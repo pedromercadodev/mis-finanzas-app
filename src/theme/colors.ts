@@ -1,0 +1,68 @@
+export const colors = {
+  // Modo Claro
+  light: {
+    background: '#F8F9FA',
+    surface: '#FFFFFF',
+    primary: '#6366F1',
+    primaryLight: '#EEF2FF',
+    secondary: '#8B5CF6',
+    text: '#1A1A2E',
+    textSecondary: '#6B7280',
+    success: '#10B981',
+    successLight: '#D1FAE5',
+    danger: '#EF4444',
+    dangerLight: '#FEE2E2',
+    warning: '#F59E0B',
+    warningLight: '#FEF3C7',
+    usd: '#059669',
+    bs: '#D97706',
+    border: '#E5E7EB',
+    shadow: 'rgba(0,0,0,0.06)',
+    cardShadow: 'rgba(99,102,241,0.1)',
+  },
+  // Modo Oscuro
+  dark: {
+    background: '#0F172A',
+    surface: '#1E293B',
+    primary: '#818CF8',
+    primaryLight: '#1E1B4B',
+    secondary: '#A78BFA',
+    text: '#F1F5F9',
+    textSecondary: '#94A3B8',
+    success: '#34D399',
+    successLight: '#064E3B',
+    danger: '#F87171',
+    dangerLight: '#7F1D1D',
+    warning: '#FBBF24',
+    warningLight: '#78350F',
+    usd: '#6EE7B7',
+    bs: '#FCD34D',
+    border: '#334155',
+    shadow: 'rgba(0,0,0,0.3)',
+    cardShadow: 'rgba(129,140,248,0.1)',
+  },
+} as const;
+
+export const accountColors = [
+  { name: 'Binance', hex: '#F0B90B' },
+  { name: 'Facebank', hex: '#10B981' },
+  { name: 'Tarjeta', hex: '#8B5CF6' },
+  { name: 'Efectivo', hex: '#F97316' },
+  { name: 'Banco', hex: '#EF4444' },
+  { name: 'Otra', hex: '#EC4899' },
+] as const;
+
+export const categoryIcons: Record<string, string> = {
+  Comida: '🍔',
+  Transporte: '🚗',
+  Salud: '💊',
+  Educación: '📚',
+  Entretenimiento: '🎮',
+  Vivienda: '🏠',
+  Servicios: '💡',
+  Ropa: '👕',
+  Salario: '💼',
+  Freelance: '💻',
+  Inversiones: '📈',
+  Otros: '📦',
+};
