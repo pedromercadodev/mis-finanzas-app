@@ -6,7 +6,29 @@ Aplicación móvil de finanzas personales construida con **React Native (Expo)**
 
 ---
 
-## 📱 Capturas
+## 📋 Historial de Versiones
+
+### v2.0.0 (Actual)
+- ✨ **Exportación de Datos** — CSV y JSON con expo-sharing
+- 📊 **Reportes Gráficos** — PieChart (gastos/ingresos por categoría) y LineChart (flujo de caja)
+- 🔄 **Suscripciones** — Gastos recurrentes con frecuencia semanal/mensual/anual y procesamiento automático
+- 💰 **Deudas y Préstamos** — Registro de pagos, barra de progreso, intereses, badges de estado
+- 🪙 **Billeteras Digitales** — Cuentas agrupadas por plataforma (Binance, Coinbase, etc.) con widget en Dashboard
+- 🐛 **Fix migración** — Columna `platform` con `PRAGMA table_info` para evitar errores en BD existentes
+
+### v1.0.0
+- 🏠 Dashboard con resumen de saldos y tasas de cambio
+- 💳 Cuentas bancarias, efectivo y ahorro (USD/BS/BOTH)
+- 💸 Transacciones con categorización y filtros por período
+- 📊 Presupuestos estilo YNAB por grupos de categorías
+- 🎯 Metas con sub-metas, progreso visual y celebración
+- 🌐 Tasas de cambio automáticas (BCV + Paralelo + Binance)
+- 🤖 Entrada por IA con DeepSeek
+- 🌙 Modo oscuro/claro automático
+
+---
+
+##  Capturas
 
 | Dashboard | Cuentas | Transacciones | Reportes |
 |:---------:|:-------:|:-------------:|:--------:|
