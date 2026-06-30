@@ -10,7 +10,18 @@ import {
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { LineChart, PieChart } from 'react-native-chart-kit';
+import {
+  LineChart,
+  PieChart,
+  Line,
+  Pie,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from 'recharts';
 import { useThemeColors } from '../../src/hooks/useThemeColors';
 import AnimatedTransition from '../../src/components/AnimatedTransition';
 import { formatUSD, formatBS } from '../../src/utils/format';
@@ -116,77 +127,30 @@ export default function ReportsScreen() {
     setActiveTab(tab);
   };
 
-  // Preparar datos para el gráfico de pastel
+  // Preparar datos para el gráfico de pastel (recharts)
   const pieChartData = categoryData.slice(0, 8).map((cat) => ({
     name: cat.categoryName.length > 12 ? cat.categoryName.substring(0, 12) + '…' : cat.categoryName,
-    amount: cat.totalUSD > 0 ? cat.totalUSD : (cat.totalBS > 0 ? cat.totalBS : 0),
-    color: cat.color || '#999',
-    legendFontColor: themeColors.text,
-    legendFontSize: 12,
+    value: cat.totalUSD > 0 ? cat.totalUSD : (cat.totalBS > 0 ? cat.totalBS : 0),
+    fill: cat.color || '#999',
   }));
 
-  // Si no hay datos, agregar un placeholder
-  if (pieChartData.length === 0) {
-    pieChartData.push({
-      name: 'Sin datos',
-      amount: 1,
-      color: '#E5E7EB',
-      legendFontColor: themeColors.textSecondary as any,
-      legendFontSize: 12,
-    });
-  }
-
-  // Preparar datos para el gráfico de línea (flujo de caja)
-  const lineLabels = cashFlowData.map((p) => {
-    // Acortar label: mostrar solo mes/año
+  // Preparar datos para el gráfico de línea (flujo de caja) - recharts
+  const lineChartData = cashFlowData.map((p) => {
     const parts = p.date.split('-');
+    let label = p.date;
     if (parts.length >= 2) {
       const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-      return months[parseInt(parts[1]) - 1] || p.date;
+      label = months[parseInt(parts[1]) - 1] || p.date;
     }
-    return p.date;
+    return {
+      date: label,
+      balance: p.balanceUSD,
+      income: p.incomeUSD,
+      expense: p.expenseUSD,
+    };
   });
 
-  const lineData = {
-    labels: lineLabels.length > 6 ? lineLabels.filter((_, i) => i % Math.ceil(lineLabels.length / 6) === 0) : lineLabels,
-    datasets: [
-      {
-        data: cashFlowData.length > 0 ? cashFlowData.map((p) => p.balanceUSD) : [0],
-        color: (opacity = 1) => `rgba(99, 102, 241, ${opacity})`,
-        strokeWidth: 2,
-      },
-      {
-        data: cashFlowData.length > 0 ? cashFlowData.map((p) => p.incomeUSD) : [0],
-        color: (opacity = 1) => `rgba(16, 185, 129, ${opacity})`,
-        strokeWidth: 2,
-      },
-      {
-        data: cashFlowData.length > 0 ? cashFlowData.map((p) => p.expenseUSD) : [0],
-        color: (opacity = 1) => `rgba(239, 68, 68, ${opacity})`,
-        strokeWidth: 2,
-      },
-    ],
-    legend: ['Balance', 'Ingresos', 'Gastos'],
-  };
-
-  const chartConfig = {
-    backgroundColor: themeColors.surface,
-    backgroundGradientFrom: themeColors.surface,
-    backgroundGradientTo: themeColors.surface,
-    decimalPlaces: 0,
-    color: (opacity = 1) => `rgba(107, 114, 128, ${opacity})`,
-    labelColor: () => themeColors.textSecondary,
-    style: { borderRadius: 16 },
-    propsForDots: {
-      r: '4',
-      strokeWidth: '2',
-      stroke: themeColors.primary,
-    },
-    propsForBackgroundLines: {
-      strokeDasharray: '4 4',
-      stroke: themeColors.border,
-    },
-  };
+  const COLORS = ['#6366F1', '#10B981', '#EF4444', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
 
   return (
     <AnimatedTransition>
@@ -345,14 +309,24 @@ export default function ReportsScreen() {
                     Historial de Flujo de Caja (USD)
                   </Text>
                   {cashFlowData.length > 0 ? (
-                    <LineChart
-                      data={lineData}
-                      width={SCREEN_WIDTH - 72}
-                      height={256}
-                      chartConfig={chartConfig}
-                      bezier
-                      style={{ borderRadius: 16 }}
-                    />
+                    <ResponsiveContainer width="100%" height={256}>
+                      <LineChart data={lineChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="4 4" stroke={themeColors.border} />
+                        <XAxis dataKey="date" tick={{ fontSize: 11, fill: themeColors.textSecondary }} stroke={themeColors.border} />
+                        <YAxis tick={{ fontSize: 11, fill: themeColors.textSecondary }} stroke={themeColors.border} />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: themeColors.surface,
+                            border: `1px solid ${themeColors.border}`,
+                            borderRadius: 8,
+                            color: themeColors.text,
+                          }}
+                        />
+                        <Line type="monotone" dataKey="balance" stroke="#6366F1" strokeWidth={2} dot={{ r: 4, fill: '#6366F1' }} name="Balance" />
+                        <Line type="monotone" dataKey="income" stroke="#10B981" strokeWidth={2} dot={{ r: 4, fill: '#10B981' }} name="Ingresos" />
+                        <Line type="monotone" dataKey="expense" stroke="#EF4444" strokeWidth={2} dot={{ r: 4, fill: '#EF4444' }} name="Gastos" />
+                      </LineChart>
+                    </ResponsiveContainer>
                   ) : (
                     <View style={{ alignItems: 'center', paddingVertical: 40 }}>
                       <Ionicons name="analytics-outline" size={48} color={themeColors.textSecondary} />
@@ -397,16 +371,34 @@ export default function ReportsScreen() {
                   </Text>
                   {categoryData.length > 0 ? (
                     <>
-                      <PieChart
-                        data={pieChartData}
-                        width={SCREEN_WIDTH - 72}
-                        height={220}
-                        chartConfig={chartConfig}
-                        accessor="amount"
-                        backgroundColor="transparent"
-                        paddingLeft="15"
-                        absolute
-                      />
+                      <ResponsiveContainer width="100%" height={220}>
+                        <PieChart>
+                          <Pie
+                            data={pieChartData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={50}
+                            outerRadius={80}
+                            dataKey="value"
+                            nameKey="name"
+                            label={({ name, percent }: any) => `${name} ${percent ? (percent * 100).toFixed(0) : 0}%`}
+                            labelLine={true}
+                          >
+                            {pieChartData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.fill || COLORS[index % COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: themeColors.surface,
+                              border: `1px solid ${themeColors.border}`,
+                              borderRadius: 8,
+                              color: themeColors.text,
+                            }}
+                            formatter={(value: any) => formatUSD(value)}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
                       {/* Lista detallada de categorías */}
                       <View style={{ marginTop: 16, gap: 8 }}>
                         {categoryData.slice(0, 10).map((cat) => (

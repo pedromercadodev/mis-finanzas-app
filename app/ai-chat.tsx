@@ -15,7 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import Markdown from 'react-native-markdown-display';
+import ReactMarkdown from 'react-markdown';
 import { useThemeColors } from '../src/hooks/useThemeColors';
 import { useSettings } from '../src/store/useSettings';
 import { useAccounts } from '../src/store/useAccounts';
@@ -66,38 +66,93 @@ interface ChatMessage {
   isSuccess?: boolean;
 }
 
-// Genera estilos para Markdown basados en el tema
-function getMarkdownStyles(textColor: string, surfaceColor: string, bgColor: string) {
-  return {
-    body: { color: textColor, fontSize: 15, lineHeight: 22 },
-    strong: { fontWeight: '700' as const },
-    em: { fontStyle: 'italic' as const },
-    text: { color: textColor },
-    link: { color: '#818CF8' },
-    blockquote: {
-      borderLeftWidth: 3,
-      borderLeftColor: '#6366F1',
-      paddingLeft: 10,
-      marginVertical: 4,
-    },
-    code_inline: {
-      backgroundColor: surfaceColor,
-      borderRadius: 4,
-      paddingHorizontal: 6,
-      paddingVertical: 2,
-      fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-      fontSize: 13,
-    },
-    fence: {
-      backgroundColor: bgColor,
-      borderRadius: 8,
-      padding: 10,
-      marginVertical: 6,
-    },
-    bullet_list: { marginVertical: 2 },
-    ordered_list: { marginVertical: 2 },
-    list_item: { marginVertical: 1 },
-  };
+// Componentes personalizados para react-markdown
+function MarkdownContent({ content, themeColors: colors }: { content: string; themeColors: any }) {
+  return (
+    <ReactMarkdown
+      components={{
+        p: ({ children }) => (
+          <Text style={{ color: colors.text, fontSize: 15, lineHeight: 22, marginBottom: 4 }}>
+            {children}
+          </Text>
+        ),
+        strong: ({ children }) => (
+          <Text style={{ fontWeight: '700', color: colors.text }}>{children}</Text>
+        ),
+        em: ({ children }) => (
+          <Text style={{ fontStyle: 'italic', color: colors.text }}>{children}</Text>
+        ),
+        a: ({ href, children }) => (
+          <Text style={{ color: '#818CF8', textDecorationLine: 'underline' }}>{children}</Text>
+        ),
+        blockquote: ({ children }) => (
+          <View
+            style={{
+              borderLeftWidth: 3,
+              borderLeftColor: '#6366F1',
+              paddingLeft: 10,
+              marginVertical: 4,
+            }}>
+            <Text style={{ color: colors.textSecondary, fontStyle: 'italic' }}>{children}</Text>
+          </View>
+        ),
+        code: ({ children, className }) => {
+          const isInline = !className;
+          if (isInline) {
+            return (
+              <Text
+                style={{
+                  backgroundColor: colors.surface,
+                  borderRadius: 4,
+                  paddingHorizontal: 6,
+                  paddingVertical: 2,
+                  fontFamily: 'monospace',
+                  fontSize: 13,
+                  color: colors.text,
+                }}>
+                {children}
+              </Text>
+            );
+          }
+          return (
+            <View
+              style={{
+                backgroundColor: colors.background,
+                borderRadius: 8,
+                padding: 10,
+                marginVertical: 6,
+              }}>
+              <Text style={{ fontFamily: 'monospace', fontSize: 13, color: colors.text }}>
+                {children}
+              </Text>
+            </View>
+          );
+        },
+        ul: ({ children }) => (
+          <View style={{ marginVertical: 2 }}>{children}</View>
+        ),
+        ol: ({ children }) => (
+          <View style={{ marginVertical: 2 }}>{children}</View>
+        ),
+        li: ({ children }) => (
+          <View style={{ marginVertical: 1, flexDirection: 'row', alignItems: 'flex-start' }}>
+            <Text style={{ color: colors.text, marginRight: 6 }}>•</Text>
+            <Text style={{ color: colors.text, fontSize: 15, lineHeight: 22, flex: 1 }}>{children}</Text>
+          </View>
+        ),
+        h1: ({ children }) => (
+          <Text style={{ fontSize: 20, fontWeight: '700', color: colors.text, marginVertical: 8 }}>{children}</Text>
+        ),
+        h2: ({ children }) => (
+          <Text style={{ fontSize: 17, fontWeight: '700', color: colors.text, marginVertical: 6 }}>{children}</Text>
+        ),
+        h3: ({ children }) => (
+          <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text, marginVertical: 4 }}>{children}</Text>
+        ),
+      }}>
+      {content}
+    </ReactMarkdown>
+  );
 }
 
 export default function AIChatScreen() {
@@ -812,8 +867,6 @@ export default function AIChatScreen() {
   const renderMessage = useCallback(({ item }: { item: ChatMessage }) => {
     const isUser = item.role === 'user';
 
-    const mdStyle = isUser ? undefined : getMarkdownStyles(themeColors.text, themeColors.surface, themeColors.background);
-
     return (
       <View
         style={{
@@ -848,9 +901,7 @@ export default function AIChatScreen() {
               {item.content}
             </Text>
           ) : (
-            <Markdown style={mdStyle}>
-              {item.content}
-            </Markdown>
+            <MarkdownContent content={item.content} themeColors={themeColors} />
           )}
 
           {/* Preview de transacción */}

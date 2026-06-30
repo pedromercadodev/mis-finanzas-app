@@ -1,4 +1,4 @@
-import { getDatabase } from './database';
+import { db } from './database';
 import type { Category } from '../utils/types';
 
 export interface CategoryBreakdown {
@@ -39,44 +39,49 @@ export async function getCategoryBreakdown(
   startDate: string,
   endDate: string
 ): Promise<CategoryBreakdown[]> {
-  const db = await getDatabase();
+  const transactions = await db.transactions
+    .filter((tx) => tx.type === type && tx.date >= startDate && tx.date <= endDate)
+    .toArray();
 
-  const rows = await db.getAllAsync<any>(
-    `SELECT
-       c.id as categoryId,
-       c.name as categoryName,
-       c.icon,
-       c.color,
-       COALESCE(SUM(COALESCE(t.amountUSD, 0)), 0) as totalUSD,
-       COALESCE(SUM(COALESCE(t.amountBS, 0)), 0) as totalBS
-     FROM transactions t
-     LEFT JOIN categories c ON t.categoryId = c.id
-     WHERE t.type = ?
-       AND t.date >= ?
-       AND t.date <= ?
-     GROUP BY c.id
-     ORDER BY totalUSD DESC, totalBS DESC`,
-    [type, startDate, endDate]
-  );
+  const categories = await db.categories.toArray();
+  const catMap = new Map(categories.map((c) => [c.id, c]));
+
+  // Agrupar por categoría
+  const breakdownMap = new Map<number, { totalUSD: number; totalBS: number }>();
+
+  for (const tx of transactions) {
+    const catId = tx.categoryId;
+    if (!breakdownMap.has(catId)) {
+      breakdownMap.set(catId, { totalUSD: 0, totalBS: 0 });
+    }
+    const current = breakdownMap.get(catId)!;
+    current.totalUSD += tx.amountUSD || 0;
+    current.totalBS += tx.amountBS || 0;
+  }
 
   // Calcular total general para porcentajes
-  const grandTotalUSD = rows.reduce((sum: number, r: any) => sum + r.totalUSD, 0);
-  const grandTotalBS = rows.reduce((sum: number, r: any) => sum + r.totalBS, 0);
-
-  // Usar el total combinado (USD + BS convertido aproximado) para el %
+  const grandTotalUSD = Array.from(breakdownMap.values()).reduce((sum, v) => sum + v.totalUSD, 0);
+  const grandTotalBS = Array.from(breakdownMap.values()).reduce((sum, v) => sum + v.totalBS, 0);
   const grandTotalCombined = grandTotalUSD + (grandTotalBS > 0 ? grandTotalBS / 100 : 0);
 
-  return rows.map((row: any) => ({
-    categoryId: row.categoryId,
-    categoryName: row.categoryName || 'Sin categoría',
-    icon: row.icon || 'help-outline',
-    color: row.color || '#999',
-    totalUSD: row.totalUSD,
-    totalBS: row.totalBS,
-    percentage: grandTotalCombined > 0
-      ? Math.round(((row.totalUSD + (row.totalBS > 0 ? row.totalBS / 100 : 0)) / grandTotalCombined) * 100)
-      : 0,
-  }));
+  const result: CategoryBreakdown[] = Array.from(breakdownMap.entries())
+    .map(([categoryId, values]) => {
+      const cat = catMap.get(categoryId);
+      return {
+        categoryId,
+        categoryName: cat?.name || 'Sin categoría',
+        icon: cat?.icon || 'help-outline',
+        color: cat?.color || '#999',
+        totalUSD: values.totalUSD,
+        totalBS: values.totalBS,
+        percentage: grandTotalCombined > 0
+          ? Math.round(((values.totalUSD + (values.totalBS > 0 ? values.totalBS / 100 : 0)) / grandTotalCombined) * 100)
+          : 0,
+      };
+    })
+    .sort((a, b) => b.totalUSD - a.totalUSD);
+
+  return result;
 }
 
 /**
@@ -88,51 +93,69 @@ export async function getCashFlowHistory(
   endDate: string,
   interval: 'day' | 'week' | 'month' = 'month'
 ): Promise<CashFlowPoint[]> {
-  const db = await getDatabase();
+  const transactions = await db.transactions
+    .filter((tx) =>
+      tx.date >= startDate &&
+      tx.date <= endDate &&
+      (tx.type === 'income' || tx.type === 'expense')
+    )
+    .toArray();
 
-  let dateFormat: string;
-  switch (interval) {
-    case 'day':
-      dateFormat = '%Y-%m-%d';
-      break;
-    case 'week':
-      dateFormat = '%Y-%W';
-      break;
-    case 'month':
-    default:
-      dateFormat = '%Y-%m';
-      break;
+  // Agrupar por período
+  const periodMap = new Map<string, { incomeUSD: number; expenseUSD: number; incomeBS: number; expenseBS: number }>();
+
+  for (const tx of transactions) {
+    let period: string;
+    const d = new Date(tx.date);
+
+    switch (interval) {
+      case 'day':
+        period = tx.date; // YYYY-MM-DD
+        break;
+      case 'week': {
+        // Obtener número de semana
+        const startOfYear = new Date(d.getFullYear(), 0, 1);
+        const weekNum = Math.ceil(((d.getTime() - startOfYear.getTime()) / 86400000 + startOfYear.getDay() + 1) / 7);
+        period = `${d.getFullYear()}-W${String(weekNum).padStart(2, '0')}`;
+        break;
+      }
+      case 'month':
+      default:
+        period = tx.date.substring(0, 7); // YYYY-MM
+        break;
+    }
+
+    if (!periodMap.has(period)) {
+      periodMap.set(period, { incomeUSD: 0, expenseUSD: 0, incomeBS: 0, expenseBS: 0 });
+    }
+
+    const current = periodMap.get(period)!;
+    if (tx.type === 'income') {
+      current.incomeUSD += tx.amountUSD || 0;
+      current.incomeBS += tx.amountBS || 0;
+    } else if (tx.type === 'expense') {
+      current.expenseUSD += tx.amountUSD || 0;
+      current.expenseBS += tx.amountBS || 0;
+    }
   }
 
-  const rows = await db.getAllAsync<any>(
-    `SELECT
-       strftime('${dateFormat}', t.date) as period,
-       COALESCE(SUM(CASE WHEN t.type = 'income' THEN COALESCE(t.amountUSD, 0) ELSE 0 END), 0) as incomeUSD,
-       COALESCE(SUM(CASE WHEN t.type = 'expense' THEN COALESCE(t.amountUSD, 0) ELSE 0 END), 0) as expenseUSD,
-       COALESCE(SUM(CASE WHEN t.type = 'income' THEN COALESCE(t.amountBS, 0) ELSE 0 END), 0) as incomeBS,
-       COALESCE(SUM(CASE WHEN t.type = 'expense' THEN COALESCE(t.amountBS, 0) ELSE 0 END), 0) as expenseBS
-     FROM transactions t
-     WHERE t.date >= ?
-       AND t.date <= ?
-       AND t.type IN ('income', 'expense')
-     GROUP BY period
-     ORDER BY period ASC`,
-    [startDate, endDate]
-  );
+  // Ordenar por período ascendente
+  const sortedPeriods = Array.from(periodMap.keys()).sort();
 
   let runningBalanceUSD = 0;
   let runningBalanceBS = 0;
 
-  return rows.map((row: any) => {
-    runningBalanceUSD += row.incomeUSD - row.expenseUSD;
-    runningBalanceBS += row.incomeBS - row.expenseBS;
+  return sortedPeriods.map((period) => {
+    const values = periodMap.get(period)!;
+    runningBalanceUSD += values.incomeUSD - values.expenseUSD;
+    runningBalanceBS += values.incomeBS - values.expenseBS;
     return {
-      date: row.period,
-      incomeUSD: row.incomeUSD,
-      expenseUSD: row.expenseUSD,
+      date: period,
+      incomeUSD: values.incomeUSD,
+      expenseUSD: values.expenseUSD,
       balanceUSD: runningBalanceUSD,
-      incomeBS: row.incomeBS,
-      expenseBS: row.expenseBS,
+      incomeBS: values.incomeBS,
+      expenseBS: values.expenseBS,
       balanceBS: runningBalanceBS,
     };
   });
@@ -145,27 +168,33 @@ export async function getReportSummary(
   startDate: string,
   endDate: string
 ): Promise<ReportSummary> {
-  const db = await getDatabase();
+  const transactions = await db.transactions
+    .filter((tx) =>
+      tx.date >= startDate &&
+      tx.date <= endDate &&
+      (tx.type === 'income' || tx.type === 'expense')
+    )
+    .toArray();
 
-  const result = await db.getFirstAsync<any>(
-    `SELECT
-       COALESCE(SUM(CASE WHEN type = 'income' THEN COALESCE(amountUSD, 0) ELSE 0 END), 0) as totalIncomeUSD,
-       COALESCE(SUM(CASE WHEN type = 'expense' THEN COALESCE(amountUSD, 0) ELSE 0 END), 0) as totalExpenseUSD,
-       COALESCE(SUM(CASE WHEN type = 'income' THEN COALESCE(amountBS, 0) ELSE 0 END), 0) as totalIncomeBS,
-       COALESCE(SUM(CASE WHEN type = 'expense' THEN COALESCE(amountBS, 0) ELSE 0 END), 0) as totalExpenseBS
-     FROM transactions
-     WHERE date >= ?
-       AND date <= ?
-       AND type IN ('income', 'expense')`,
-    [startDate, endDate]
-  );
+  let totalIncomeUSD = 0, totalExpenseUSD = 0;
+  let totalIncomeBS = 0, totalExpenseBS = 0;
+
+  for (const tx of transactions) {
+    if (tx.type === 'income') {
+      totalIncomeUSD += tx.amountUSD || 0;
+      totalIncomeBS += tx.amountBS || 0;
+    } else if (tx.type === 'expense') {
+      totalExpenseUSD += tx.amountUSD || 0;
+      totalExpenseBS += tx.amountBS || 0;
+    }
+  }
 
   return {
-    totalIncomeUSD: result?.totalIncomeUSD || 0,
-    totalExpenseUSD: result?.totalExpenseUSD || 0,
-    totalIncomeBS: result?.totalIncomeBS || 0,
-    totalExpenseBS: result?.totalExpenseBS || 0,
-    netUSD: (result?.totalIncomeUSD || 0) - (result?.totalExpenseUSD || 0),
-    netBS: (result?.totalIncomeBS || 0) - (result?.totalExpenseBS || 0),
+    totalIncomeUSD,
+    totalExpenseUSD,
+    totalIncomeBS,
+    totalExpenseBS,
+    netUSD: totalIncomeUSD - totalExpenseUSD,
+    netBS: totalIncomeBS - totalExpenseBS,
   };
 }

@@ -1,5 +1,3 @@
-import { File, Paths } from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
 import { getTransactions } from './transactions';
 import { getAccountById } from './accounts';
 import { getCategories } from './categories';
@@ -124,21 +122,25 @@ export async function exportData(options: ExportOptions): Promise<string> {
   const dateStr = new Date().toISOString().split('T')[0];
   const fileName = `transacciones_${dateStr}.${options.format}`;
 
-  // Usar la nueva API de expo-file-system v19
-  const file = new File(Paths.cache, fileName);
-  file.create({ overwrite: true });
-  file.write(content);
+  // En web, usar FileSaver o descarga directa
+  const blob = new Blob([content], {
+    type: options.format === 'csv' ? 'text/csv;charset=utf-8' : 'application/json;charset=utf-8',
+  });
 
-  return file.uri;
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+
+  return fileName;
 }
 
 export async function shareFile(fileUri: string): Promise<void> {
-  const isAvailable = await Sharing.isAvailableAsync();
-  if (!isAvailable) {
-    throw new Error('Compartir archivos no está disponible en este dispositivo');
-  }
-  await Sharing.shareAsync(fileUri, {
-    mimeType: fileUri.endsWith('.csv') ? 'text/csv' : 'application/json',
-    dialogTitle: 'Exportar transacciones',
-  });
+  // En web, la descarga ya se manejó en exportData
+  // Esta función se mantiene para compatibilidad
+  console.log('Archivo descargado:', fileUri);
 }

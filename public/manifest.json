@@ -1,0 +1,48 @@
+{
+  "name": "Mis Finanzas",
+  "short_name": "Finanzas",
+  "description": "App de finanzas personales - Controla tus ingresos, gastos, metas y más",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0f0f1a",
+  "theme_color": "#0f0f1a",
+  "lang": "es-ES",
+  "scope": "/",
+  "categories": ["finance", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "splash_pages": null,
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "ios": {
+    "supportsTablet": true,
+    "bundleIdentifier": "com.tufinanzas.app",
+    "apple-touch-icon": "/icons/icon-192x192.png",
+    "apple-touch-startup-image": "/icons/splash.png"
+  }
+}

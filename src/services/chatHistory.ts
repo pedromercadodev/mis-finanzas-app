@@ -1,5 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
 const CHAT_HISTORY_KEY = 'ai-chat-history';
 
 export interface ChatHistoryMessage {
@@ -10,6 +8,11 @@ export interface ChatHistoryMessage {
 }
 
 const HISTORY_MAX_ITEMS = 100;
+
+// localStorage wrapper para web
+function getStorage(): Storage {
+  return localStorage;
+}
 
 /**
  * Guarda un mensaje en el historial de chat.
@@ -22,7 +25,7 @@ export async function saveChatMessage(msg: ChatHistoryMessage): Promise<void> {
     // Limitar a HISTORY_MAX_ITEMS mensajes
     const trimmed = history.slice(-HISTORY_MAX_ITEMS);
 
-    await AsyncStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(trimmed));
+    getStorage().setItem(CHAT_HISTORY_KEY, JSON.stringify(trimmed));
   } catch (error) {
     console.error('Error saving chat message:', error);
   }
@@ -33,7 +36,7 @@ export async function saveChatMessage(msg: ChatHistoryMessage): Promise<void> {
  */
 export async function getChatHistory(): Promise<ChatHistoryMessage[]> {
   try {
-    const data = await AsyncStorage.getItem(CHAT_HISTORY_KEY);
+    const data = getStorage().getItem(CHAT_HISTORY_KEY);
     return data ? JSON.parse(data) : [];
   } catch (error) {
     console.error('Error loading chat history:', error);
@@ -136,7 +139,7 @@ export async function getSessionMessages(sessionId: string): Promise<ChatHistory
  */
 export async function clearChatHistory(): Promise<void> {
   try {
-    await AsyncStorage.removeItem(CHAT_HISTORY_KEY);
+    getStorage().removeItem(CHAT_HISTORY_KEY);
   } catch (error) {
     console.error('Error clearing chat history:', error);
   }

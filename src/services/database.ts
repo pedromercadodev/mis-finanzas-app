@@ -1,12 +1,13 @@
-import * as SQLite from 'expo-sqlite';
-import { initializeDatabase } from '../db/schema';
+import { db, initializeDefaultData } from '../db/dexie-db';
 
-let db: SQLite.SQLiteDatabase | null = null;
+let initialized = false;
 
-export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
-  if (!db) {
-    db = await SQLite.openDatabaseAsync('finanzas.db');
-    await initializeDatabase(db);
+export async function getDatabase(): Promise<typeof db> {
+  if (!initialized) {
+    await initializeDefaultData();
+    initialized = true;
   }
   return db;
 }
+
+export { db };

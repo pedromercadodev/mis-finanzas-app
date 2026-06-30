@@ -1,53 +1,49 @@
-import { getDatabase } from './database';
+import { db } from './database';
 import type { GoalItem } from '../utils/types';
 
 export async function getItemsByGoalId(goalId: number): Promise<GoalItem[]> {
-  const db = await getDatabase();
-  return await db.getAllAsync<GoalItem>(
-    'SELECT * FROM goal_items WHERE goalId = ? ORDER BY sortOrder ASC, id ASC',
-    [goalId]
-  );
+  return await db.goalItems
+    .where('goalId')
+    .equals(goalId)
+    .sortBy('sortOrder');
 }
 
 export async function createItem(data: Omit<GoalItem, 'id' | 'createdAt'>): Promise<number> {
-  const db = await getDatabase();
-  const result = await db.runAsync(
-    `INSERT INTO goal_items (goalId, name, targetAmount, currentAmount, isCompleted, sortOrder)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    [data.goalId, data.name, data.targetAmount, data.currentAmount, data.isCompleted, data.sortOrder]
-  );
-  return result.lastInsertRowId;
+  const now = new Date().toISOString();
+  const id = await db.goalItems.add({
+    ...data,
+    createdAt: now,
+  } as GoalItem);
+  return id;
 }
 
 export async function updateItemProgress(id: number, amount: number): Promise<void> {
-  const db = await getDatabase();
-  await db.runAsync(
-    'UPDATE goal_items SET currentAmount = currentAmount + ? WHERE id = ?',
-    [amount, id]
-  );
+  const item = await db.goalItems.get(id);
+  if (item) {
+    await db.goalItems.update(id, {
+      currentAmount: (item.currentAmount || 0) + amount,
+    });
+  }
 }
 
 export async function toggleItemCompleted(id: number): Promise<void> {
-  const db = await getDatabase();
-  await db.runAsync(
-    `UPDATE goal_items SET isCompleted = CASE WHEN isCompleted = 0 THEN 1 ELSE 0 END WHERE id = ?`,
-    [id]
-  );
+  const item = await db.goalItems.get(id);
+  if (item) {
+    await db.goalItems.update(id, {
+      isCompleted: item.isCompleted ? 0 : 1,
+    });
+  }
 }
 
 export async function deleteItem(id: number): Promise<void> {
-  const db = await getDatabase();
-  await db.runAsync('DELETE FROM goal_items WHERE id = ?', [id]);
+  await db.goalItems.delete(id);
 }
 
 export async function recalculateGoalProgress(goalId: number): Promise<void> {
-  const db = await getDatabase();
-  // Sumar currentAmount de todos los items de la meta
-  const result = await db.getFirstAsync<{ total: number }>(
-    'SELECT COALESCE(SUM(currentAmount), 0) as total FROM goal_items WHERE goalId = ?',
-    [goalId]
-  );
-  const total = result?.total ?? 0;
-  // Actualizar currentAmount de la meta con la suma de los items
-  await db.runAsync('UPDATE goals SET currentAmount = ?, lastProgressAt = datetime(\'now\') WHERE id = ?', [total, goalId]);
+  const items = await db.goalItems.where('goalId').equals(goalId).toArray();
+  const total = items.reduce((sum, item) => sum + (item.currentAmount || 0), 0);
+  await db.goals.update(goalId, {
+    currentAmount: total,
+    lastProgressAt: new Date().toISOString(),
+  });
 }

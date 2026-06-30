@@ -1,9 +1,10 @@
-import { View, Text, TouchableOpacity, Animated, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { usePathname, useRouter } from 'expo-router';
-import { useEffect, useRef, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { motion } from 'framer-motion';
 
 const TABS = [
   { name: 'index', title: 'Resumen', icon: 'home-outline', iconActive: 'home' },
@@ -27,27 +28,6 @@ export default function AnimatedTabBar() {
     return pathname === tabPath || pathname === `/${t.name}`;
   });
   const currentIndex = activeIndex >= 0 ? activeIndex : 0;
-
-  const slideAnim = useRef(new Animated.Value(currentIndex * TAB_WIDTH)).current;
-  const scaleAnims = useRef(TABS.map(() => new Animated.Value(0))).current;
-
-  useEffect(() => {
-    Animated.spring(slideAnim, {
-      toValue: currentIndex * TAB_WIDTH,
-      useNativeDriver: true,
-      tension: 120,
-      friction: 10,
-    }).start();
-
-    TABS.forEach((_, i) => {
-      Animated.spring(scaleAnims[i], {
-        toValue: i === currentIndex ? 1 : 0,
-        useNativeDriver: true,
-        tension: 200,
-        friction: 8,
-      }).start();
-    });
-  }, [currentIndex]);
 
   const navigate = useCallback((name: string) => {
     if (name === 'ai-chat') {
@@ -77,8 +57,8 @@ export default function AnimatedTabBar() {
         elevation: 10,
       }}
     >
-      {/* Indicador deslizante redondeado */}
-      <Animated.View
+      {/* Indicador deslizante con framer-motion */}
+      <motion.div
         style={{
           position: 'absolute',
           top: 0,
@@ -87,16 +67,13 @@ export default function AnimatedTabBar() {
           height: 3,
           backgroundColor: themeColors.primary,
           borderRadius: 2,
-          transform: [{ translateX: slideAnim }],
         }}
+        animate={{ x: currentIndex * TAB_WIDTH }}
+        transition={{ type: 'spring', stiffness: 120, damping: 10 }}
       />
 
       {TABS.map((tab, index) => {
         const isActive = index === currentIndex;
-        const scale = scaleAnims[index].interpolate({
-          inputRange: [0, 1],
-          outputRange: [1, 1.12],
-        });
 
         return (
           <TouchableOpacity
@@ -110,24 +87,29 @@ export default function AnimatedTabBar() {
               paddingTop: 6,
             }}
           >
-            <Animated.View
+            <motion.div
               style={{
                 width: 46,
                 height: 46,
                 borderRadius: 23,
-                backgroundColor: isActive ? themeColors.primary + '18' : 'transparent',
                 justifyContent: 'center',
                 alignItems: 'center',
-                transform: [{ scale }],
                 marginBottom: 3,
+                display: 'flex',
+                flexDirection: 'row',
               }}
+              animate={{
+                scale: isActive ? 1.12 : 1,
+                backgroundColor: isActive ? themeColors.primary + '18' : 'transparent',
+              }}
+              transition={{ type: 'spring', stiffness: 200, damping: 8 }}
             >
               <Ionicons
                 name={isActive ? (tab.iconActive as any) : (tab.icon as any)}
                 size={isActive ? 24 : 22}
                 color={isActive ? themeColors.primary : themeColors.textSecondary}
               />
-            </Animated.View>
+            </motion.div>
             <Text
               style={{
                 fontSize: 10,

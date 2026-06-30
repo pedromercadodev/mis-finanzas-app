@@ -1,14 +1,14 @@
-import { getDatabase } from './database';
+import { db } from './database';
 import type { BudgetAllocation, CategorySpending, GroupWithCategories, CategoryWithGroup } from '../utils/types';
 import { getCategoriesWithGroups } from './categories';
 import { getGroups } from './categoryGroups';
 
 export async function getAllocation(categoryId: number, month: string): Promise<BudgetAllocation | null> {
-  const db = await getDatabase();
-  return await db.getFirstAsync<BudgetAllocation>(
-    'SELECT * FROM budget_allocations WHERE categoryId = ? AND month = ?',
-    [categoryId, month]
-  );
+  const allocation = await db.budgetAllocations
+    .where(['categoryId', 'month'])
+    .equals([categoryId, month])
+    .first();
+  return allocation ?? null;
 }
 
 export async function setAllocation(
@@ -17,39 +17,56 @@ export async function setAllocation(
   amountUSD: number,
   amountBS: number = 0
 ): Promise<void> {
-  const db = await getDatabase();
-  await db.runAsync(
-    `INSERT INTO budget_allocations (categoryId, month, amountUSD, amountBS, updatedAt)
-     VALUES (?, ?, ?, ?, datetime('now'))
-     ON CONFLICT(categoryId, month) DO UPDATE SET
-       amountUSD = excluded.amountUSD,
-       amountBS = excluded.amountBS,
-       updatedAt = datetime('now')`,
-    [categoryId, month, amountUSD, amountBS]
-  );
+  const now = new Date().toISOString();
+  const existing = await getAllocation(categoryId, month);
+
+  if (existing) {
+    await db.budgetAllocations.update(existing.id, {
+      amountUSD,
+      amountBS,
+      updatedAt: now,
+    });
+  } else {
+    await db.budgetAllocations.add({
+      categoryId,
+      month,
+      amountUSD,
+      amountBS,
+      createdAt: now,
+      updatedAt: now,
+    } as BudgetAllocation);
+  }
 }
 
 export async function getMonthAllocations(month: string): Promise<BudgetAllocation[]> {
-  const db = await getDatabase();
-  return await db.getAllAsync<BudgetAllocation>(
-    'SELECT * FROM budget_allocations WHERE month = ? ORDER BY categoryId ASC',
-    [month]
-  );
+  return await db.budgetAllocations
+    .where('month')
+    .equals(month)
+    .toArray();
 }
 
 export async function getSpendingByCategory(month: string): Promise<CategorySpending[]> {
-  const db = await getDatabase();
-  return await db.getAllAsync<CategorySpending>(
-    `SELECT
-       categoryId,
-       COALESCE(SUM(amountUSD), 0) as spentUSD,
-       COALESCE(SUM(amountBS), 0) as spentBS
-     FROM transactions
-     WHERE type = 'expense'
-       AND date LIKE ?
-     GROUP BY categoryId`,
-    [`${month}%`]
-  );
+  const transactions = await db.transactions
+    .filter((tx) => tx.type === 'expense' && tx.date.startsWith(month))
+    .toArray();
+
+  const spendingMap = new Map<number, { spentUSD: number; spentBS: number }>();
+
+  for (const tx of transactions) {
+    const catId = tx.categoryId;
+    if (!spendingMap.has(catId)) {
+      spendingMap.set(catId, { spentUSD: 0, spentBS: 0 });
+    }
+    const current = spendingMap.get(catId)!;
+    current.spentUSD += tx.amountUSD || 0;
+    current.spentBS += tx.amountBS || 0;
+  }
+
+  return Array.from(spendingMap.entries()).map(([categoryId, values]) => ({
+    categoryId,
+    spentUSD: values.spentUSD,
+    spentBS: values.spentBS,
+  }));
 }
 
 export async function getGroupSummaries(month: string): Promise<GroupWithCategories[]> {

@@ -41,11 +41,11 @@ export interface Category {
   color: string;
   type: 'income' | 'expense';
   budget: number | null;
+  groupId: number | null;
+  sortOrder: number;
 }
 
 export interface CategoryWithGroup extends Category {
-  groupId: number | null;
-  sortOrder: number;
   groupName?: string;
 }
 

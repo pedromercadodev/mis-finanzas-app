@@ -1,4 +1,4 @@
-import { getDatabase } from './database';
+import { db } from './database';
 import type { Debt, DebtPayment, DebtType, DebtStatus } from '../utils/types';
 
 /**
@@ -8,34 +8,24 @@ export async function getDebts(
   type?: DebtType,
   status?: DebtStatus
 ): Promise<Debt[]> {
-  const db = await getDatabase();
-  let query = 'SELECT * FROM debts';
-  const params: any[] = [];
-  const conditions: string[] = [];
+  let results = await db.debts.toArray();
 
   if (type) {
-    conditions.push('type = ?');
-    params.push(type);
+    results = results.filter((d) => d.type === type);
   }
   if (status) {
-    conditions.push('status = ?');
-    params.push(status);
+    results = results.filter((d) => d.status === status);
   }
 
-  if (conditions.length > 0) {
-    query += ' WHERE ' + conditions.join(' AND ');
-  }
-
-  query += ' ORDER BY createdAt DESC';
-  return await db.getAllAsync<Debt>(query, params);
+  results.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return results;
 }
 
 /**
  * Obtiene una deuda por su ID.
  */
 export async function getDebtById(id: number): Promise<Debt | null> {
-  const db = await getDatabase();
-  return await db.getFirstAsync<Debt>('SELECT * FROM debts WHERE id = ?', [id]);
+  return (await db.debts.get(id)) ?? null;
 }
 
 /**
@@ -44,28 +34,23 @@ export async function getDebtById(id: number): Promise<Debt | null> {
 export async function createDebt(
   data: Omit<Debt, 'id' | 'createdAt'>
 ): Promise<number> {
-  const db = await getDatabase();
-  const result = await db.runAsync(
-    `INSERT INTO debts (type, personName, description, amountUSD, amountBS, currency, interestRate, totalAmountUSD, totalAmountBS, paidAmountUSD, paidAmountBS, dueDate, status, notes)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      data.type,
-      data.personName,
-      data.description || null,
-      data.amountUSD ?? null,
-      data.amountBS ?? null,
-      data.currency,
-      data.interestRate ?? 0,
-      data.totalAmountUSD ?? null,
-      data.totalAmountBS ?? null,
-      data.paidAmountUSD ?? 0,
-      data.paidAmountBS ?? 0,
-      data.dueDate || null,
-      data.status || 'active',
-      data.notes || null,
-    ]
-  );
-  return result.lastInsertRowId;
+  const now = new Date().toISOString();
+  const id = await db.debts.add({
+    ...data,
+    description: data.description ?? null,
+    amountUSD: data.amountUSD ?? null,
+    amountBS: data.amountBS ?? null,
+    interestRate: data.interestRate ?? 0,
+    totalAmountUSD: data.totalAmountUSD ?? null,
+    totalAmountBS: data.totalAmountBS ?? null,
+    paidAmountUSD: data.paidAmountUSD ?? 0,
+    paidAmountBS: data.paidAmountBS ?? 0,
+    dueDate: data.dueDate ?? null,
+    status: data.status || 'active',
+    notes: data.notes ?? null,
+    createdAt: now,
+  } as Debt);
+  return id;
 }
 
 /**
@@ -75,48 +60,30 @@ export async function updateDebt(
   id: number,
   data: Partial<Debt>
 ): Promise<void> {
-  const db = await getDatabase();
-  const fields: string[] = [];
-  const values: any[] = [];
-
-  if (data.type !== undefined) { fields.push('type = ?'); values.push(data.type); }
-  if (data.personName !== undefined) { fields.push('personName = ?'); values.push(data.personName); }
-  if (data.description !== undefined) { fields.push('description = ?'); values.push(data.description); }
-  if (data.amountUSD !== undefined) { fields.push('amountUSD = ?'); values.push(data.amountUSD); }
-  if (data.amountBS !== undefined) { fields.push('amountBS = ?'); values.push(data.amountBS); }
-  if (data.currency !== undefined) { fields.push('currency = ?'); values.push(data.currency); }
-  if (data.interestRate !== undefined) { fields.push('interestRate = ?'); values.push(data.interestRate); }
-  if (data.totalAmountUSD !== undefined) { fields.push('totalAmountUSD = ?'); values.push(data.totalAmountUSD); }
-  if (data.totalAmountBS !== undefined) { fields.push('totalAmountBS = ?'); values.push(data.totalAmountBS); }
-  if (data.paidAmountUSD !== undefined) { fields.push('paidAmountUSD = ?'); values.push(data.paidAmountUSD); }
-  if (data.paidAmountBS !== undefined) { fields.push('paidAmountBS = ?'); values.push(data.paidAmountBS); }
-  if (data.dueDate !== undefined) { fields.push('dueDate = ?'); values.push(data.dueDate); }
-  if (data.status !== undefined) { fields.push('status = ?'); values.push(data.status); }
-  if (data.notes !== undefined) { fields.push('notes = ?'); values.push(data.notes); }
-
-  if (fields.length > 0) {
-    values.push(id);
-    await db.runAsync(`UPDATE debts SET ${fields.join(', ')} WHERE id = ?`, values);
-  }
+  await db.debts.update(id, data);
 }
 
 /**
- * Elimina una deuda y sus pagos asociados (CASCADE).
+ * Elimina una deuda y sus pagos asociados.
  */
 export async function deleteDebt(id: number): Promise<void> {
-  const db = await getDatabase();
-  await db.runAsync('DELETE FROM debts WHERE id = ?', [id]);
+  // Eliminar pagos asociados
+  const payments = await db.debtPayments.where('debtId').equals(id).toArray();
+  for (const p of payments) {
+    await db.debtPayments.delete(p.id);
+  }
+  await db.debts.delete(id);
 }
 
 /**
  * Obtiene los pagos de una deuda.
  */
 export async function getDebtPayments(debtId: number): Promise<DebtPayment[]> {
-  const db = await getDatabase();
-  return await db.getAllAsync<DebtPayment>(
-    'SELECT * FROM debt_payments WHERE debtId = ? ORDER BY date DESC',
-    [debtId]
-  );
+  return await db.debtPayments
+    .where('debtId')
+    .equals(debtId)
+    .reverse()
+    .sortBy('date');
 }
 
 /**
@@ -129,14 +96,17 @@ export async function recordPayment(
   date: string,
   notes?: string
 ): Promise<number> {
-  const db = await getDatabase();
+  const now = new Date().toISOString();
 
   // Insertar el pago
-  const result = await db.runAsync(
-    `INSERT INTO debt_payments (debtId, amountUSD, amountBS, date, notes)
-     VALUES (?, ?, ?, ?, ?)`,
-    [debtId, amountUSD, amountBS, date, notes || null]
-  );
+  const paymentId = await db.debtPayments.add({
+    debtId,
+    amountUSD,
+    amountBS,
+    date,
+    notes: notes ?? null,
+    createdAt: now,
+  } as DebtPayment);
 
   // Actualizar paidAmount en la deuda
   const debt = await getDebtById(debtId);
@@ -162,7 +132,7 @@ export async function recordPayment(
     });
   }
 
-  return result.lastInsertRowId;
+  return paymentId;
 }
 
 /**
@@ -178,42 +148,32 @@ export async function getDebtSummary(): Promise<{
   activeLentCount: number;
   activeBorrowedCount: number;
 }> {
-  const db = await getDatabase();
+  const allDebts = await db.debts.toArray();
 
-  const lentResult = await db.getFirstAsync<{
-    totalUSD: number | null;
-    totalBS: number | null;
-    count: number;
-  }>(
-    `SELECT
-       COALESCE(SUM(COALESCE(totalAmountUSD, amountUSD, 0)), 0) as totalUSD,
-       COALESCE(SUM(COALESCE(totalAmountBS, amountBS, 0)), 0) as totalBS,
-       COUNT(*) as count
-     FROM debts
-     WHERE type = 'lent' AND status = 'active'`
+  const activeLent = allDebts.filter((d) => d.type === 'lent' && d.status === 'active');
+  const activeBorrowed = allDebts.filter((d) => d.type === 'borrowed' && d.status === 'active');
+
+  const totalLentUSD = activeLent.reduce(
+    (sum, d) => sum + (d.totalAmountUSD || d.amountUSD || 0), 0
   );
-
-  const borrowedResult = await db.getFirstAsync<{
-    totalUSD: number | null;
-    totalBS: number | null;
-    count: number;
-  }>(
-    `SELECT
-       COALESCE(SUM(COALESCE(totalAmountUSD, amountUSD, 0)), 0) as totalUSD,
-       COALESCE(SUM(COALESCE(totalAmountBS, amountBS, 0)), 0) as totalBS,
-       COUNT(*) as count
-     FROM debts
-     WHERE type = 'borrowed' AND status = 'active'`
+  const totalLentBS = activeLent.reduce(
+    (sum, d) => sum + (d.totalAmountBS || d.amountBS || 0), 0
+  );
+  const totalBorrowedUSD = activeBorrowed.reduce(
+    (sum, d) => sum + (d.totalAmountUSD || d.amountUSD || 0), 0
+  );
+  const totalBorrowedBS = activeBorrowed.reduce(
+    (sum, d) => sum + (d.totalAmountBS || d.amountBS || 0), 0
   );
 
   return {
-    totalLentUSD: lentResult?.totalUSD ?? 0,
-    totalLentBS: lentResult?.totalBS ?? 0,
-    totalBorrowedUSD: borrowedResult?.totalUSD ?? 0,
-    totalBorrowedBS: borrowedResult?.totalBS ?? 0,
-    netBalanceUSD: (lentResult?.totalUSD ?? 0) - (borrowedResult?.totalUSD ?? 0),
-    netBalanceBS: (lentResult?.totalBS ?? 0) - (borrowedResult?.totalBS ?? 0),
-    activeLentCount: lentResult?.count ?? 0,
-    activeBorrowedCount: borrowedResult?.count ?? 0,
+    totalLentUSD,
+    totalLentBS,
+    totalBorrowedUSD,
+    totalBorrowedBS,
+    netBalanceUSD: totalLentUSD - totalBorrowedUSD,
+    netBalanceBS: totalLentBS - totalBorrowedBS,
+    activeLentCount: activeLent.length,
+    activeBorrowedCount: activeBorrowed.length,
   };
 }

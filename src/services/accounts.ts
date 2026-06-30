@@ -1,109 +1,90 @@
-import { getDatabase } from './database';
+import { db } from './database';
 import type { Account } from '../utils/types';
 
 export async function getAccounts(): Promise<Account[]> {
-  const db = await getDatabase();
-  return await db.getAllAsync<Account>(
-    'SELECT * FROM accounts WHERE isActive = 1 ORDER BY createdAt ASC'
-  );
+  return await db.accounts
+    .where('isActive')
+    .equals(1)
+    .reverse()
+    .sortBy('createdAt');
 }
 
 export async function getAccountById(id: number): Promise<Account | null> {
-  const db = await getDatabase();
-  return await db.getFirstAsync<Account>(
-    'SELECT * FROM accounts WHERE id = ?',
-    [id]
-  );
+  return (await db.accounts.get(id)) ?? null;
 }
 
 export async function createAccount(account: Omit<Account, 'id' | 'createdAt'>): Promise<number> {
-  const db = await getDatabase();
-  const result = await db.runAsync(
-    `INSERT INTO accounts (name, type, currency, initialBalanceUSD, initialBalanceBS, icon, color, isActive, platform)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      account.name,
-      account.type,
-      account.currency,
-      account.initialBalanceUSD,
-      account.initialBalanceBS,
-      account.icon,
-      account.color,
-      account.isActive,
-      account.platform ?? null,
-    ]
-  );
-  return result.lastInsertRowId;
+  const now = new Date().toISOString();
+  const id = await db.accounts.add({
+    ...account,
+    platform: account.platform ?? null,
+    createdAt: now,
+  } as Account);
+  return id;
 }
 
 export async function updateAccount(id: number, account: Partial<Account>): Promise<void> {
-  const db = await getDatabase();
-  const fields: string[] = [];
-  const values: any[] = [];
-
-  if (account.name !== undefined) { fields.push('name = ?'); values.push(account.name); }
-  if (account.type !== undefined) { fields.push('type = ?'); values.push(account.type); }
-  if (account.currency !== undefined) { fields.push('currency = ?'); values.push(account.currency); }
-  if (account.initialBalanceUSD !== undefined) { fields.push('initialBalanceUSD = ?'); values.push(account.initialBalanceUSD); }
-  if (account.initialBalanceBS !== undefined) { fields.push('initialBalanceBS = ?'); values.push(account.initialBalanceBS); }
-  if (account.icon !== undefined) { fields.push('icon = ?'); values.push(account.icon); }
-  if (account.color !== undefined) { fields.push('color = ?'); values.push(account.color); }
-  if (account.isActive !== undefined) { fields.push('isActive = ?'); values.push(account.isActive); }
-
-  if (fields.length > 0) {
-    values.push(id);
-    await db.runAsync(
-      `UPDATE accounts SET ${fields.join(', ')} WHERE id = ?`,
-      values
-    );
-  }
+  await db.accounts.update(id, account);
 }
 
 export async function deleteAccount(id: number): Promise<void> {
-  const db = await getDatabase();
-  await db.runAsync('UPDATE accounts SET isActive = 0 WHERE id = ?', [id]);
+  await db.accounts.update(id, { isActive: 0 });
 }
 
 export async function getAccountBalance(id: number): Promise<{ balanceUSD: number; balanceBS: number }> {
-  const db = await getDatabase();
   const account = await getAccountById(id);
   if (!account) return { balanceUSD: 0, balanceBS: 0 };
 
-  const income = await db.getFirstAsync<{ usd: number; bs: number }>(
-    `SELECT COALESCE(SUM(amountUSD), 0) as usd, COALESCE(SUM(amountBS), 0) as bs
-     FROM transactions WHERE accountId = ? AND type = 'income'`,
-    [id]
-  );
+  const transactions = await db.transactions
+    .where('accountId')
+    .equals(id)
+    .toArray();
 
-  const expense = await db.getFirstAsync<{ usd: number; bs: number }>(
-    `SELECT COALESCE(SUM(amountUSD), 0) as usd, COALESCE(SUM(amountBS), 0) as bs
-     FROM transactions WHERE accountId = ? AND type = 'expense'`,
-    [id]
-  );
+  let incomeUSD = 0, incomeBS = 0;
+  let expenseUSD = 0, expenseBS = 0;
+  let transferOutUSD = 0, transferOutBS = 0;
+  let transferInUSD = 0, transferInBS = 0;
 
-  const transfersOut = await db.getFirstAsync<{ usd: number; bs: number }>(
-    `SELECT COALESCE(SUM(amountUSD), 0) as usd, COALESCE(SUM(amountBS), 0) as bs
-     FROM transactions WHERE accountId = ? AND type = 'transfer'`,
-    [id]
-  );
+  for (const tx of transactions) {
+    if (tx.type === 'income') {
+      incomeUSD += tx.amountUSD || 0;
+      incomeBS += tx.amountBS || 0;
+    } else if (tx.type === 'expense') {
+      expenseUSD += tx.amountUSD || 0;
+      expenseBS += tx.amountBS || 0;
+    } else if (tx.type === 'transfer') {
+      if (tx.accountId === id) {
+        transferOutUSD += tx.amountUSD || 0;
+        transferOutBS += tx.amountBS || 0;
+      }
+    }
+  }
 
-  const transfersIn = await db.getFirstAsync<{ usd: number; bs: number }>(
-    `SELECT COALESCE(SUM(amountUSD), 0) as usd, COALESCE(SUM(amountBS), 0) as bs
-     FROM transactions WHERE transferToAccountId = ? AND type = 'transfer'`,
-    [id]
-  );
+  // También obtener transferencias hacia esta cuenta
+  const transfersIn = await db.transactions
+    .where('transferToAccountId')
+    .equals(id)
+    .toArray();
+
+  for (const tx of transfersIn) {
+    if (tx.type === 'transfer') {
+      transferInUSD += tx.amountUSD || 0;
+      transferInBS += tx.amountBS || 0;
+    }
+  }
 
   return {
-    balanceUSD: account.initialBalanceUSD + (income?.usd || 0) - (expense?.usd || 0) - (transfersOut?.usd || 0) + (transfersIn?.usd || 0),
-    balanceBS: account.initialBalanceBS + (income?.bs || 0) - (expense?.bs || 0) - (transfersOut?.bs || 0) + (transfersIn?.bs || 0),
+    balanceUSD: account.initialBalanceUSD + incomeUSD - expenseUSD - transferOutUSD + transferInUSD,
+    balanceBS: account.initialBalanceBS + incomeBS - expenseBS - transferOutBS + transferInBS,
   };
 }
 
 export async function getAccountsByPlatform(): Promise<{ platform: string; accounts: Account[]; totalUSD: number; totalBS: number }[]> {
-  const db = await getDatabase();
-  const allAccounts = await db.getAllAsync<Account>(
-    "SELECT * FROM accounts WHERE isActive = 1 AND platform IS NOT NULL AND platform != '' ORDER BY platform, createdAt ASC"
-  );
+  const allAccounts = await db.accounts
+    .where('isActive')
+    .equals(1)
+    .filter(a => a.platform != null && a.platform !== '')
+    .sortBy('platform');
 
   const platformMap = new Map<string, Account[]>();
   for (const acc of allAccounts) {

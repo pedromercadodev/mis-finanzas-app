@@ -11,14 +11,34 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.tufinanzas.app",
       "infoPlist": {
-        "UIStatusBarHidden": false
+        "UIStatusBarHidden": false,
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "com.tufinanzas.app"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single",
+      "scope": "/",
+      "name": "Mis Finanzas",
+      "shortName": "Finanzas",
+      "description": "App de finanzas personales - Controla tus ingresos, gastos, metas y más",
+      "lang": "es-ES",
+      "startUrl": "/",
+      "display": "standalone",
+      "orientation": "portrait-primary",
+      "backgroundColor": "#0f0f1a",
+      "themeColor": "#0f0f1a",
+      "preferRelatedApplications": false,
+      "barStyle": "black-translucent",
+      "capabilities": ["push", "offline"],
+      "splash": {
+        "backgroundColor": "#0f0f1a",
+        "resizeMode": "contain"
+      }
     },
     "plugins": [
       "expo-router",
@@ -30,6 +50,12 @@
           }
         }
       ]
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "f1b045a3-3d8f-41bc-86a7-3cf019868e93"
+      }
+    }
   }
 }

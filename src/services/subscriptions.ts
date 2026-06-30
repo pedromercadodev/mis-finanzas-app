@@ -1,4 +1,4 @@
-import { getDatabase } from './database';
+import { db } from './database';
 import { createTransaction } from './transactions';
 import type { Subscription } from '../utils/types';
 
@@ -6,24 +6,20 @@ import type { Subscription } from '../utils/types';
  * Obtiene todas las suscripciones, opcionalmente solo las activas.
  */
 export async function getSubscriptions(activeOnly = false): Promise<Subscription[]> {
-  const db = await getDatabase();
-  let query = 'SELECT * FROM subscriptions';
-  const params: any[] = [];
+  let collection = db.subscriptions.orderBy('nextBillingDate');
 
   if (activeOnly) {
-    query += ' WHERE isActive = 1';
+    collection = collection.filter((s) => s.isActive === 1) as any;
   }
 
-  query += ' ORDER BY nextBillingDate ASC';
-  return await db.getAllAsync<Subscription>(query, params);
+  return await collection.toArray();
 }
 
 /**
  * Obtiene una suscripción por su ID.
  */
 export async function getSubscriptionById(id: number): Promise<Subscription | null> {
-  const db = await getDatabase();
-  return await db.getFirstAsync<Subscription>('SELECT * FROM subscriptions WHERE id = ?', [id]);
+  return (await db.subscriptions.get(id)) ?? null;
 }
 
 /**
@@ -32,28 +28,17 @@ export async function getSubscriptionById(id: number): Promise<Subscription | nu
 export async function createSubscription(
   data: Omit<Subscription, 'id' | 'createdAt'>
 ): Promise<number> {
-  const db = await getDatabase();
-  const result = await db.runAsync(
-    `INSERT INTO subscriptions (name, description, amountUSD, amountBS, currency, categoryId, accountId, frequency, intervalDays, billingDay, nextBillingDate, isActive, autoGenerate, notes)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      data.name,
-      data.description || null,
-      data.amountUSD ?? null,
-      data.amountBS ?? null,
-      data.currency,
-      data.categoryId,
-      data.accountId,
-      data.frequency,
-      data.intervalDays ?? null,
-      data.billingDay,
-      data.nextBillingDate,
-      data.isActive,
-      data.autoGenerate,
-      data.notes || null,
-    ]
-  );
-  return result.lastInsertRowId;
+  const now = new Date().toISOString();
+  const id = await db.subscriptions.add({
+    ...data,
+    description: data.description ?? null,
+    amountUSD: data.amountUSD ?? null,
+    amountBS: data.amountBS ?? null,
+    intervalDays: data.intervalDays ?? null,
+    notes: data.notes ?? null,
+    createdAt: now,
+  } as Subscription);
+  return id;
 }
 
 /**
@@ -63,44 +48,20 @@ export async function updateSubscription(
   id: number,
   data: Partial<Subscription>
 ): Promise<void> {
-  const db = await getDatabase();
-  const fields: string[] = [];
-  const values: any[] = [];
-
-  if (data.name !== undefined) { fields.push('name = ?'); values.push(data.name); }
-  if (data.description !== undefined) { fields.push('description = ?'); values.push(data.description); }
-  if (data.amountUSD !== undefined) { fields.push('amountUSD = ?'); values.push(data.amountUSD); }
-  if (data.amountBS !== undefined) { fields.push('amountBS = ?'); values.push(data.amountBS); }
-  if (data.currency !== undefined) { fields.push('currency = ?'); values.push(data.currency); }
-  if (data.categoryId !== undefined) { fields.push('categoryId = ?'); values.push(data.categoryId); }
-  if (data.accountId !== undefined) { fields.push('accountId = ?'); values.push(data.accountId); }
-  if (data.frequency !== undefined) { fields.push('frequency = ?'); values.push(data.frequency); }
-  if (data.intervalDays !== undefined) { fields.push('intervalDays = ?'); values.push(data.intervalDays); }
-  if (data.billingDay !== undefined) { fields.push('billingDay = ?'); values.push(data.billingDay); }
-  if (data.nextBillingDate !== undefined) { fields.push('nextBillingDate = ?'); values.push(data.nextBillingDate); }
-  if (data.isActive !== undefined) { fields.push('isActive = ?'); values.push(data.isActive); }
-  if (data.autoGenerate !== undefined) { fields.push('autoGenerate = ?'); values.push(data.autoGenerate); }
-  if (data.notes !== undefined) { fields.push('notes = ?'); values.push(data.notes); }
-
-  if (fields.length > 0) {
-    values.push(id);
-    await db.runAsync(`UPDATE subscriptions SET ${fields.join(', ')} WHERE id = ?`, values);
-  }
+  await db.subscriptions.update(id, data);
 }
 
 /**
  * Elimina una suscripción.
  */
 export async function deleteSubscription(id: number): Promise<void> {
-  const db = await getDatabase();
-  await db.runAsync('DELETE FROM subscriptions WHERE id = ?', [id]);
+  await db.subscriptions.delete(id);
 }
 
 /**
  * Obtiene las suscripciones cuya próxima fecha de cobro ya pasó o vence en los próximos `daysAhead` días.
  */
 export async function getDueSubscriptions(daysAhead = 0): Promise<Subscription[]> {
-  const db = await getDatabase();
   const today = new Date().toISOString().split('T')[0];
 
   // Fecha límite: hoy + daysAhead días
@@ -108,13 +69,10 @@ export async function getDueSubscriptions(daysAhead = 0): Promise<Subscription[]
   limitDate.setDate(limitDate.getDate() + daysAhead);
   const limitDateStr = limitDate.toISOString().split('T')[0];
 
-  return await db.getAllAsync<Subscription>(
-    `SELECT * FROM subscriptions
-     WHERE isActive = 1
-       AND nextBillingDate <= ?
-     ORDER BY nextBillingDate ASC`,
-    [limitDateStr]
-  );
+  const all = await db.subscriptions.toArray();
+  return all
+    .filter((s) => s.isActive === 1 && s.nextBillingDate <= limitDateStr)
+    .sort((a, b) => a.nextBillingDate.localeCompare(b.nextBillingDate));
 }
 
 /**
