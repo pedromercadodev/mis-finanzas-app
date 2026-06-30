@@ -15,13 +15,14 @@ export default function TabLayout() {
         }}
       >
         <Tabs.Screen name="index" />
-        <Tabs.Screen name="accounts" />
         <Tabs.Screen name="transactions" />
-        <Tabs.Screen name="budgets" />
-        <Tabs.Screen name="goals" />
         <Tabs.Screen name="reports" />
-        <Tabs.Screen name="subscriptions" />
         <Tabs.Screen name="settings" />
+        {/* Rutas ocultas de la tab bar (accesibles por navegación interna) */}
+        <Tabs.Screen name="accounts" options={{ href: null }} />
+        <Tabs.Screen name="budgets" options={{ href: null }} />
+        <Tabs.Screen name="goals" options={{ href: null }} />
+        <Tabs.Screen name="subscriptions" options={{ href: null }} />
       </Tabs>
     </View>
   );

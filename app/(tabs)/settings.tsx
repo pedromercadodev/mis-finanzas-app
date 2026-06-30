@@ -20,6 +20,7 @@ import { useSettings } from '../../src/store/useSettings';
 import { formatBS } from '../../src/utils/format';
 import type { RateType } from '../../src/utils/types';
 import { exportData, shareFile } from '../../src/services/export';
+import { testDeepSeekConnection } from '../../src/services/deepseek';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -147,7 +148,7 @@ export default function SettingsScreen() {
             <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
           </TouchableOpacity>
           {showDeepseek && (
-            <View style={{ padding: 16 }}>
+            <View style={{ padding: 16, gap: 10 }}>
               <TextInput
                 value={deepseekKey}
                 onChangeText={setDeepseekKey}
@@ -164,6 +165,22 @@ export default function SettingsScreen() {
                   borderColor: themeColors.border,
                 }}
               />
+              <TouchableOpacity
+                onPress={async () => {
+                  const result = await testDeepSeekConnection(deepseekKey);
+                  Alert.alert('DeepSeek', result.message);
+                }}
+                style={{
+                  backgroundColor: themeColors.primary,
+                  borderRadius: 10,
+                  padding: 12,
+                  alignItems: 'center',
+                }}
+              >
+                <Text style={{ color: '#FFF', fontWeight: '600' }}>
+                  Probar conexión
+                </Text>
+              </TouchableOpacity>
             </View>
           )}
 
@@ -357,7 +374,9 @@ export default function SettingsScreen() {
           Gestión
         </Text>
         <View style={{ backgroundColor: themeColors.surface, borderRadius: 16, marginBottom: 24, overflow: 'hidden' }}>
-          <TouchableOpacity style={{
+          <TouchableOpacity
+            onPress={() => router.push('/(tabs)/accounts')}
+            style={{
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',

@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { updateAccount } from '../../src/services/accounts';
 import {
   View,
   Text,
@@ -6,6 +7,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   Alert,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -41,6 +43,8 @@ export default function AccountDetailScreen() {
 
   const [balance, setBalance] = useState({ balanceUSD: 0, balanceBS: 0 });
   const [refreshing, setRefreshing] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editName, setEditName] = useState('');
 
   const account = accounts.find((a) => a.id === accountId);
 
@@ -146,7 +150,7 @@ export default function AccountDetailScreen() {
           borderBottomLeftRadius: 32,
           borderBottomRightRadius: 32,
         }}>
-          {/* Back + Delete */}
+          {/* Back + Edit + Delete */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <TouchableOpacity
               onPress={() => router.back()}
@@ -161,19 +165,37 @@ export default function AccountDetailScreen() {
             >
               <Ionicons name="chevron-back" size={24} color="#FFF" />
             </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleDelete}
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
-                backgroundColor: 'rgba(255,255,255,0.2)',
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}
-            >
-              <Ionicons name="trash-outline" size={20} color="#FFF" />
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <TouchableOpacity
+                onPress={() => {
+                  setEditName(account?.name || '');
+                  setShowEditModal(true);
+                }}
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: 'rgba(255,255,255,0.2)',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
+              >
+                <Ionicons name="pencil" size={20} color="#FFF" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleDelete}
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: 'rgba(255,255,255,0.2)',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
+              >
+                <Ionicons name="trash-outline" size={20} color="#FFF" />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Icon + Name */}
@@ -406,6 +428,95 @@ export default function AccountDetailScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* Modal para editar nombre */}
+      {showEditModal && (
+        <View style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: 20,
+        }}>
+          <View style={{
+            backgroundColor: themeColors.surface,
+            borderRadius: 20,
+            padding: 24,
+            width: '100%',
+            maxWidth: 340,
+          }}>
+            <Text style={{
+              fontSize: 18,
+              fontWeight: '700',
+              color: themeColors.text,
+              marginBottom: 16,
+            }}>
+              Editar nombre
+            </Text>
+            <TextInput
+              value={editName}
+              onChangeText={setEditName}
+              placeholder="Nuevo nombre"
+              placeholderTextColor={themeColors.textSecondary}
+              autoFocus
+              style={{
+                backgroundColor: themeColors.background,
+                borderRadius: 12,
+                padding: 14,
+                fontSize: 15,
+                color: themeColors.text,
+                marginBottom: 20,
+                borderWidth: 1,
+                borderColor: themeColors.border,
+              }}
+            />
+            <View style={{ flexDirection: 'row', gap: 12, justifyContent: 'flex-end' }}>
+              <TouchableOpacity
+                onPress={() => setShowEditModal(false)}
+                style={{
+                  paddingHorizontal: 20,
+                  paddingVertical: 12,
+                  borderRadius: 12,
+                  backgroundColor: themeColors.surface,
+                  borderWidth: 1,
+                  borderColor: themeColors.border,
+                }}
+              >
+                <Text style={{ fontSize: 14, fontWeight: '600', color: themeColors.text }}>
+                  Cancelar
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={async () => {
+                  if (!editName.trim()) return;
+                  try {
+                    await updateAccount(accountId, { name: editName.trim() });
+                    await loadData();
+                    setShowEditModal(false);
+                    Alert.alert('✅ Listo', 'Nombre actualizado correctamente');
+                  } catch (error: any) {
+                    Alert.alert('Error', error?.message || 'No se pudo actualizar');
+                  }
+                }}
+                style={{
+                  paddingHorizontal: 20,
+                  paddingVertical: 12,
+                  borderRadius: 12,
+                  backgroundColor: themeColors.primary,
+                }}
+              >
+                <Text style={{ fontSize: 14, fontWeight: '600', color: '#FFF' }}>
+                  Guardar
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }

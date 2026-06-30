@@ -23,6 +23,7 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="account/new" options={{ presentation: 'modal', headerShown: true, title: 'Nueva Cuenta', contentStyle: { backgroundColor: themeColors.background } }} />
         <Stack.Screen name="account/[id]" options={{ presentation: 'modal', headerShown: true, title: 'Detalle de Cuenta', contentStyle: { backgroundColor: themeColors.background } }} />
+        <Stack.Screen name="ai-chat" options={{ presentation: 'modal', headerShown: false }} />
       </Stack>
     </View>
   );

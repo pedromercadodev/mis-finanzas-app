@@ -7,12 +7,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const TABS = [
   { name: 'index', title: 'Resumen', icon: 'home-outline', iconActive: 'home' },
-  { name: 'accounts', title: 'Cuentas', icon: 'wallet-outline', iconActive: 'wallet' },
   { name: 'transactions', title: 'Movimientos', icon: 'swap-horizontal-outline', iconActive: 'swap-horizontal' },
-  { name: 'budgets', title: 'Presupuestos', icon: 'pie-chart-outline', iconActive: 'pie-chart' },
-  { name: 'goals', title: 'Metas', icon: 'trophy-outline', iconActive: 'trophy' },
+  { name: 'ai-chat', title: 'Asistente', icon: 'sparkles-outline', iconActive: 'sparkles' },
   { name: 'reports', title: 'Reportes', icon: 'bar-chart-outline', iconActive: 'bar-chart' },
-  { name: 'subscriptions', title: 'Suscrip.', icon: 'repeat-outline', iconActive: 'repeat' },
   { name: 'settings', title: 'Ajustes', icon: 'settings-outline', iconActive: 'settings' },
 ] as const;
 
@@ -53,6 +50,10 @@ export default function AnimatedTabBar() {
   }, [currentIndex]);
 
   const navigate = useCallback((name: string) => {
+    if (name === 'ai-chat') {
+      router.push('/ai-chat');
+      return;
+    }
     const targetPath = name === 'index' ? '/(tabs)' as const : `/(tabs)/${name}` as const;
     router.replace(targetPath);
   }, [router]);
