@@ -1,8 +1,8 @@
-import { View, Text, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, Dimensions, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { usePathname, useRouter } from 'expo-router';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { motion } from 'framer-motion';
 
@@ -16,6 +16,10 @@ const TABS = [
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const TAB_WIDTH = SCREEN_WIDTH / TABS.length;
+
+// En web, framer-motion usa motion.div directamente
+// En algunos entornos Expo, puede necesitar motion.create('div')
+const MotionDiv = typeof motion.div === 'function' ? motion.div : (motion as any).create?.('div') ?? motion.div;
 
 export default function AnimatedTabBar() {
   const themeColors = useThemeColors();
@@ -38,6 +42,16 @@ export default function AnimatedTabBar() {
     router.push(targetPath);
   }, [router]);
 
+  const indicatorStyle = useMemo(() => ({
+    position: 'absolute' as const,
+    top: 0,
+    left: TAB_WIDTH * 0.2,
+    width: TAB_WIDTH * 0.6,
+    height: 3,
+    backgroundColor: themeColors.primary,
+    borderRadius: 2,
+  }), [themeColors.primary]);
+
   return (
     <View
       style={{
@@ -58,16 +72,8 @@ export default function AnimatedTabBar() {
       }}
     >
       {/* Indicador deslizante con framer-motion */}
-      <motion.div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: TAB_WIDTH * 0.2,
-          width: TAB_WIDTH * 0.6,
-          height: 3,
-          backgroundColor: themeColors.primary,
-          borderRadius: 2,
-        }}
+      <MotionDiv
+        style={indicatorStyle}
         animate={{ x: currentIndex * TAB_WIDTH }}
         transition={{ type: 'spring', stiffness: 120, damping: 10 }}
       />
@@ -87,7 +93,7 @@ export default function AnimatedTabBar() {
               paddingTop: 6,
             }}
           >
-            <motion.div
+            <MotionDiv
               style={{
                 width: 46,
                 height: 46,
@@ -109,7 +115,7 @@ export default function AnimatedTabBar() {
                 size={isActive ? 24 : 22}
                 color={isActive ? themeColors.primary : themeColors.textSecondary}
               />
-            </motion.div>
+            </MotionDiv>
             <Text
               style={{
                 fontSize: 10,

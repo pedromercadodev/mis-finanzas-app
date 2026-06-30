@@ -1,9 +1,10 @@
 {
   "version": 2,
-  "buildCommand": "npx expo export --platform web && echo 'Copying PWA files...' && (robocopy public dist /E /NJH /NJS /NDL /NFL >nul 2>&1 || cp -r public/* dist/ 2>/dev/null || xcopy /E /I /Y public dist >nul 2>&1) && echo 'Build complete'",
+  "buildCommand": "npx expo export --platform web && cp -r public/* dist/ 2>/dev/null; echo 'Build complete'",
   "outputDirectory": "dist",
   "devCommand": "npx expo start --web",
   "framework": null,
+  "installCommand": "npm install --ignore-scripts",
   "rewrites": [
     {
       "source": "/(.*)",

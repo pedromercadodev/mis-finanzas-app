@@ -55,6 +55,20 @@ class FinanzasDatabase extends Dexie {
       debts: '++id, isActive, createdAt',
       debtPayments: '++id, debtId, createdAt',
     });
+
+    this.version(2).stores({
+      accounts: '++id, platform, currency, isActive, createdAt',
+      transactions: '++id, accountId, categoryId, type, date, createdAt, [type+date], [accountId+date]',
+      categories: '++id, type, groupId, sortOrder',
+      categoryGroups: '++id, type, sortOrder, createdAt',
+      budgetAllocations: '++id, categoryId, month, [categoryId+month]',
+      goals: '++id, isActive, createdAt',
+      goalItems: '++id, goalId, isCompleted, createdAt',
+      exchangeRates: '++id, rateType, date',
+      subscriptions: '++id, accountId, isActive, frequency, nextBillingDate, createdAt',
+      debts: '++id, isActive, createdAt',
+      debtPayments: '++id, debtId, createdAt',
+    });
   }
 }
 

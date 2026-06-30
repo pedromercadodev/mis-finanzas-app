@@ -1,28 +1,27 @@
-import { getDatabase } from './database';
+import { db } from '../db/dexie-db';
 import type { ExchangeRate, RateType } from '../utils/types';
 
 export async function getLatestRate(): Promise<ExchangeRate | null> {
-  const db = await getDatabase();
-  return await db.getFirstAsync<ExchangeRate>(
-    'SELECT * FROM exchange_rates ORDER BY date DESC, id DESC LIMIT 1'
-  );
+  const rates = await db.exchangeRates
+    .orderBy('id')
+    .reverse()
+    .limit(1)
+    .toArray();
+  return rates[0] || null;
 }
 
 export async function getLatestRateByType(type: RateType): Promise<ExchangeRate | null> {
-  const db = await getDatabase();
-  return await db.getFirstAsync<ExchangeRate>(
-    'SELECT * FROM exchange_rates WHERE rateType = ? ORDER BY date DESC, id DESC LIMIT 1',
-    [type]
-  );
+  const rates = await db.exchangeRates
+    .where('rateType')
+    .equals(type)
+    .reverse()
+    .sortBy('id');
+  return rates[0] || null;
 }
 
 export async function saveRate(rate: Omit<ExchangeRate, 'id'>): Promise<number> {
-  const db = await getDatabase();
-  const result = await db.runAsync(
-    'INSERT INTO exchange_rates (rateType, rateUSDToBS, date, source) VALUES (?, ?, ?, ?)',
-    [rate.rateType, rate.rateUSDToBS, rate.date, rate.source]
-  );
-  return result.lastInsertRowId;
+  const id = await db.exchangeRates.add(rate as ExchangeRate);
+  return id as number;
 }
 
 // ─── DOLARAPI (Principal - ambas tasas) ────────────────────────────────────

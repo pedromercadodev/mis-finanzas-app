@@ -2,7 +2,7 @@ import { ReactNode, useEffect, useRef } from 'react';
 import { View, Dimensions } from 'react-native';
 import { usePathname } from 'expo-router';
 import { useThemeColors } from '../hooks/useThemeColors';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -10,15 +10,13 @@ interface AnimatedTransitionProps {
   children: ReactNode;
 }
 
+// En web, framer-motion usa motion.div directamente
+const MotionDiv = typeof motion.div === 'function' ? motion.div : (motion as any).create?.('div') ?? motion.div;
+
 /**
  * AnimatedTransition - Envuelve el contenido de cada tab
  * y aplica una animación combinada de Slide Horizontal + Fade + Scale
  * cuando la ruta cambia.
- *
- * Efecto premium tipo Monzo/Revolut:
- * - Slide horizontal (300ms)
- * - Fade simultáneo
- * - Scale sutil (0.98 → 1.0)
  */
 export default function AnimatedTransition({ children }: AnimatedTransitionProps) {
   const themeColors = useThemeColors();
@@ -48,7 +46,7 @@ export default function AnimatedTransition({ children }: AnimatedTransitionProps
   };
 
   return (
-    <motion.div
+    <MotionDiv
       key={pathname}
       initial="initial"
       animate="animate"
@@ -67,6 +65,6 @@ export default function AnimatedTransition({ children }: AnimatedTransitionProps
       }}
     >
       {children}
-    </motion.div>
+    </MotionDiv>
   );
 }
