@@ -35,7 +35,7 @@ export default function AnimatedTabBar() {
       return;
     }
     const targetPath = name === 'index' ? '/(tabs)' as const : `/(tabs)/${name}` as const;
-    router.replace(targetPath);
+    router.push(targetPath);
   }, [router]);
 
   return (

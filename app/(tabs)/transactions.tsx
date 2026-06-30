@@ -255,6 +255,7 @@ export default function TransactionsScreen() {
     <AnimatedTransition>
     <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
       <ScrollView
+        style={{ flex: 1 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         contentContainerStyle={{ padding: 20, paddingBottom: 100 }}
       >

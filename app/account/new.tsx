@@ -85,6 +85,7 @@ export default function NewAccountScreen() {
         style={{ flex: 1 }}
       >
         <ScrollView
+          style={{ flex: 1 }}
           contentContainerStyle={{ padding: isSmall ? 14 : 20, paddingBottom: 40 }}
           keyboardShouldPersistTaps="handled"
         >

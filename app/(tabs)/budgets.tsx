@@ -120,6 +120,7 @@ export default function BudgetsScreen() {
     <AnimatedTransition>
     <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
       <ScrollView
+        style={{ flex: 1 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         contentContainerStyle={{ padding: isSmall ? 14 : 20, paddingBottom: 100 }}
       >

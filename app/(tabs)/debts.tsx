@@ -334,7 +334,7 @@ export default function DebtsScreen() {
   return (
     <AnimatedTransition>
       <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
-        <ScrollView contentContainerStyle={{ padding: isSmall ? 14 : 20, paddingBottom: 100 }}>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: isSmall ? 14 : 20, paddingBottom: 100 }}>
           {/* Header */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <Text style={{ fontSize: isSmall ? 24 : 28, fontWeight: '700', color: themeColors.text }}>

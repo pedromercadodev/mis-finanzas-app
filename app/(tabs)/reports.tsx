@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useWindowDimensions } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Dimensions,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -159,7 +160,7 @@ export default function ReportsScreen() {
   return (
     <AnimatedTransition>
       <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
-        <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
           {/* Header */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <Text style={{ fontSize: 28, fontWeight: '700', color: themeColors.text }}>

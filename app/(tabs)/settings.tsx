@@ -114,7 +114,7 @@ export default function SettingsScreen() {
   return (
     <AnimatedTransition>
     <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
         <Text style={{ fontSize: isSmall ? 24 : 28, fontWeight: '700', color: themeColors.text, marginBottom: isSmall ? 16 : 24 }}>
           Ajustes
         </Text>

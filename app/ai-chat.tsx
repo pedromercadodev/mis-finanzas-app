@@ -1502,6 +1502,7 @@ export default function AIChatScreen() {
           data={messages}
           keyExtractor={(item) => item.id}
           renderItem={renderMessage}
+          style={{ flex: 1 }}
           contentContainerStyle={{
             paddingVertical: 16,
             flexGrow: 1,
