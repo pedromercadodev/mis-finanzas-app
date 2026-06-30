@@ -10,6 +10,7 @@ import {
   RefreshControl,
   KeyboardAvoidingView,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -36,6 +37,8 @@ const GROUP_ICONS = ['📁', '📋', '🎯', '💰', '🏠', '🛒', '💼', '�
 export default function CategoriesScreen() {
   const router = useRouter();
   const themeColors = useThemeColors();
+  const { width: screenWidth } = useWindowDimensions();
+  const isSmall = screenWidth < 400;
   const [categories, setCategories] = useState<CategoryWithGroup[]>([]);
   const [groups, setGroups] = useState<CategoryGroup[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -253,15 +256,15 @@ export default function CategoriesScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
       <ScrollView
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        contentContainerStyle={{ padding: 20, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: isSmall ? 14 : 20, paddingBottom: 100 }}
       >
         {/* Header */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: isSmall ? 16 : 24 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <TouchableOpacity onPress={() => router.back()}>
               <Ionicons name="arrow-back" size={24} color={themeColors.text} />
             </TouchableOpacity>
-            <Text style={{ fontSize: 28, fontWeight: '700', color: themeColors.text }}>
+            <Text style={{ fontSize: isSmall ? 24 : 28, fontWeight: '700', color: themeColors.text }}>
               Categorías
             </Text>
           </View>

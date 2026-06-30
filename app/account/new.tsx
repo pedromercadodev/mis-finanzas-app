@@ -8,6 +8,7 @@ import {
   Alert,
   Platform,
   KeyboardAvoidingView,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -35,6 +36,8 @@ const accountIcons = [
 export default function NewAccountScreen() {
   const router = useRouter();
   const themeColors = useThemeColors();
+  const { width: screenWidth } = useWindowDimensions();
+  const isSmall = screenWidth < 400;
   const { addAccount, loadAccounts } = useAccounts();
   const [name, setName] = useState('');
   const [type, setType] = useState<AccountType>('exchange');
@@ -82,7 +85,7 @@ export default function NewAccountScreen() {
         style={{ flex: 1 }}
       >
         <ScrollView
-          contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
+          contentContainerStyle={{ padding: isSmall ? 14 : 20, paddingBottom: 40 }}
           keyboardShouldPersistTaps="handled"
         >
           {/* Nombre */}
@@ -97,8 +100,8 @@ export default function NewAccountScreen() {
             style={{
               backgroundColor: themeColors.surface,
               borderRadius: 12,
-              padding: 14,
-              fontSize: 15,
+              padding: isSmall ? 12 : 14,
+              fontSize: isSmall ? 14 : 15,
               color: themeColors.text,
               marginBottom: 20,
               borderWidth: 1,
@@ -151,7 +154,7 @@ export default function NewAccountScreen() {
             style={{
               backgroundColor: themeColors.surface,
               borderRadius: 12,
-              padding: 14,
+              padding: isSmall ? 12 : 14,
               fontSize: 15,
               color: themeColors.text,
               marginBottom: 20,

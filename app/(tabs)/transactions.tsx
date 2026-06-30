@@ -10,6 +10,7 @@ import {
   Alert,
   Platform,
   KeyboardAvoidingView,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -61,6 +62,10 @@ function getPeriodDates(filter: PeriodFilter): { start: string; end: string; lab
 }
 
 export default function TransactionsScreen() {
+  const { width: screenWidth } = useWindowDimensions();
+  const isSmall = screenWidth < 400;
+  const gap = isSmall ? 8 : 12;
+  const pad = isSmall ? 12 : 14;
   const params = useLocalSearchParams<{ presetAccountId?: string; presetType?: string }>();
   const themeColors = useThemeColors();
   const { accounts, loadAccounts } = useAccounts();

@@ -10,6 +10,7 @@ import {
   Alert,
   Platform,
   KeyboardAvoidingView,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -40,6 +41,8 @@ const NO_PROGRESS_MESSAGES = [
 
 export default function GoalsScreen() {
   const themeColors = useThemeColors();
+  const { width: screenWidth } = useWindowDimensions();
+  const isSmall = screenWidth < 400;
   const [goals, setGoals] = useState<GoalWithItems[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -307,10 +310,10 @@ export default function GoalsScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
       <ScrollView
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        contentContainerStyle={{ padding: 20, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: isSmall ? 14 : 20, paddingBottom: 100 }}
       >
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <Text style={{ fontSize: 28, fontWeight: '700', color: themeColors.text }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: isSmall ? 14 : 20 }}>
+          <Text style={{ fontSize: isSmall ? 24 : 28, fontWeight: '700', color: themeColors.text }}>
             Metas
           </Text>
           <TouchableOpacity
@@ -318,8 +321,8 @@ export default function GoalsScreen() {
             style={{
               backgroundColor: themeColors.primary,
               borderRadius: 12,
-              paddingHorizontal: 16,
-              paddingVertical: 10,
+              paddingHorizontal: isSmall ? 12 : 16,
+              paddingVertical: isSmall ? 8 : 10,
               flexDirection: 'row',
               alignItems: 'center',
               gap: 6,
@@ -349,7 +352,7 @@ export default function GoalsScreen() {
                 style={{
                   backgroundColor: themeColors.surface,
                   borderRadius: 20,
-                  padding: 20,
+                  padding: isSmall ? 14 : 20,
                   flexDirection: 'row',
                   alignItems: 'center',
                   shadowColor: '#000',
@@ -413,7 +416,7 @@ export default function GoalsScreen() {
                   <Text style={{ fontSize: 16, fontWeight: '600', color: themeColors.text, marginBottom: 4 }}>
                     {goal.name}
                   </Text>
-                  <Text style={{ fontSize: 14, color: themeColors.textSecondary }}>
+                  <Text style={{ fontSize: isSmall ? 12 : 14, color: themeColors.textSecondary }}>
                     {goal.currency === 'USD' ? formatUSD(goal.currentAmount) : formatBS(goal.currentAmount)}
                     {' / '}
                     {goal.currency === 'USD' ? formatUSD(goal.targetAmount) : formatBS(goal.targetAmount)}
@@ -509,7 +512,7 @@ export default function GoalsScreen() {
                           }}>
                             {item.name}
                           </Text>
-                          <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>
+                          <Text style={{ fontSize: isSmall ? 11 : 12, color: themeColors.textSecondary }}>
                             {goal.currency === 'USD' ? formatUSD(item.currentAmount) : formatBS(item.currentAmount)}
                             {' / '}
                             {goal.currency === 'USD' ? formatUSD(item.targetAmount) : formatBS(item.targetAmount)}
@@ -622,7 +625,7 @@ export default function GoalsScreen() {
             style={{ flex: 1 }}
           >
             <ScrollView contentContainerStyle={{ padding: 20 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: isSmall ? 16 : 24 }}>
                 <Text style={{ fontSize: 24, fontWeight: '700', color: themeColors.text }}>
                   Nueva Meta
                 </Text>
@@ -777,7 +780,7 @@ export default function GoalsScreen() {
             style={{ flex: 1 }}
           >
             <ScrollView contentContainerStyle={{ padding: 20 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: isSmall ? 16 : 24 }}>
                 <Text style={{ fontSize: 24, fontWeight: '700', color: themeColors.text }}>
                   Nuevo Ítem
                 </Text>
@@ -841,7 +844,7 @@ export default function GoalsScreen() {
             style={{ flex: 1 }}
           >
             <ScrollView contentContainerStyle={{ padding: 20 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: isSmall ? 16 : 24 }}>
                 <Text style={{ fontSize: 24, fontWeight: '700', color: themeColors.text }}>
                   Abonar a Meta
                 </Text>

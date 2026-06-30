@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   Dimensions,
+  useWindowDimensions,
   ActivityIndicator,
   Alert,
 } from 'react-native';
@@ -24,6 +25,14 @@ import { formatUSD, formatBS, formatDateShort, getCurrentMonthRange } from '../.
 import type { Account } from '../../src/utils/types';
 
 export default function DashboardScreen() {
+  const { width: screenWidth } = useWindowDimensions();
+  const isSmall = screenWidth < 400;
+  const gap = isSmall ? 8 : 12;
+  const pad = isSmall ? 12 : 16;
+  const fontLg = isSmall ? 14 : 18;
+  const fontXl = isSmall ? 16 : 20;
+  const fontTitle = isSmall ? 24 : 28;
+  const fontSm = isSmall ? 11 : 13;
   const router = useRouter();
   const { accounts, loadAccounts } = useAccounts();
   const { transactions, loadTransactions } = useTransactions();
@@ -147,7 +156,7 @@ export default function DashboardScreen() {
       >
         {/* Header */}
         <View style={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 10 }}>
-          <Text style={{ fontSize: 28, fontWeight: '700', color: themeColors.text }}>
+          <Text style={{ fontSize: fontTitle, fontWeight: '700', color: themeColors.text }}>
             Mis Finanzas
           </Text>
         </View>
@@ -161,7 +170,7 @@ export default function DashboardScreen() {
           <View style={{
             backgroundColor: themeColors.surface,
             borderRadius: 20,
-            padding: 24,
+            padding: isSmall ? 18 : 24,
             shadowColor: themeColors.primary,
             shadowOffset: { width: 0, height: 4 },
             shadowOpacity: 0.15,
@@ -187,11 +196,11 @@ export default function DashboardScreen() {
                 <Ionicons name="chevron-down" size={10} color={themeColors.primary} />
               </View>
             </View>
-            <Text style={{ fontSize: 36, fontWeight: '700', color: themeColors.text }}>
+            <Text style={{ fontSize: isSmall ? 30 : 36, fontWeight: '700', color: themeColors.text }}>
               {formatUSD(totalUSD)}
             </Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
-              <Text style={{ fontSize: 18, color: themeColors.textSecondary }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: isSmall ? 4 : 6, marginTop: 2 }}>
+              <Text style={{ fontSize: isSmall ? 15 : 18, color: themeColors.textSecondary }}>
                 {formatBS(totalBS)}
               </Text>
               <View style={{
@@ -239,7 +248,7 @@ export default function DashboardScreen() {
               </TouchableOpacity>
             </View>
 
-            <View style={{ flexDirection: 'row', gap: 12 }}>
+            <View style={{ flexDirection: 'row', gap }}>
               {/* Tasa BCV */}
               <TouchableOpacity
                 onPress={() => {
@@ -249,7 +258,7 @@ export default function DashboardScreen() {
                   flex: 1,
                   backgroundColor: preferredRateType === 'BCV' && !manualRate ? themeColors.primaryLight + '60' : themeColors.primaryLight + '40',
                   borderRadius: 12,
-                  padding: 12,
+                  padding: isSmall ? 10 : 12,
                   borderWidth: preferredRateType === 'BCV' && !manualRate ? 1.5 : 0,
                   borderColor: preferredRateType === 'BCV' && !manualRate ? themeColors.primary : 'transparent',
                 }}
@@ -265,14 +274,14 @@ export default function DashboardScreen() {
                   }}>
                     <Text style={{ fontSize: 12 }}>🏛️</Text>
                   </View>
-                  <Text style={{ fontSize: 12, fontWeight: '600', color: themeColors.textSecondary }}>
+                  <Text style={{ fontSize: isSmall ? 11 : 12, fontWeight: '600', color: themeColors.textSecondary }}>
                     BCV
                   </Text>
                   {preferredRateType === 'BCV' && !manualRate && (
                     <Ionicons name="checkmark-circle" size={14} color={themeColors.primary} />
                   )}
                 </View>
-                <Text style={{ fontSize: 18, fontWeight: '700', color: themeColors.text }}>
+                <Text style={{ fontSize: isSmall ? 15 : 18, fontWeight: '700', color: themeColors.text }}>
                   {bcvRate ? formatBS(bcvRate.rateUSDToBS) : '—'}
                 </Text>
               </TouchableOpacity>
@@ -302,14 +311,14 @@ export default function DashboardScreen() {
                   }}>
                     <Text style={{ fontSize: 12 }}>💱</Text>
                   </View>
-                  <Text style={{ fontSize: 12, fontWeight: '600', color: themeColors.textSecondary }}>
+                  <Text style={{ fontSize: isSmall ? 11 : 12, fontWeight: '600', color: themeColors.textSecondary }}>
                     Paralelo
                   </Text>
                   {preferredRateType === 'PARALLEL' && !manualRate && (
                     <Ionicons name="checkmark-circle" size={14} color={themeColors.warning} />
                   )}
                 </View>
-                <Text style={{ fontSize: 18, fontWeight: '700', color: themeColors.text }}>
+                <Text style={{ fontSize: isSmall ? 15 : 18, fontWeight: '700', color: themeColors.text }}>
                   {parallelRate ? formatBS(parallelRate.rateUSDToBS) : '—'}
                 </Text>
               </TouchableOpacity>
@@ -390,19 +399,19 @@ export default function DashboardScreen() {
 
         {/* Accesos Rápidos */}
         <View style={{ marginHorizontal: 20, marginBottom: 20 }}>
-          <View style={{ flexDirection: 'row', gap: 12 }}>
+          <View style={{ flexDirection: 'row', gap }}>
             <TouchableOpacity
               onPress={() => router.push('/(tabs)/debts')}
               style={{
                 flex: 1,
                 backgroundColor: '#FEE2E2',
                 borderRadius: 16,
-                padding: 16,
+                padding: pad,
                 alignItems: 'center',
               }}
             >
               <Ionicons name="cash" size={24} color="#DC2626" />
-              <Text style={{ fontSize: 13, fontWeight: '600', color: '#DC2626', marginTop: 6 }}>
+              <Text style={{ fontSize: fontSm, fontWeight: '600', color: '#DC2626', marginTop: 6 }}>
                 Deudas
               </Text>
             </TouchableOpacity>
@@ -412,12 +421,12 @@ export default function DashboardScreen() {
                 flex: 1,
                 backgroundColor: themeColors.primaryLight + '60',
                 borderRadius: 16,
-                padding: 16,
+                padding: pad,
                 alignItems: 'center',
               }}
             >
               <Ionicons name="pie-chart" size={24} color={themeColors.primary} />
-              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.primary, marginTop: 6 }}>
+              <Text style={{ fontSize: fontSm, fontWeight: '600', color: themeColors.primary, marginTop: 6 }}>
                 Presupuestos
               </Text>
             </TouchableOpacity>
@@ -427,12 +436,12 @@ export default function DashboardScreen() {
                 flex: 1,
                 backgroundColor: themeColors.successLight,
                 borderRadius: 16,
-                padding: 16,
+                padding: pad,
                 alignItems: 'center',
               }}
             >
               <Ionicons name="trophy" size={24} color={themeColors.success} />
-              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.success, marginTop: 6 }}>
+              <Text style={{ fontSize: fontSm, fontWeight: '600', color: themeColors.success, marginTop: 6 }}>
                 Metas
               </Text>
             </TouchableOpacity>
@@ -442,7 +451,7 @@ export default function DashboardScreen() {
         {/* Tarjetas de Cuentas */}
         <View style={{ marginBottom: 20 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 12 }}>
-            <Text style={{ fontSize: 18, fontWeight: '600', color: themeColors.text }}>
+            <Text style={{ fontSize: fontXl, fontWeight: '600', color: themeColors.text }}>
               Tus Cuentas
             </Text>
             <TouchableOpacity onPress={() => router.push('/(tabs)/accounts')}>
@@ -540,23 +549,23 @@ export default function DashboardScreen() {
 
         {/* Resumen del Mes */}
         <View style={{ marginHorizontal: 20, marginBottom: 20 }}>
-          <Text style={{ fontSize: 18, fontWeight: '600', color: themeColors.text, marginBottom: 12 }}>
+          <Text style={{ fontSize: fontXl, fontWeight: '600', color: themeColors.text, marginBottom: 12 }}>
             Resumen del Mes
           </Text>
-          <View style={{ flexDirection: 'row', gap: 12 }}>
+          <View style={{ flexDirection: 'row', gap }}>
             <View style={{
               flex: 1,
               backgroundColor: themeColors.successLight,
               borderRadius: 16,
-              padding: 16,
+              padding: pad,
             }}>
-              <Text style={{ fontSize: 12, color: themeColors.success, fontWeight: '500', marginBottom: 4 }}>
+              <Text style={{ fontSize: isSmall ? 11 : 12, color: themeColors.success, fontWeight: '500', marginBottom: 4 }}>
                 Ingresos
               </Text>
-              <Text style={{ fontSize: 18, fontWeight: '700', color: themeColors.success }}>
+              <Text style={{ fontSize: isSmall ? 15 : 18, fontWeight: '700', color: themeColors.success }}>
                 {formatUSD(summary.incomeUSD + (activeRate ? summary.incomeBS / activeRate : 0))}
               </Text>
-              <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>
+              <Text style={{ fontSize: isSmall ? 11 : 12, color: themeColors.textSecondary }}>
                 {formatBS(summary.incomeBS + (summary.incomeUSD * (activeRate || 0)))}
               </Text>
             </View>
@@ -564,15 +573,15 @@ export default function DashboardScreen() {
               flex: 1,
               backgroundColor: themeColors.dangerLight,
               borderRadius: 16,
-              padding: 16,
+              padding: pad,
             }}>
-              <Text style={{ fontSize: 12, color: themeColors.danger, fontWeight: '500', marginBottom: 4 }}>
+              <Text style={{ fontSize: isSmall ? 11 : 12, color: themeColors.danger, fontWeight: '500', marginBottom: 4 }}>
                 Gastos
               </Text>
-              <Text style={{ fontSize: 18, fontWeight: '700', color: themeColors.danger }}>
+              <Text style={{ fontSize: isSmall ? 15 : 18, fontWeight: '700', color: themeColors.danger }}>
                 {formatUSD(summary.expenseUSD + (activeRate ? summary.expenseBS / activeRate : 0))}
               </Text>
-              <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>
+              <Text style={{ fontSize: isSmall ? 11 : 12, color: themeColors.textSecondary }}>
                 {formatBS(summary.expenseBS + (summary.expenseUSD * (activeRate || 0)))}
               </Text>
             </View>
@@ -582,7 +591,7 @@ export default function DashboardScreen() {
         {/* Últimas Transacciones */}
         <View style={{ marginHorizontal: 20 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <Text style={{ fontSize: 18, fontWeight: '600', color: themeColors.text }}>
+            <Text style={{ fontSize: fontXl, fontWeight: '600', color: themeColors.text }}>
               Últimos Movimientos
             </Text>
             <TouchableOpacity onPress={() => router.push('/(tabs)/transactions')}>
@@ -597,7 +606,7 @@ export default function DashboardScreen() {
               style={{
                 backgroundColor: themeColors.surface,
                 borderRadius: 12,
-                padding: 14,
+                padding: isSmall ? 12 : 14,
                 marginBottom: 8,
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -615,7 +624,7 @@ export default function DashboardScreen() {
                 backgroundColor: tx.type === 'income' ? themeColors.successLight : themeColors.dangerLight,
                 justifyContent: 'center',
                 alignItems: 'center',
-                marginRight: 12,
+                marginRight: isSmall ? 10 : 12,
               }}>
                 <Ionicons
                   name={tx.type === 'income' ? 'arrow-down' : tx.type === 'transfer' ? 'swap-horizontal' : 'arrow-up'}
@@ -624,17 +633,17 @@ export default function DashboardScreen() {
                 />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 14, fontWeight: '600', color: themeColors.text }}>
+                <Text style={{ fontSize: isSmall ? 13 : 14, fontWeight: '600', color: themeColors.text }}>
                   {tx.description}
                 </Text>
-                <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>
+                <Text style={{ fontSize: isSmall ? 11 : 12, color: themeColors.textSecondary }}>
                   {formatDateShort(tx.date)}
                 </Text>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
                 {tx.amountUSD && (
                   <Text style={{
-                    fontSize: 14,
+                    fontSize: isSmall ? 13 : 14,
                     fontWeight: '600',
                     color: tx.type === 'income' ? themeColors.success : themeColors.danger,
                   }}>
@@ -642,7 +651,7 @@ export default function DashboardScreen() {
                   </Text>
                 )}
                 {tx.amountBS && (
-                  <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>
+                  <Text style={{ fontSize: isSmall ? 11 : 12, color: themeColors.textSecondary }}>
                     {formatBS(tx.amountBS)}
                   </Text>
                 )}

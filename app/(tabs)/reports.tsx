@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useWindowDimensions } from 'react';
 import {
   View,
   Text,
@@ -78,6 +78,10 @@ function getPeriodRange(period: PeriodOption): { start: string; end: string } {
 }
 
 export default function ReportsScreen() {
+  const { width: screenWidth } = useWindowDimensions();
+  const isSmall = screenWidth < 400;
+  const gap = isSmall ? 8 : 12;
+  const pad = isSmall ? 10 : 12;
   const themeColors = useThemeColors();
   const [period, setPeriod] = useState<PeriodOption>('month');
   const [activeTab, setActiveTab] = useState<ReportTab>('expense');

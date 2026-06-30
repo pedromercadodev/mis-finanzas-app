@@ -8,6 +8,7 @@ import {
   RefreshControl,
   Alert,
   TextInput,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -34,6 +35,8 @@ export default function AccountDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const themeColors = useThemeColors();
+  const { width: screenWidth } = useWindowDimensions();
+  const isSmall = screenWidth < 400;
   const accountId = parseInt(id, 10);
 
   const { accounts, loadAccounts, removeAccount } = useAccounts();
@@ -144,9 +147,9 @@ export default function AccountDetailScreen() {
         {/* Header */}
         <View style={{
           backgroundColor: account.color,
-          paddingHorizontal: 20,
-          paddingTop: 20,
-          paddingBottom: 32,
+          paddingHorizontal: isSmall ? 14 : 20,
+          paddingTop: isSmall ? 14 : 20,
+          paddingBottom: isSmall ? 24 : 32,
           borderBottomLeftRadius: 32,
           borderBottomRightRadius: 32,
         }}>
@@ -155,9 +158,9 @@ export default function AccountDetailScreen() {
             <TouchableOpacity
               onPress={() => router.back()}
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
+                width: isSmall ? 34 : 40,
+                height: isSmall ? 34 : 40,
+                borderRadius: isSmall ? 17 : 20,
                 backgroundColor: 'rgba(255,255,255,0.2)',
                 justifyContent: 'center',
                 alignItems: 'center',

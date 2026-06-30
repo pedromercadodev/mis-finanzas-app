@@ -5,6 +5,7 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,6 +21,8 @@ import { useSettings } from '../../src/store/useSettings';
 export default function AccountsScreen() {
   const router = useRouter();
   const themeColors = useThemeColors();
+  const { width: screenWidth } = useWindowDimensions();
+  const isSmall = screenWidth < 400;
   const { loadAccounts } = useAccounts();
   const { preferredRateType } = useSettings();
   const { bcv, parallel } = useExchangeRates();
@@ -64,10 +67,10 @@ export default function AccountsScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
       <ScrollView
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        contentContainerStyle={{ padding: 20, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: isSmall ? 14 : 20, paddingBottom: 100 }}
       >
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <Text style={{ fontSize: 28, fontWeight: '700', color: themeColors.text }}>
+          <Text style={{ fontSize: isSmall ? 24 : 28, fontWeight: '700', color: themeColors.text }}>
             Mis Cuentas
           </Text>
           <TouchableOpacity
@@ -75,8 +78,8 @@ export default function AccountsScreen() {
             style={{
               backgroundColor: themeColors.primary,
               borderRadius: 12,
-              paddingHorizontal: 16,
-              paddingVertical: 10,
+              paddingHorizontal: isSmall ? 12 : 16,
+              paddingVertical: isSmall ? 8 : 10,
               flexDirection: 'row',
               alignItems: 'center',
               gap: 6,
@@ -87,7 +90,7 @@ export default function AccountsScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: isSmall ? 8 : 12 }}>
           {accountsList.map((account) => {
             const balance = balances[account.id];
             const hasUSD = (balance?.balanceUSD ?? 0) > 0;

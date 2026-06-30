@@ -8,6 +8,7 @@ import {
   Switch,
   Alert,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,6 +24,8 @@ import { exportData, shareFile } from '../../src/services/export';
 import { testDeepSeekConnection } from '../../src/services/deepseek';
 
 export default function SettingsScreen() {
+  const { width: screenWidth } = useWindowDimensions();
+  const isSmall = screenWidth < 400;
   const router = useRouter();
   const themeColors = useThemeColors();
   const {
@@ -112,12 +115,12 @@ export default function SettingsScreen() {
     <AnimatedTransition>
     <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
-        <Text style={{ fontSize: 28, fontWeight: '700', color: themeColors.text, marginBottom: 24 }}>
+        <Text style={{ fontSize: isSmall ? 24 : 28, fontWeight: '700', color: themeColors.text, marginBottom: isSmall ? 16 : 24 }}>
           Ajustes
         </Text>
 
         {/* Sección APIs */}
-        <Text style={{ fontSize: 12, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
+        <Text style={{ fontSize: isSmall ? 11 : 12, fontWeight: '600', color: themeColors.textSecondary, marginBottom: isSmall ? 6 : 8, textTransform: 'uppercase', letterSpacing: 1 }}>
           APIs
         </Text>
         <View style={{ backgroundColor: themeColors.surface, borderRadius: 16, marginBottom: 24, overflow: 'hidden' }}>
@@ -127,7 +130,7 @@ export default function SettingsScreen() {
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'space-between',
-              padding: 16,
+              padding: isSmall ? 12 : 16,
               borderBottomWidth: 1,
               borderBottomColor: themeColors.border,
             }}
@@ -148,7 +151,7 @@ export default function SettingsScreen() {
             <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
           </TouchableOpacity>
           {showDeepseek && (
-            <View style={{ padding: 16, gap: 10 }}>
+            <View style={{ padding: isSmall ? 12 : 16, gap: isSmall ? 8 : 10 }}>
               <TextInput
                 value={deepseekKey}
                 onChangeText={setDeepseekKey}
@@ -158,7 +161,7 @@ export default function SettingsScreen() {
                 style={{
                   backgroundColor: themeColors.background,
                   borderRadius: 10,
-                  padding: 12,
+                  padding: isSmall ? 10 : 12,
                   fontSize: 14,
                   color: themeColors.text,
                   borderWidth: 1,
@@ -173,7 +176,7 @@ export default function SettingsScreen() {
                 style={{
                   backgroundColor: themeColors.primary,
                   borderRadius: 10,
-                  padding: 12,
+                  padding: isSmall ? 10 : 12,
                   alignItems: 'center',
                 }}
               >
@@ -190,7 +193,7 @@ export default function SettingsScreen() {
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'space-between',
-              padding: 16,
+              padding: isSmall ? 12 : 16,
               borderBottomWidth: 1,
               borderBottomColor: themeColors.border,
             }}
@@ -211,12 +214,12 @@ export default function SettingsScreen() {
             <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
           </TouchableOpacity>
           {showRate && (
-            <View style={{ padding: 16, gap: 12 }}>
+            <View style={{ padding: isSmall ? 12 : 16, gap: isSmall ? 8 : 12 }}>
               {/* Tasas actuales desde la BD */}
               <View style={{
                 backgroundColor: themeColors.background,
                 borderRadius: 12,
-                padding: 12,
+                padding: isSmall ? 10 : 12,
                 gap: 8,
               }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -255,7 +258,7 @@ export default function SettingsScreen() {
                 style={{
                   backgroundColor: themeColors.primary,
                   borderRadius: 10,
-                  padding: 12,
+                  padding: isSmall ? 10 : 12,
                   alignItems: 'center',
                   opacity: ratesLoading ? 0.6 : 1,
                 }}
@@ -280,7 +283,7 @@ export default function SettingsScreen() {
                     flex: 1,
                     backgroundColor: themeColors.background,
                     borderRadius: 10,
-                    padding: 12,
+                    padding: isSmall ? 10 : 12,
                     fontSize: 14,
                     color: themeColors.text,
                     borderWidth: 1,
@@ -292,7 +295,7 @@ export default function SettingsScreen() {
                   style={{
                     backgroundColor: themeColors.success,
                     borderRadius: 10,
-                    paddingHorizontal: 16,
+                    paddingHorizontal: isSmall ? 12 : 16,
                     justifyContent: 'center',
                   }}
                 >
@@ -304,11 +307,11 @@ export default function SettingsScreen() {
         </View>
 
         {/* Sección Cálculos */}
-        <Text style={{ fontSize: 12, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
+        <Text style={{ fontSize: isSmall ? 11 : 12, fontWeight: '600', color: themeColors.textSecondary, marginBottom: isSmall ? 6 : 8, textTransform: 'uppercase', letterSpacing: 1 }}>
           Cálculos
         </Text>
         <View style={{ backgroundColor: themeColors.surface, borderRadius: 16, marginBottom: 24, overflow: 'hidden' }}>
-          <View style={{ padding: 16 }}>
+          <View style={{ padding: isSmall ? 12 : 16 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 }}>
               <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: themeColors.primaryLight, justifyContent: 'center', alignItems: 'center' }}>
                 <Ionicons name="calculator" size={18} color={themeColors.primary} />
@@ -370,7 +373,7 @@ export default function SettingsScreen() {
         </View>
 
         {/* Sección Gestión */}
-        <Text style={{ fontSize: 12, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
+        <Text style={{ fontSize: isSmall ? 11 : 12, fontWeight: '600', color: themeColors.textSecondary, marginBottom: isSmall ? 6 : 8, textTransform: 'uppercase', letterSpacing: 1 }}>
           Gestión
         </Text>
         <View style={{ backgroundColor: themeColors.surface, borderRadius: 16, marginBottom: 24, overflow: 'hidden' }}>
@@ -380,7 +383,7 @@ export default function SettingsScreen() {
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: 16,
+            padding: isSmall ? 12 : 16,
             borderBottomWidth: 1,
             borderBottomColor: themeColors.border,
           }}>
@@ -400,7 +403,7 @@ export default function SettingsScreen() {
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: 16,
+            padding: isSmall ? 12 : 16,
           }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: themeColors.primaryLight, justifyContent: 'center', alignItems: 'center' }}>
@@ -418,7 +421,7 @@ export default function SettingsScreen() {
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: 16,
+            padding: isSmall ? 12 : 16,
             borderTopWidth: 1,
             borderTopColor: themeColors.border,
           }}>
@@ -435,7 +438,7 @@ export default function SettingsScreen() {
         </View>
 
         {/* Sección Datos */}
-        <Text style={{ fontSize: 12, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
+        <Text style={{ fontSize: isSmall ? 11 : 12, fontWeight: '600', color: themeColors.textSecondary, marginBottom: isSmall ? 6 : 8, textTransform: 'uppercase', letterSpacing: 1 }}>
           Datos
         </Text>
         <View style={{ backgroundColor: themeColors.surface, borderRadius: 16, marginBottom: 24, overflow: 'hidden' }}>
@@ -445,7 +448,7 @@ export default function SettingsScreen() {
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: 16,
+            padding: isSmall ? 12 : 16,
           }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: themeColors.warningLight, justifyContent: 'center', alignItems: 'center' }}>
@@ -460,7 +463,7 @@ export default function SettingsScreen() {
         </View>
 
         {/* Sección Apariencia */}
-        <Text style={{ fontSize: 12, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
+        <Text style={{ fontSize: isSmall ? 11 : 12, fontWeight: '600', color: themeColors.textSecondary, marginBottom: isSmall ? 6 : 8, textTransform: 'uppercase', letterSpacing: 1 }}>
           Apariencia
         </Text>
         <View style={{ backgroundColor: themeColors.surface, borderRadius: 16, marginBottom: 24 }}>
@@ -468,7 +471,7 @@ export default function SettingsScreen() {
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: 16,
+            padding: isSmall ? 12 : 16,
           }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: themeColors.primaryLight, justifyContent: 'center', alignItems: 'center' }}>

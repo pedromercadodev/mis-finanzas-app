@@ -10,6 +10,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,6 +28,8 @@ const MONTH_NAMES = [
 
 export default function BudgetsScreen() {
   const themeColors = useThemeColors();
+  const { width: screenWidth } = useWindowDimensions();
+  const isSmall = screenWidth < 400;
   const [groups, setGroups] = useState<GroupWithCategories[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Set<number>>(new Set());
@@ -118,15 +121,15 @@ export default function BudgetsScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
       <ScrollView
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        contentContainerStyle={{ padding: 20, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: isSmall ? 14 : 20, paddingBottom: 100 }}
       >
         {/* Header */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-          <Text style={{ fontSize: 28, fontWeight: '700', color: themeColors.text }}>
+          <Text style={{ fontSize: isSmall ? 24 : 28, fontWeight: '700', color: themeColors.text }}>
             Presupuestos
           </Text>
         </View>
-        <Text style={{ fontSize: 14, color: themeColors.textSecondary, marginBottom: 20 }}>
+        <Text style={{ fontSize: isSmall ? 12 : 14, color: themeColors.textSecondary, marginBottom: isSmall ? 14 : 20 }}>
           {getMonthLabel(currentMonth)}
         </Text>
 

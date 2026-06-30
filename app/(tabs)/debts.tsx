@@ -11,6 +11,7 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,6 +34,8 @@ type FilterTab = 'all' | 'lent' | 'borrowed';
 
 export default function DebtsScreen() {
   const themeColors = useThemeColors();
+  const { width: screenWidth } = useWindowDimensions();
+  const isSmall = screenWidth < 400;
   const [debts, setDebts] = useState<Debt[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterTab, setFilterTab] = useState<FilterTab>('all');
@@ -331,10 +334,10 @@ export default function DebtsScreen() {
   return (
     <AnimatedTransition>
       <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
-        <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
+        <ScrollView contentContainerStyle={{ padding: isSmall ? 14 : 20, paddingBottom: 100 }}>
           {/* Header */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-            <Text style={{ fontSize: 28, fontWeight: '700', color: themeColors.text }}>
+            <Text style={{ fontSize: isSmall ? 24 : 28, fontWeight: '700', color: themeColors.text }}>
               Deudas
             </Text>
             <TouchableOpacity
@@ -353,23 +356,23 @@ export default function DebtsScreen() {
           </View>
 
           {/* Summary Cards */}
-          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 20 }}>
+          <View style={{ flexDirection: 'row', gap: isSmall ? 8 : 12, marginBottom: isSmall ? 14 : 20 }}>
             <View style={{
               flex: 1,
               backgroundColor: themeColors.surface,
               borderRadius: 16,
-              padding: 16,
+              padding: isSmall ? 12 : 16,
               borderLeftWidth: 4,
               borderLeftColor: '#10B981',
             }}>
-              <Text style={{ fontSize: 12, color: '#10B981', fontWeight: '600', marginBottom: 4 }}>
+              <Text style={{ fontSize: isSmall ? 11 : 12, color: '#10B981', fontWeight: '600', marginBottom: 4 }}>
                 ME DEBEN
               </Text>
-              <Text style={{ fontSize: 18, fontWeight: '700', color: themeColors.text }}>
+              <Text style={{ fontSize: isSmall ? 15 : 18, fontWeight: '700', color: themeColors.text }}>
                 {formatUSD(summary.totalLentUSD)}
               </Text>
               {summary.totalLentBS > 0 && (
-                <Text style={{ fontSize: 13, color: themeColors.textSecondary }}>
+                <Text style={{ fontSize: isSmall ? 11 : 13, color: themeColors.textSecondary }}>
                   {formatBS(summary.totalLentBS)}
                 </Text>
               )}
@@ -381,18 +384,18 @@ export default function DebtsScreen() {
               flex: 1,
               backgroundColor: themeColors.surface,
               borderRadius: 16,
-              padding: 16,
+              padding: isSmall ? 12 : 16,
               borderLeftWidth: 4,
               borderLeftColor: '#EF4444',
             }}>
-              <Text style={{ fontSize: 12, color: '#EF4444', fontWeight: '600', marginBottom: 4 }}>
+              <Text style={{ fontSize: isSmall ? 11 : 12, color: '#EF4444', fontWeight: '600', marginBottom: 4 }}>
                 YO DEBO
               </Text>
-              <Text style={{ fontSize: 18, fontWeight: '700', color: themeColors.text }}>
+              <Text style={{ fontSize: isSmall ? 15 : 18, fontWeight: '700', color: themeColors.text }}>
                 {formatUSD(summary.totalBorrowedUSD)}
               </Text>
               {summary.totalBorrowedBS > 0 && (
-                <Text style={{ fontSize: 13, color: themeColors.textSecondary }}>
+                <Text style={{ fontSize: isSmall ? 11 : 13, color: themeColors.textSecondary }}>
                   {formatBS(summary.totalBorrowedBS)}
                 </Text>
               )}
@@ -406,7 +409,7 @@ export default function DebtsScreen() {
           <View style={{
             backgroundColor: themeColors.surface,
             borderRadius: 16,
-            padding: 16,
+            padding: isSmall ? 12 : 16,
             marginBottom: 20,
             flexDirection: 'row',
             justifyContent: 'space-between',

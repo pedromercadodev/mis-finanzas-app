@@ -12,6 +12,7 @@ import {
   Alert,
   Switch,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -40,6 +41,8 @@ const FREQUENCIES: { key: FrequencyType; label: string }[] = [
 
 export default function SubscriptionsScreen() {
   const themeColors = useThemeColors();
+  const { width: screenWidth } = useWindowDimensions();
+  const isSmall = screenWidth < 400;
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -274,10 +277,10 @@ export default function SubscriptionsScreen() {
   return (
     <AnimatedTransition>
       <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
-        <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
+        <ScrollView contentContainerStyle={{ padding: isSmall ? 14 : 20, paddingBottom: 100 }}>
           {/* Header */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-            <Text style={{ fontSize: 28, fontWeight: '700', color: themeColors.text }}>
+            <Text style={{ fontSize: isSmall ? 24 : 28, fontWeight: '700', color: themeColors.text }}>
               Suscripciones
             </Text>
             <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -340,7 +343,7 @@ export default function SubscriptionsScreen() {
                   style={{
                     backgroundColor: themeColors.surface,
                     borderRadius: 16,
-                    padding: 16,
+                    padding: isSmall ? 12 : 16,
                     marginBottom: 12,
                     shadowColor: '#000',
                     shadowOffset: { width: 0, height: 2 },
