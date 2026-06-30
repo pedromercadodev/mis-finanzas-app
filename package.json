@@ -9,6 +9,7 @@
     "bufferutil": "^4.1.0",
     "drizzle-orm": "^0.45.2",
     "expo": "54",
+    "expo-build-properties": "^56.0.19",
     "expo-constants": "~18.0.13",
     "expo-file-system": "~19.0.23",
     "expo-linking": "~8.0.12",
@@ -35,6 +36,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.1.10",
+    "eas-cli": "^20.5.0",
     "typescript": "~5.9.2"
   },
   "scripts": {
