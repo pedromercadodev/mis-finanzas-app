@@ -21,9 +21,13 @@ import { useSettings } from '../src/store/useSettings';
 import { useAccounts } from '../src/store/useAccounts';
 import { useTransactions } from '../src/store/useTransactions';
 import { chatWithDeepSeek } from '../src/services/deepseek';
-import { createTransaction } from '../src/services/transactions';
-import { createAccount, updateAccount } from '../src/services/accounts';
+import { createTransaction, updateTransaction, deleteTransaction } from '../src/services/transactions';
+import { createAccount, updateAccount, deleteAccount } from '../src/services/accounts';
 import { getCategories } from '../src/services/categories';
+import { createGoal, updateGoalProgress, deleteGoal } from '../src/services/goals';
+import { createSubscription, updateSubscription, deleteSubscription } from '../src/services/subscriptions';
+import { setAllocation } from '../src/services/budgetAllocations';
+import { createDebt, recordPayment, deleteDebt } from '../src/services/debts';
 import {
   saveChatMessage,
   getChatHistory,
@@ -31,7 +35,7 @@ import {
   clearChatHistory,
   type ChatHistoryMessage,
 } from '../src/services/chatHistory';
-import type { DeepSeekMessage, DeepSeekAction, TransactionAction, CreateAccountAction, UpdateAccountAction } from '../src/services/deepseek';
+import type { DeepSeekMessage, DeepSeekAction, TransactionAction, CreateAccountAction, UpdateAccountAction, TransferAction, CreateGoalAction, UpdateGoalProgressAction, DeleteGoalAction, CreateSubscriptionAction, UpdateSubscriptionAction, DeleteSubscriptionAction, SetBudgetAction, CreateDebtAction, PayDebtAction, DeleteDebtAction, UpdateTransactionAction, DeleteTransactionAction, DeleteAccountAction } from '../src/services/deepseek';
 import type { Category } from '../src/utils/types';
 
 // Mapeo de nombres de categoría a IDs numéricos
@@ -145,11 +149,17 @@ export default function AIChatScreen() {
           {
             id: '0',
             role: 'assistant',
-            content: '¡Hola! 👋 Soy tu **asistente financiero**. Puedes pedirme cosas como:\n\n' +
+            content: '¡Hola! 👋 Soy tu **asistente financiero**. Puedo ayudarte con **todo**:\n\n' +
               '💸 *"Gaste 50 dólares en uber"*\n' +
               '💰 *"Recibí 200 dólares de salario"*\n' +
               '🏦 *"Crea una cuenta de ahorro"*\n' +
               '✏️ *"Cambia el nombre de mi cuenta X a Y"*\n' +
+              '🗑️ *"Elimina la cuenta X"*\n' +
+              '🔄 *"Transfiere $30 de cuenta X a Y"*\n' +
+              '🎯 *"Crea una meta de ahorro de $500"*\n' +
+              '📅 *"Agrega suscripción de Netflix $15"*\n' +
+              ' *"Pon presupuesto de $200 en Comida"*\n' +
+              '💳 *"Registra deuda de $100 con Juan"*\n' +
               '📊 *"¿Cuánto dinero tengo?"*',
           },
         ]);
@@ -251,6 +261,14 @@ export default function AIChatScreen() {
     }
   }, [isLoading, deepseekKey, messages, accounts, categories, addMessage]);
 
+  // Buscar cuenta por nombre o ID
+  const findAccount = useCallback((identifier: string | number) => {
+    if (typeof identifier === 'number') {
+      return accounts.find((a) => a.id === identifier);
+    }
+    return accounts.find((a) => a.name.toLowerCase() === String(identifier).toLowerCase());
+  }, [accounts]);
+
   // Confirmar acción
   const confirmAction = useCallback(async (msg: ChatMessage) => {
     if (!msg.action) return;
@@ -291,6 +309,41 @@ export default function AIChatScreen() {
           isSuccess: true,
         });
 
+      } else if (action.actionType === 'update_transaction') {
+        // === ACTUALIZAR TRANSACCIÓN ===
+        const updTx = action as UpdateTransactionAction;
+        const updates: any = {};
+        if (updTx.type) updates.type = updTx.type;
+        if (updTx.amount !== undefined) {
+          if (updTx.currency === 'USD') updates.amountUSD = updTx.amount;
+          else if (updTx.currency === 'BS') updates.amountBS = updTx.amount;
+        }
+        if (updTx.description) updates.description = updTx.description;
+        if (updTx.category) updates.categoryId = CATEGORY_MAP[updTx.category] || 12;
+
+        await updateTransaction(updTx.transactionId, updates);
+        await loadTransactions();
+
+        await addMessage({
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: `✅ **¡Listo!** Se actualizó la transacción.`,
+          isSuccess: true,
+        });
+
+      } else if (action.actionType === 'delete_transaction') {
+        // === ELIMINAR TRANSACCIÓN ===
+        const delTx = action as DeleteTransactionAction;
+        await deleteTransaction(delTx.transactionId);
+        await loadTransactions();
+
+        await addMessage({
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: `✅ **¡Listo!** Se eliminó la transacción.`,
+          isSuccess: true,
+        });
+
       } else if (action.actionType === 'create_account') {
         // === CREAR CUENTA ===
         const accAction = action as CreateAccountAction;
@@ -323,33 +376,17 @@ export default function AIChatScreen() {
       } else if (action.actionType === 'update_account') {
         // === ACTUALIZAR CUENTA ===
         const updAction = action as UpdateAccountAction;
-
-        // Buscar la cuenta: primero por accountId, si no existe buscar por nombre anterior
-        let targetAccount = accounts.find((a) => a.id === updAction.accountId);
-        
-        // Si no se encontró por ID pero hay un nombre en la acción, buscar por nombre
-        if (!targetAccount && updAction.name) {
-          // DeepSeek a veces envía el nombre en accountId cuando se confunde
-          const possibleId = parseInt(String(updAction.accountId), 10);
-          if (isNaN(possibleId)) {
-            // Buscar por nombre en accountId
-            targetAccount = accounts.find(
-              (a) => a.name.toLowerCase() === String(updAction.accountId).toLowerCase()
-            );
-          }
-        }
+        let targetAccount = findAccount(updAction.accountId);
 
         if (!targetAccount) {
           await addMessage({
             id: (Date.now() + 1).toString(),
             role: 'assistant',
-            content: `⚠️ No encontré la cuenta que quieres modificar. Las cuentas disponibles son:\n${accounts.map((a) => `- **${a.name}** (ID: ${a.id})`).join('\n')}\n\n¿Podrías decirme exactamente cuál quieres modificar?`,
+            content: `⚠️ No encontré la cuenta. Las disponibles son:\n${accounts.map((a) => `- **${a.name}**`).join('\n')}\n\n¿Cuál quieres modificar?`,
             isSuccess: false,
           });
           setMessages((prev) =>
-            prev.map((m) =>
-              m.id === msg.id ? { ...m, isCancelled: true, isAction: false } : m
-            )
+            prev.map((m) => m.id === msg.id ? { ...m, isCancelled: true, isAction: false } : m)
           );
           setIsLoading(false);
           return;
@@ -363,13 +400,276 @@ export default function AIChatScreen() {
         await updateAccount(targetAccount.id, updates);
         await loadAccounts();
 
-        const changes: string[] = [];
-        if (updAction.name) changes.push(`nombre a **"${updAction.name}"**`);
+        await addMessage({
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: `✅ **¡Listo!** Se actualizó la cuenta **"${targetAccount.name}"** → **"${updAction.name || targetAccount.name}"**.`,
+          isSuccess: true,
+        });
+
+      } else if (action.actionType === 'delete_account') {
+        // === ELIMINAR CUENTA ===
+        const delAcc = action as DeleteAccountAction;
+        let targetAccount = findAccount(delAcc.accountId);
+
+        if (!targetAccount) {
+          await addMessage({
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: `⚠️ No encontré la cuenta. Las disponibles son:\n${accounts.map((a) => `- **${a.name}**`).join('\n')}`,
+            isSuccess: false,
+          });
+          setMessages((prev) =>
+            prev.map((m) => m.id === msg.id ? { ...m, isCancelled: true, isAction: false } : m)
+          );
+          setIsLoading(false);
+          return;
+        }
+
+        await deleteAccount(targetAccount.id);
+        await loadAccounts();
 
         await addMessage({
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: `✅ **¡Listo!** Se actualizó la cuenta **"${targetAccount.name}"**: ${changes.join(', ')}.`,
+          content: `✅ **¡Listo!** Se eliminó la cuenta **"${targetAccount.name}"**.`,
+          isSuccess: true,
+        });
+
+      } else if (action.actionType === 'transfer') {
+        // === TRANSFERENCIA ===
+        const trf = action as TransferAction;
+        const fromAcc = findAccount(trf.fromAccountId);
+        const toAcc = findAccount(trf.toAccountId);
+
+        if (!fromAcc || !toAcc) {
+          await addMessage({
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: `⚠️ No encontré una de las cuentas. Cuentas disponibles:\n${accounts.map((a) => `- **${a.name}**`).join('\n')}`,
+            isSuccess: false,
+          });
+          setMessages((prev) =>
+            prev.map((m) => m.id === msg.id ? { ...m, isCancelled: true, isAction: false } : m)
+          );
+          setIsLoading(false);
+          return;
+        }
+
+        await createTransaction({
+          type: 'transfer',
+          description: trf.description || `Transferencia a ${toAcc.name}`,
+          amountUSD: trf.currency === 'USD' ? trf.amount : null,
+          amountBS: trf.currency === 'BS' ? trf.amount : null,
+          currency: trf.currency,
+          exchangeRate: null,
+          accountId: fromAcc.id,
+          transferToAccountId: toAcc.id,
+          categoryId: 12,
+          date: new Date().toISOString().split('T')[0],
+          notes: null,
+        });
+
+        await loadAccounts();
+        await loadTransactions();
+
+        const sym = trf.currency === 'USD' ? '$' : 'Bs.';
+        await addMessage({
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: `✅ **¡Listo!** Se transfirieron **${sym}${trf.amount}** de **"${fromAcc.name}"** a **"${toAcc.name}"**.`,
+          isSuccess: true,
+        });
+
+      } else if (action.actionType === 'create_goal') {
+        // === CREAR META ===
+        const goal = action as CreateGoalAction;
+        await createGoal({
+          name: goal.name,
+          targetAmount: goal.targetAmount,
+          currentAmount: 0,
+          currency: goal.currency,
+          accountId: goal.accountId || null,
+          deadline: goal.deadline || null,
+          periodType: 'none',
+          celebratedAt: null,
+          lastProgressAt: null,
+        });
+
+        await addMessage({
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: `✅ **¡Listo!** Se creó la meta **"${goal.name}"** con objetivo de **${goal.currency === 'USD' ? '$' : 'Bs.'}${goal.targetAmount}**.`,
+          isSuccess: true,
+        });
+
+      } else if (action.actionType === 'update_goal_progress') {
+        // === ACTUALIZAR PROGRESO DE META ===
+        const gp = action as UpdateGoalProgressAction;
+        await updateGoalProgress(gp.goalId, gp.amount);
+
+        await addMessage({
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: `✅ **¡Listo!** Se agregaron **${gp.amount}** al progreso de la meta.`,
+          isSuccess: true,
+        });
+
+      } else if (action.actionType === 'delete_goal') {
+        // === ELIMINAR META ===
+        const dg = action as DeleteGoalAction;
+        await deleteGoal(dg.goalId);
+
+        await addMessage({
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: `✅ **¡Listo!** Se eliminó la meta.`,
+          isSuccess: true,
+        });
+
+      } else if (action.actionType === 'create_subscription') {
+        // === CREAR SUSCRIPCIÓN ===
+        const sub = action as CreateSubscriptionAction;
+        const catId = CATEGORY_MAP[sub.category] || 12;
+
+        await createSubscription({
+          name: sub.name,
+          description: sub.description || null,
+          amountUSD: sub.currency === 'USD' ? sub.amount : null,
+          amountBS: sub.currency === 'BS' ? sub.amount : null,
+          currency: sub.currency,
+          categoryId: catId,
+          accountId: sub.accountId,
+          frequency: sub.frequency,
+          intervalDays: null,
+          billingDay: sub.billingDay,
+          nextBillingDate: new Date().toISOString().split('T')[0],
+          isActive: 1,
+          autoGenerate: 1,
+          notes: null,
+        });
+
+        await addMessage({
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: `✅ **¡Listo!** Se creó la suscripción **"${sub.name}"** de **${sub.currency === 'USD' ? '$' : 'Bs.'}${sub.amount}** (${sub.frequency}).`,
+          isSuccess: true,
+        });
+
+      } else if (action.actionType === 'update_subscription') {
+        // === ACTUALIZAR SUSCRIPCIÓN ===
+        const us = action as UpdateSubscriptionAction;
+        const subUpdates: any = {};
+        if (us.name) subUpdates.name = us.name;
+        if (us.amount !== undefined) {
+          if (us.currency === 'USD') subUpdates.amountUSD = us.amount;
+          else if (us.currency === 'BS') subUpdates.amountBS = us.amount;
+        }
+        if (us.frequency) subUpdates.frequency = us.frequency;
+        if (us.isActive !== undefined) subUpdates.isActive = us.isActive ? 1 : 0;
+
+        await updateSubscription(us.subscriptionId, subUpdates);
+
+        await addMessage({
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: `✅ **¡Listo!** Se actualizó la suscripción.`,
+          isSuccess: true,
+        });
+
+      } else if (action.actionType === 'delete_subscription') {
+        // === ELIMINAR SUSCRIPCIÓN ===
+        const ds = action as DeleteSubscriptionAction;
+        await deleteSubscription(ds.subscriptionId);
+
+        await addMessage({
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: `✅ **¡Listo!** Se eliminó la suscripción.`,
+          isSuccess: true,
+        });
+
+      } else if (action.actionType === 'set_budget') {
+        // === ASIGNAR PRESUPUESTO ===
+        const bg = action as SetBudgetAction;
+        const bgCatId = CATEGORY_MAP[bg.category];
+        if (!bgCatId) {
+          await addMessage({
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: `⚠️ La categoría "${bg.category}" no es válida. Categorías: ${Object.keys(CATEGORY_MAP).filter(k => k !== 'Educacion').join(', ')}.`,
+            isSuccess: false,
+          });
+          setMessages((prev) =>
+            prev.map((m) => m.id === msg.id ? { ...m, isCancelled: true, isAction: false } : m)
+          );
+          setIsLoading(false);
+          return;
+        }
+
+        await setAllocation(bgCatId, bg.month, bg.amountUSD, bg.amountBS || 0);
+
+        await addMessage({
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: `✅ **¡Listo!** Se asignó presupuesto de **$${bg.amountUSD} USD**${bg.amountBS ? ` y **Bs.${bg.amountBS}**` : ''} a **${bg.category}** para **${bg.month}**.`,
+          isSuccess: true,
+        });
+
+      } else if (action.actionType === 'create_debt') {
+        // === CREAR DEUDA ===
+        const debt = action as CreateDebtAction;
+        await createDebt({
+          type: debt.type,
+          personName: debt.personName,
+          description: debt.description || null,
+          amountUSD: debt.currency === 'USD' ? debt.amount : null,
+          amountBS: debt.currency === 'BS' ? debt.amount : null,
+          currency: debt.currency,
+          interestRate: 0,
+          totalAmountUSD: debt.currency === 'USD' ? debt.amount : null,
+          totalAmountBS: debt.currency === 'BS' ? debt.amount : null,
+          paidAmountUSD: 0,
+          paidAmountBS: 0,
+          dueDate: debt.dueDate || null,
+          status: 'active',
+          notes: null,
+        });
+
+        const debtTypeLabel = debt.type === 'lent' ? 'préstamo' : 'deuda';
+        await addMessage({
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: `✅ **¡Listo!** Se registró ${debtTypeLabel} de **${debt.currency === 'USD' ? '$' : 'Bs.'}${debt.amount}** con **${debt.personName}**.`,
+          isSuccess: true,
+        });
+
+      } else if (action.actionType === 'pay_debt') {
+        // === PAGAR DEUDA ===
+        const pd = action as PayDebtAction;
+        await recordPayment(
+          pd.debtId,
+          pd.currency === 'USD' ? pd.amount : 0,
+          pd.currency === 'BS' ? pd.amount : 0,
+          new Date().toISOString().split('T')[0]
+        );
+
+        await addMessage({
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: `✅ **¡Listo!** Se registró el pago de **${pd.currency === 'USD' ? '$' : 'Bs.'}${pd.amount}** a la deuda.`,
+          isSuccess: true,
+        });
+
+      } else if (action.actionType === 'delete_debt') {
+        // === ELIMINAR DEUDA ===
+        const dd = action as DeleteDebtAction;
+        await deleteDebt(dd.debtId);
+
+        await addMessage({
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: `✅ **¡Listo!** Se eliminó la deuda.`,
           isSuccess: true,
         });
       }
@@ -386,7 +686,7 @@ export default function AIChatScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [accounts, loadAccounts, loadTransactions, addMessage]);
+  }, [accounts, loadAccounts, loadTransactions, addMessage, findAccount]);
 
   // Cancelar acción
   const cancelAction = useCallback((msg: ChatMessage) => {
@@ -646,6 +946,375 @@ export default function AIChatScreen() {
               )}
               <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginTop: 4 }}>
                 Account ID: {item.action.accountId}
+              </Text>
+            </View>
+          )}
+
+          {/* Preview de actualizar transacción */}
+          {item.action && item.action.actionType === 'update_transaction' && (
+            <View
+              style={{
+                marginTop: 12,
+                backgroundColor: themeColors.background,
+                borderRadius: 10,
+                padding: 12,
+                borderLeftWidth: 3,
+                borderLeftColor: '#F59E0B',
+              }}
+            >
+              <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
+                ✏️ ACTUALIZAR TRANSACCIÓN
+              </Text>
+              <Text style={{ fontSize: 13, color: themeColors.text }}>
+                ID: <Text style={{ fontWeight: '700' }}>{(item.action as any).transactionId}</Text>
+              </Text>
+              {(item.action as any).description && (
+                <Text style={{ fontSize: 13, color: themeColors.textSecondary, marginTop: 2 }}>
+                  Nueva descripción: {(item.action as any).description}
+                </Text>
+              )}
+              {(item.action as any).amount !== undefined && (
+                <Text style={{ fontSize: 13, color: themeColors.textSecondary, marginTop: 2 }}>
+                  Nuevo monto: {(item.action as any).currency === 'USD' ? '$' : 'Bs.'}{(item.action as any).amount}
+                </Text>
+              )}
+            </View>
+          )}
+
+          {/* Preview de eliminar transacción */}
+          {item.action && item.action.actionType === 'delete_transaction' && (
+            <View
+              style={{
+                marginTop: 12,
+                backgroundColor: themeColors.background,
+                borderRadius: 10,
+                padding: 12,
+                borderLeftWidth: 3,
+                borderLeftColor: '#EF4444',
+              }}
+            >
+              <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
+                🗑️ ELIMINAR TRANSACCIÓN
+              </Text>
+              <Text style={{ fontSize: 13, color: themeColors.text }}>
+                ID de transacción: <Text style={{ fontWeight: '700' }}>{(item.action as any).transactionId}</Text>
+              </Text>
+            </View>
+          )}
+
+          {/* Preview de eliminar cuenta */}
+          {item.action && item.action.actionType === 'delete_account' && (
+            <View
+              style={{
+                marginTop: 12,
+                backgroundColor: themeColors.background,
+                borderRadius: 10,
+                padding: 12,
+                borderLeftWidth: 3,
+                borderLeftColor: '#EF4444',
+              }}
+            >
+              <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
+                🗑️ ELIMINAR CUENTA
+              </Text>
+              <Text style={{ fontSize: 13, color: themeColors.text }}>
+                Cuenta: <Text style={{ fontWeight: '700' }}>{(item.action as any).accountId}</Text>
+              </Text>
+            </View>
+          )}
+
+          {/* Preview de transferencia */}
+          {item.action && item.action.actionType === 'transfer' && (
+            <View
+              style={{
+                marginTop: 12,
+                backgroundColor: themeColors.background,
+                borderRadius: 10,
+                padding: 12,
+                borderLeftWidth: 3,
+                borderLeftColor: '#8B5CF6',
+              }}
+            >
+              <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
+                🔄 TRANSFERENCIA
+              </Text>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: themeColors.text }}>
+                {(item.action as any).currency === 'USD' ? '$' : 'Bs.'}{(item.action as any).amount}
+              </Text>
+              <Text style={{ fontSize: 13, color: themeColors.textSecondary, marginTop: 2 }}>
+                De: <Text style={{ fontWeight: '600' }}>{(item.action as any).fromAccountId}</Text>
+              </Text>
+              <Text style={{ fontSize: 13, color: themeColors.textSecondary }}>
+                A: <Text style={{ fontWeight: '600' }}>{(item.action as any).toAccountId}</Text>
+              </Text>
+              {(item.action as any).description && (
+                <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginTop: 2 }}>
+                  {(item.action as any).description}
+                </Text>
+              )}
+            </View>
+          )}
+
+          {/* Preview de crear meta */}
+          {item.action && item.action.actionType === 'create_goal' && (
+            <View
+              style={{
+                marginTop: 12,
+                backgroundColor: themeColors.background,
+                borderRadius: 10,
+                padding: 12,
+                borderLeftWidth: 3,
+                borderLeftColor: '#10B981',
+              }}
+            >
+              <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
+                🎯 NUEVA META
+              </Text>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: themeColors.text }}>
+                {(item.action as any).name}
+              </Text>
+              <Text style={{ fontSize: 14, color: themeColors.text, marginTop: 2 }}>
+                Objetivo: {(item.action as any).currency === 'USD' ? '$' : 'Bs.'}{(item.action as any).targetAmount}
+              </Text>
+              {(item.action as any).deadline && (
+                <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginTop: 2 }}>
+                  Fecha límite: {(item.action as any).deadline}
+                </Text>
+              )}
+            </View>
+          )}
+
+          {/* Preview de actualizar progreso de meta */}
+          {item.action && item.action.actionType === 'update_goal_progress' && (
+            <View
+              style={{
+                marginTop: 12,
+                backgroundColor: themeColors.background,
+                borderRadius: 10,
+                padding: 12,
+                borderLeftWidth: 3,
+                borderLeftColor: '#10B981',
+              }}
+            >
+              <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
+                📈 PROGRESO DE META
+              </Text>
+              <Text style={{ fontSize: 13, color: themeColors.text }}>
+                Meta ID: <Text style={{ fontWeight: '700' }}>{(item.action as any).goalId}</Text>
+              </Text>
+              <Text style={{ fontSize: 14, color: themeColors.text, marginTop: 2 }}>
+                Agregar: <Text style={{ fontWeight: '700' }}>{(item.action as any).amount}</Text>
+              </Text>
+            </View>
+          )}
+
+          {/* Preview de eliminar meta */}
+          {item.action && item.action.actionType === 'delete_goal' && (
+            <View
+              style={{
+                marginTop: 12,
+                backgroundColor: themeColors.background,
+                borderRadius: 10,
+                padding: 12,
+                borderLeftWidth: 3,
+                borderLeftColor: '#EF4444',
+              }}
+            >
+              <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
+                🗑️ ELIMINAR META
+              </Text>
+              <Text style={{ fontSize: 13, color: themeColors.text }}>
+                Meta ID: <Text style={{ fontWeight: '700' }}>{(item.action as any).goalId}</Text>
+              </Text>
+            </View>
+          )}
+
+          {/* Preview de crear suscripción */}
+          {item.action && item.action.actionType === 'create_subscription' && (
+            <View
+              style={{
+                marginTop: 12,
+                backgroundColor: themeColors.background,
+                borderRadius: 10,
+                padding: 12,
+                borderLeftWidth: 3,
+                borderLeftColor: '#F59E0B',
+              }}
+            >
+              <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
+                📅 NUEVA SUSCRIPCIÓN
+              </Text>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: themeColors.text }}>
+                {(item.action as any).name}
+              </Text>
+              <Text style={{ fontSize: 14, color: themeColors.text, marginTop: 2 }}>
+                {(item.action as any).currency === 'USD' ? '$' : 'Bs.'}{(item.action as any).amount}
+              </Text>
+              <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginTop: 2 }}>
+                Frecuencia: {(item.action as any).frequency} · Categoría: {(item.action as any).category}
+              </Text>
+            </View>
+          )}
+
+          {/* Preview de actualizar suscripción */}
+          {item.action && item.action.actionType === 'update_subscription' && (
+            <View
+              style={{
+                marginTop: 12,
+                backgroundColor: themeColors.background,
+                borderRadius: 10,
+                padding: 12,
+                borderLeftWidth: 3,
+                borderLeftColor: '#F59E0B',
+              }}
+            >
+              <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
+                ✏️ ACTUALIZAR SUSCRIPCIÓN
+              </Text>
+              <Text style={{ fontSize: 13, color: themeColors.text }}>
+                ID: <Text style={{ fontWeight: '700' }}>{(item.action as any).subscriptionId}</Text>
+              </Text>
+              {(item.action as any).name && (
+                <Text style={{ fontSize: 13, color: themeColors.textSecondary, marginTop: 2 }}>
+                  Nuevo nombre: {(item.action as any).name}
+                </Text>
+              )}
+              {(item.action as any).amount !== undefined && (
+                <Text style={{ fontSize: 13, color: themeColors.textSecondary, marginTop: 2 }}>
+                  Nuevo monto: {(item.action as any).currency === 'USD' ? '$' : 'Bs.'}{(item.action as any).amount}
+                </Text>
+              )}
+            </View>
+          )}
+
+          {/* Preview de eliminar suscripción */}
+          {item.action && item.action.actionType === 'delete_subscription' && (
+            <View
+              style={{
+                marginTop: 12,
+                backgroundColor: themeColors.background,
+                borderRadius: 10,
+                padding: 12,
+                borderLeftWidth: 3,
+                borderLeftColor: '#EF4444',
+              }}
+            >
+              <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
+                🗑️ ELIMINAR SUSCRIPCIÓN
+              </Text>
+              <Text style={{ fontSize: 13, color: themeColors.text }}>
+                Suscripción ID: <Text style={{ fontWeight: '700' }}>{(item.action as any).subscriptionId}</Text>
+              </Text>
+            </View>
+          )}
+
+          {/* Preview de asignar presupuesto */}
+          {item.action && item.action.actionType === 'set_budget' && (
+            <View
+              style={{
+                marginTop: 12,
+                backgroundColor: themeColors.background,
+                borderRadius: 10,
+                padding: 12,
+                borderLeftWidth: 3,
+                borderLeftColor: '#3B82F6',
+              }}
+            >
+              <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
+                📊 ASIGNAR PRESUPUESTO
+              </Text>
+              <Text style={{ fontSize: 14, color: themeColors.text }}>
+                Categoría: <Text style={{ fontWeight: '700' }}>{(item.action as any).category}</Text>
+              </Text>
+              <Text style={{ fontSize: 14, color: themeColors.text, marginTop: 2 }}>
+                ${(item.action as any).amountUSD} USD
+              </Text>
+              {(item.action as any).amountBS > 0 && (
+                <Text style={{ fontSize: 14, color: themeColors.text }}>
+                  Bs.{(item.action as any).amountBS}
+                </Text>
+              )}
+              <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginTop: 2 }}>
+                Mes: {(item.action as any).month}
+              </Text>
+            </View>
+          )}
+
+          {/* Preview de crear deuda */}
+          {item.action && item.action.actionType === 'create_debt' && (
+            <View
+              style={{
+                marginTop: 12,
+                backgroundColor: themeColors.background,
+                borderRadius: 10,
+                padding: 12,
+                borderLeftWidth: 3,
+                borderLeftColor: '#EF4444',
+              }}
+            >
+              <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
+                {(item.action as any).type === 'lent' ? '💸 PRÉSTAMO (TÚ PRESTASTE)' : '💳 DEUDA (TÚ DEBES)'}
+              </Text>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: themeColors.text }}>
+                {(item.action as any).currency === 'USD' ? '$' : 'Bs.'}{(item.action as any).amount}
+              </Text>
+              <Text style={{ fontSize: 14, color: themeColors.text, marginTop: 2 }}>
+                Con: <Text style={{ fontWeight: '600' }}>{(item.action as any).personName}</Text>
+              </Text>
+              {(item.action as any).description && (
+                <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginTop: 2 }}>
+                  {(item.action as any).description}
+                </Text>
+              )}
+              {(item.action as any).dueDate && (
+                <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginTop: 2 }}>
+                  Vence: {(item.action as any).dueDate}
+                </Text>
+              )}
+            </View>
+          )}
+
+          {/* Preview de pagar deuda */}
+          {item.action && item.action.actionType === 'pay_debt' && (
+            <View
+              style={{
+                marginTop: 12,
+                backgroundColor: themeColors.background,
+                borderRadius: 10,
+                padding: 12,
+                borderLeftWidth: 3,
+                borderLeftColor: '#10B981',
+              }}
+            >
+              <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
+                💰 PAGAR DEUDA
+              </Text>
+              <Text style={{ fontSize: 13, color: themeColors.text }}>
+                Deuda ID: <Text style={{ fontWeight: '700' }}>{(item.action as any).debtId}</Text>
+              </Text>
+              <Text style={{ fontSize: 14, color: themeColors.text, marginTop: 2 }}>
+                Monto: {(item.action as any).currency === 'USD' ? '$' : 'Bs.'}{(item.action as any).amount}
+              </Text>
+            </View>
+          )}
+
+          {/* Preview de eliminar deuda */}
+          {item.action && item.action.actionType === 'delete_debt' && (
+            <View
+              style={{
+                marginTop: 12,
+                backgroundColor: themeColors.background,
+                borderRadius: 10,
+                padding: 12,
+                borderLeftWidth: 3,
+                borderLeftColor: '#EF4444',
+              }}
+            >
+              <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
+                🗑️ ELIMINAR DEUDA
+              </Text>
+              <Text style={{ fontSize: 13, color: themeColors.text }}>
+                Deuda ID: <Text style={{ fontWeight: '700' }}>{(item.action as any).debtId}</Text>
               </Text>
             </View>
           )}

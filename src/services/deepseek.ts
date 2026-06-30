@@ -5,7 +5,11 @@ export interface DeepSeekMessage {
   content: string;
 }
 
-// Acción para crear una transacción (gasto/ingreso)
+// ============================================================
+// TRANSACCIONES
+// ============================================================
+
+// Crear transacción (gasto/ingreso)
 export interface TransactionAction {
   actionType: 'transaction';
   type: 'expense' | 'income';
@@ -15,7 +19,28 @@ export interface TransactionAction {
   category: string;
 }
 
-// Acción para crear una cuenta
+// Actualizar una transacción existente
+export interface UpdateTransactionAction {
+  actionType: 'update_transaction';
+  transactionId: number;
+  type?: 'expense' | 'income';
+  amount?: number;
+  currency?: 'USD' | 'BS';
+  description?: string;
+  category?: string;
+}
+
+// Eliminar una transacción
+export interface DeleteTransactionAction {
+  actionType: 'delete_transaction';
+  transactionId: number;
+}
+
+// ============================================================
+// CUENTAS
+// ============================================================
+
+// Crear cuenta
 export interface CreateAccountAction {
   actionType: 'create_account';
   name: string;
@@ -27,7 +52,7 @@ export interface CreateAccountAction {
   color?: string;
 }
 
-// Acción para actualizar una cuenta (ej: cambiar nombre)
+// Actualizar cuenta
 export interface UpdateAccountAction {
   actionType: 'update_account';
   accountId: number;
@@ -36,7 +61,150 @@ export interface UpdateAccountAction {
   color?: string;
 }
 
-export type DeepSeekAction = TransactionAction | CreateAccountAction | UpdateAccountAction;
+// Eliminar cuenta
+export interface DeleteAccountAction {
+  actionType: 'delete_account';
+  accountId: number;
+}
+
+// ============================================================
+// TRANSFERENCIAS
+// ============================================================
+
+export interface TransferAction {
+  actionType: 'transfer';
+  fromAccountId: number;
+  toAccountId: number;
+  amount: number;
+  currency: 'USD' | 'BS';
+  description?: string;
+}
+
+// ============================================================
+// METAS (GOALS)
+// ============================================================
+
+// Crear meta
+export interface CreateGoalAction {
+  actionType: 'create_goal';
+  name: string;
+  targetAmount: number;
+  currency: 'USD' | 'BS';
+  accountId?: number;
+  deadline?: string;
+}
+
+// Actualizar progreso de meta
+export interface UpdateGoalProgressAction {
+  actionType: 'update_goal_progress';
+  goalId: number;
+  amount: number;
+}
+
+// Eliminar meta
+export interface DeleteGoalAction {
+  actionType: 'delete_goal';
+  goalId: number;
+}
+
+// ============================================================
+// SUSCRIPCIONES
+// ============================================================
+
+// Crear suscripción
+export interface CreateSubscriptionAction {
+  actionType: 'create_subscription';
+  name: string;
+  amount: number;
+  currency: 'USD' | 'BS';
+  frequency: 'weekly' | 'monthly' | 'yearly' | 'custom';
+  category: string;
+  accountId: number;
+  billingDay: number;
+  description?: string;
+}
+
+// Actualizar suscripción
+export interface UpdateSubscriptionAction {
+  actionType: 'update_subscription';
+  subscriptionId: number;
+  name?: string;
+  amount?: number;
+  currency?: 'USD' | 'BS';
+  frequency?: 'weekly' | 'monthly' | 'yearly' | 'custom';
+  isActive?: boolean;
+}
+
+// Eliminar suscripción
+export interface DeleteSubscriptionAction {
+  actionType: 'delete_subscription';
+  subscriptionId: number;
+}
+
+// ============================================================
+// PRESUPUESTOS (BUDGETS)
+// ============================================================
+
+// Asignar presupuesto a una categoría
+export interface SetBudgetAction {
+  actionType: 'set_budget';
+  category: string;
+  month: string; // formato YYYY-MM
+  amountUSD: number;
+  amountBS?: number;
+}
+
+// ============================================================
+// DEUDAS (DEBTS)
+// ============================================================
+
+// Crear deuda
+export interface CreateDebtAction {
+  actionType: 'create_debt';
+  type: 'lent' | 'borrowed';
+  personName: string;
+  amount: number;
+  currency: 'USD' | 'BS';
+  description?: string;
+  dueDate?: string;
+}
+
+// Registrar pago de deuda
+export interface PayDebtAction {
+  actionType: 'pay_debt';
+  debtId: number;
+  amount: number;
+  currency: 'USD' | 'BS';
+}
+
+// Eliminar deuda
+export interface DeleteDebtAction {
+  actionType: 'delete_debt';
+  debtId: number;
+}
+
+// ============================================================
+// TIPO UNIÓN
+// ============================================================
+
+export type DeepSeekAction =
+  | TransactionAction
+  | UpdateTransactionAction
+  | DeleteTransactionAction
+  | CreateAccountAction
+  | UpdateAccountAction
+  | DeleteAccountAction
+  | TransferAction
+  | CreateGoalAction
+  | UpdateGoalProgressAction
+  | DeleteGoalAction
+  | CreateSubscriptionAction
+  | UpdateSubscriptionAction
+  | DeleteSubscriptionAction
+  | SetBudgetAction
+  | CreateDebtAction
+  | PayDebtAction
+  | DeleteDebtAction;
 
 export interface DeepSeekResponse {
   type: 'action' | 'response';
@@ -63,7 +231,7 @@ function buildSystemPrompt(accounts: Account[], categories: Category[]): string 
     type: c.type,
   }));
 
-  return `Eres un asistente financiero personal experto en finanzas. Tu objetivo es ayudar al usuario a gestionar TODAS sus finanzas: registrar transacciones, crear cuentas, modificar cuentas, consultar saldos, y responder preguntas.
+  return `Eres un asistente financiero personal experto en finanzas. Tu objetivo es ayudar al usuario a gestionar TODO sobre sus finanzas: transacciones, cuentas, transferencias, metas, suscripciones, presupuestos y deudas.
 
 DATOS DEL USUARIO:
 
@@ -73,44 +241,77 @@ ${JSON.stringify(accountsSummary, null, 2)}
 CATEGORIAS DISPONIBLES:
 ${JSON.stringify(categoriesList, null, 2)}
 
-INSTRUCCIONES IMPORTANTES:
+INSTRUCCIONES IMPORTANTES - USA SIEMPRE ACCION: CON EL JSON CORRESPONDIENTE:
 
 1. **CREAR TRANSACCIONES (gasto/ingreso):**
-   - Cuando el usuario indique un gasto o ingreso, usa:
-     ACCION: {"actionType":"transaction","type":"expense|income","amount":NUMERO,"currency":"USD|BS","description":"TEXTO","category":"NOMBRE_CATEGORIA"}
+   ACCION: {"actionType":"transaction","type":"expense|income","amount":NUMERO,"currency":"USD|BS","description":"TEXTO","category":"NOMBRE_CATEGORIA"}
    - La categoria debe ser EXACTAMENTE uno de los nombres listados en CATEGORIAS DISPONIBLES.
-   - Siempre confirma con el usuario antes de ejecutar.
 
-2. **CREAR CUENTAS:**
-   - Cuando el usuario quiera crear una cuenta (ej: "crea una cuenta de ahorro", "agrega cuenta de banco"), usa:
-     ACCION: {"actionType":"create_account","name":"NOMBRE","type":"cash|bank|virtual_card|exchange|other","currency":"USD|BS|BOTH","initialBalanceUSD":0,"initialBalanceBS":0}
-   - Tipos de cuenta disponibles: cash (efectivo), bank (banco), virtual_card (tarjeta virtual), exchange (exchange/pago móvil), other (otro).
-   - Pregunta al usuario: nombre, tipo, moneda, y saldo inicial si no los especifica.
-   - Siempre confirma antes de crear.
+2. **ACTUALIZAR TRANSACCIÓN:**
+   ACCION: {"actionType":"update_transaction","transactionId":ID,"amount":NUMERO,"description":"TEXTO","category":"NOMBRE_CATEGORIA"}
+   - transactionId debe ser el ID de la transacción a modificar.
 
-3. **ACTUALIZAR CUENTAS:**
-   - Cuando el usuario quiera cambiar el nombre de una cuenta (ej: "cambia el nombre de mi cuenta X a Y"), usa:
-     ACCION: {"actionType":"update_account","accountId":ID,"name":"NUEVO_NOMBRE"}
-   - El accountId debe ser el ID numérico de la cuenta en CUENTAS (ej: 1, 2, 3...).
-   - IMPORTANTE: Si el usuario te dice "cambia el nombre de la cuenta X" donde X es el NOMBRE de la cuenta, busca en CUENTAS el ID correspondiente a ese nombre y úsalo como accountId.
-   - Pregunta al usuario: qué cuenta quiere modificar y cuál es el nuevo nombre.
-   - Siempre confirma antes de actualizar.
+3. **ELIMINAR TRANSACCIÓN:**
+   ACCION: {"actionType":"delete_transaction","transactionId":ID}
 
-4. **CONSULTAS Y PREGUNTAS:**
-   - Si el usuario pregunta sobre sus finanzas, responde NATURALMENTE usando los datos disponibles.
-   - Ej: "¿Cuánto dinero tengo?" -> "Tienes un total de X USD y Y BS distribuidos en N cuentas."
-   - Ej: "¿Cuánto gasté en comida?" -> "Has gastado X USD en Comida este mes."
-   - Ej: "¿En qué me he gastado el dinero?" -> Lista las categorías con montos.
-   - NO uses ACCION: para respuestas que solo son informativas.
+4. **CREAR CUENTAS:**
+   ACCION: {"actionType":"create_account","name":"NOMBRE","type":"cash|bank|virtual_card|exchange|other","currency":"USD|BS|BOTH","initialBalanceUSD":0,"initialBalanceBS":0}
+   - Tipos: cash (efectivo), bank (banco), virtual_card (tarjeta virtual), exchange (exchange/pago móvil), other (otro).
 
-5. **SI FALTAN DATOS:**
-   - Pregunta siempre la información faltante. NO asumas valores por defecto.
-   - NO uses ACCION: hasta que tengas todos los datos necesarios.
+5. **ACTUALIZAR CUENTAS:**
+   ACCION: {"actionType":"update_account","accountId":ID,"name":"NUEVO_NOMBRE"}
+   - Busca el ID de la cuenta por su nombre en CUENTAS.
 
-6. **REGLAS GENERALES:**
-   - Sé claro, conciso y amable pero profesional.
-   - Usa ACCION: solo cuando necesites que la app ejecute algo (crear/actualizar transacción o cuenta).
-   - Para respuestas informativas, solo responde naturalmente sin ACCION:.`;
+6. **ELIMINAR CUENTA:**
+   ACCION: {"actionType":"delete_account","accountId":ID}
+   - Busca el ID de la cuenta por su nombre.
+
+7. **TRANSFERENCIA entre cuentas:**
+   ACCION: {"actionType":"transfer","fromAccountId":ID,"toAccountId":ID,"amount":NUMERO,"currency":"USD|BS","description":"TEXTO"}
+   - Busca los IDs por nombre de cuenta en CUENTAS.
+
+8. **CREAR META (ahorro/objetivo):**
+   ACCION: {"actionType":"create_goal","name":"NOMBRE","targetAmount":NUMERO,"currency":"USD|BS","accountId":ID,"deadline":"YYYY-MM-DD"}
+   - accountId es opcional (cuenta asociada).
+
+9. **ACTUALIZAR PROGRESO DE META:**
+   ACCION: {"actionType":"update_goal_progress","goalId":ID,"amount":NUMERO}
+   - amount es el monto a AGREGAR al progreso actual.
+
+10. **ELIMINAR META:**
+    ACCION: {"actionType":"delete_goal","goalId":ID}
+
+11. **CREAR SUSCRIPCIÓN:**
+    ACCION: {"actionType":"create_subscription","name":"NOMBRE","amount":NUMERO,"currency":"USD|BS","frequency":"weekly|monthly|yearly|custom","category":"NOMBRE_CATEGORIA","accountId":ID,"billingDay":NUMERO_DIA}
+    - billingDay: día del mes (1-31) en que se cobra.
+
+12. **ACTUALIZAR SUSCRIPCIÓN:**
+    ACCION: {"actionType":"update_subscription","subscriptionId":ID,"name":"NUEVO_NOMBRE","amount":NUMERO,"isActive":true|false}
+
+13. **ELIMINAR SUSCRIPCIÓN:**
+    ACCION: {"actionType":"delete_subscription","subscriptionId":ID}
+
+14. **ASIGNAR PRESUPUESTO:**
+    ACCION: {"actionType":"set_budget","category":"NOMBRE_CATEGORIA","month":"YYYY-MM","amountUSD":NUMERO,"amountBS":NUMERO}
+    - Define un límite de gasto para una categoría en un mes específico.
+
+15. **CREAR DEUDA (préstamo):**
+    ACCION: {"actionType":"create_debt","type":"lent|borrowed","personName":"NOMBRE","amount":NUMERO,"currency":"USD|BS","description":"TEXTO","dueDate":"YYYY-MM-DD"}
+    - lent = prestaste tú, borrowed = te prestaron a ti.
+
+16. **REGISTRAR PAGO DE DEUDA:**
+    ACCION: {"actionType":"pay_debt","debtId":ID,"amount":NUMERO,"currency":"USD|BS"}
+
+17. **ELIMINAR DEUDA:**
+    ACCION: {"actionType":"delete_debt","debtId":ID}
+
+REGLAS GENERALES:
+- **SIEMPRE** describe lo que vas a hacer antes de mostrar ACCION:
+- Ejemplo: "Voy a registrar un gasto de $50 en Uber. ¿Confirmas?"
+  ACCION: {"actionType":"transaction","type":"expense","amount":50,"currency":"USD","description":"Uber","category":"Transporte"}
+- Si faltan datos, PREGUNTA al usuario. NO asumas valores.
+- Para consultas informativas (saldos, gastos, etc.), responde NATURALMENTE sin ACCION:.
+- Usa emojis y markdown para hacer las respuestas más amigables.`;
 }
 
 /**
@@ -167,7 +368,7 @@ export async function chatWithDeepSeek(
         model: 'deepseek-chat',
         messages: apiMessages,
         temperature: 0.3,
-        max_tokens: 1000,
+        max_tokens: 1500,
       }),
     });
 
@@ -193,7 +394,7 @@ export async function chatWithDeepSeek(
     if (action) {
       return {
         type: 'action',
-        content: cleanContent || `¿Quieres que registre esta transacción?`,
+        content: cleanContent || '¿Quieres que ejecute esta operación?',
         action,
       };
     }
