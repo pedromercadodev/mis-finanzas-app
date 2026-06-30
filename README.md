@@ -8,7 +8,17 @@ Aplicación móvil de finanzas personales construida con **React Native (Expo)**
 
 ## 📋 Historial de Versiones
 
-### v2.0.0 (Actual)
+### v2.1.0 (Actual)
+- 🤖 **DeepSeek sin límites** — El asistente IA ahora maneja **17 tipos de acción**: transacciones, cuentas (crear/actualizar/eliminar), transferencias, metas, suscripciones, presupuestos y deudas
+- 💬 **Confirmación mejorada** — DeepSeek describe la acción en lenguaje natural y muestra botones de Confirmar/Cancelar con preview cards visuales
+- 🗑️ **Eliminación por IA** — DeepSeek puede eliminar transacciones, cuentas, metas, suscripciones y deudas
+- 🔄 **Transferencias por IA** — DeepSeek puede transferir dinero entre cuentas
+- 🎯 **Metas por IA** — Crear metas, agregar progreso y eliminarlas
+- 📅 **Suscripciones por IA** — Crear, actualizar y eliminar suscripciones
+- 📊 **Presupuestos por IA** — Asignar presupuestos por categoría y mes
+- 💳 **Deudas por IA** — Crear deudas/préstamos, registrar pagos y eliminarlas
+
+### v2.0.0
 - ✨ **Exportación de Datos** — CSV y JSON con expo-sharing
 - 📊 **Reportes Gráficos** — PieChart (gastos/ingresos por categoría) y LineChart (flujo de caja)
 - 🔄 **Suscripciones** — Gastos recurrentes con frecuencia semanal/mensual/anual y procesamiento automático
@@ -159,8 +169,9 @@ finanzas-app/
 │   ├── account/
 │   │   ├── [id].tsx              # Detalle de cuenta
 │   │   └── new.tsx               # Crear cuenta
-│   └── categories/
-│       └── index.tsx             # Gestión de categorías
+│   ├── categories/
+│   │   └── index.tsx             # Gestión de categorías
+│   └── ai-chat.tsx               # Chat con asistente IA
 ├── src/
 │   ├── components/
 │   │   ├── AnimatedTabBar.tsx    # Barra de pestañas animada
@@ -183,6 +194,8 @@ finanzas-app/
 │   │   ├── subscriptions.ts      # Suscripciones recurrentes
 │   │   ├── debts.ts              # Deudas y préstamos
 │   │   ├── reports.ts            # Reportes y estadísticas
+│   │   ├── deepseek.ts           # Integración con DeepSeek AI
+│   │   ├── chatHistory.ts        # Historial de chat IA
 │   │   └── export.ts             # Exportación CSV/JSON
 │   ├── store/
 │   │   ├── useAccounts.ts        # Estado global de cuentas
@@ -266,13 +279,47 @@ El usuario puede seleccionar su tasa preferida (BCV o Paralelo) en Ajustes para 
 
 ---
 
-## 🤖 Entrada por IA
+## 🤖 Asistente IA (DeepSeek)
 
-La app soporta entrada de transacciones mediante **DeepSeek AI**. Configura tu API Key en Ajustes y escribe en lenguaje natural:
+La app integra un **asistente con IA** que puede gestionar **todas las funciones financieras** mediante lenguaje natural. Configura tu API Key de DeepSeek en Ajustes y empieza a hablar:
 
-> *"Gasté 20$ en pizza hoy"*
-> *"Recibí 500$ de pago de freelance"*
-> *"Transferí 100$ de banco a binance"*
+### 💸 Transacciones
+> *"Gasté 50 dólares en uber"*
+> *"Recibí 200 dólares de salario"*
+> *"Cambia la descripción de la transacción 5 a 'Netflix'"*
+> *"Elimina la transacción 12"*
+
+### 🏦 Cuentas
+> *"Crea una cuenta de ahorro en dólares"*
+> *"Cambia el nombre de mi cuenta de banco a Ahorros"*
+> *"Elimina la cuenta llamada 'Prueba'"*
+
+### 🔄 Transferencias
+> *"Transfiere $30 de mi cuenta de banco a binance"*
+
+### 🎯 Metas
+> *"Crea una meta de ahorro de $500 para un viaje"*
+> *"Agrega $100 al progreso de mi meta"*
+> *"Elimina la meta 3"*
+
+### 📅 Suscripciones
+> *"Agrega suscripción de Netflix de $15 mensual"*
+> *"Actualiza el precio de mi suscripción de Spotify a $10"*
+> *"Elimina la suscripción 2"*
+
+### 📊 Presupuestos
+> *"Pon presupuesto de $200 en Comida para julio 2026"*
+
+### 💳 Deudas
+> *"Registra una deuda de $100 con Juan"*
+> *"Pagué $50 de la deuda con María"*
+> *"Elimina la deuda 1"*
+
+### 📊 Consultas
+> *"¿Cuánto dinero tengo en total?"*
+> *"¿Cuáles son mis gastos del mes?"*
+
+> **Nota:** DeepSeek siempre describirá la acción a realizar y te pedirá confirmación antes de ejecutarla, mostrando una tarjeta de vista previa con los detalles.
 
 ---
 
