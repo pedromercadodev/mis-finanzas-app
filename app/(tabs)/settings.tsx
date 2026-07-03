@@ -28,6 +28,7 @@ export default function SettingsScreen() {
   const {
     deepseekKey, setDeepseekKey,
     manualRate, setManualRate,
+    manualRateType, setManualRateType,
     useDarkMode, setUseDarkMode,
     preferredRateType, setPreferredRateType,
   } = useSettings();
@@ -57,7 +58,8 @@ export default function SettingsScreen() {
       return;
     }
     setManualRate(rate);
-    Alert.alert('Guardado', `Tasa manual: ${formatBS(rate)}`);
+    const label = manualRateType === 'BCV' ? 'BCV (Oficial)' : 'Paralelo (USDT)';
+    Alert.alert('Guardado', `Tasa manual ${label}: ${formatBS(rate)}`);
     setShowRate(false);
   };
 
@@ -204,7 +206,7 @@ export default function SettingsScreen() {
                   Tasas de Cambio
                 </Text>
                 <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>
-                  {manualRate ? `Manual: ${formatBS(manualRate)}` : 'Automática'}
+                  {manualRate ? `Manual ${manualRateType === 'BCV' ? 'BCV' : 'Paralelo'}: ${formatBS(manualRate)}` : 'Automática'}
                 </Text>
               </View>
             </View>
@@ -269,6 +271,32 @@ export default function SettingsScreen() {
                 )}
               </TouchableOpacity>
 
+              {/* Selector de tipo para tasa manual */}
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                {([{ label: '🏛️ BCV', value: 'BCV' as RateType }, { label: '💱 Paralelo', value: 'PARALLEL' as RateType }]).map((opt) => (
+                  <TouchableOpacity
+                    key={opt.value}
+                    onPress={() => setManualRateType(opt.value)}
+                    style={{
+                      flex: 1,
+                      paddingVertical: 10,
+                      borderRadius: 10,
+                      backgroundColor: manualRateType === opt.value ? themeColors.primary : themeColors.background,
+                      alignItems: 'center',
+                      borderWidth: 1,
+                      borderColor: manualRateType === opt.value ? themeColors.primary : themeColors.border,
+                    }}>
+                    <Text style={{
+                      fontSize: 13,
+                      fontWeight: '600',
+                      color: manualRateType === opt.value ? '#FFF' : themeColors.textSecondary,
+                    }}>
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 <TextInput
                   value={rateInput}
@@ -299,6 +327,27 @@ export default function SettingsScreen() {
                   <Text style={{ color: '#FFF', fontWeight: '600' }}>Guardar</Text>
                 </TouchableOpacity>
               </View>
+
+              {/* Botón para volver a tasas automáticas */}
+              {manualRate !== null && (
+                <TouchableOpacity
+                  onPress={() => {
+                    setManualRate(null);
+                    setRateInput('');
+                    Alert.alert('Tasa automática', 'Se ha eliminado la tasa manual. Ahora se usarán las tasas automáticas de la BD.');
+                  }}
+                  style={{
+                    backgroundColor: themeColors.danger,
+                    borderRadius: 10,
+                    padding: 12,
+                    alignItems: 'center',
+                  }}
+                >
+                  <Text style={{ color: '#FFF', fontWeight: '600' }}>
+                    Quitar tasa manual (volver a automática)
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
         </View>

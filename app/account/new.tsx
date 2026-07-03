@@ -16,7 +16,7 @@ import { colors } from '../../src/theme/colors';
 import { accountColors } from '../../src/theme/colors';
 import { useThemeColors } from '../../src/hooks/useThemeColors';
 import { useAccounts } from '../../src/store/useAccounts';
-import type { AccountType } from '../../src/utils/types';
+import type { AccountType, CurrencyType } from '../../src/utils/types';
 
 const accountTypes: { key: AccountType; label: string; icon: string }[] = [
   { key: 'exchange', label: 'Exchange', icon: '💰' },
@@ -38,6 +38,7 @@ export default function NewAccountScreen() {
   const { addAccount, loadAccounts } = useAccounts();
   const [name, setName] = useState('');
   const [type, setType] = useState<AccountType>('exchange');
+  const [currency, setCurrency] = useState<CurrencyType>('BOTH');
   const [icon, setIcon] = useState('💰');
   const [color, setColor] = useState<string>(accountColors[0].hex);
   const [platform, setPlatform] = useState('');
@@ -61,7 +62,7 @@ export default function NewAccountScreen() {
     await addAccount({
       name: name.trim(),
       type,
-      currency: 'BOTH',
+      currency,
       initialBalanceUSD: parseFloat(initialUSD) || 0,
       initialBalanceBS: parseFloat(initialBS) || 0,
       icon,
@@ -134,6 +135,36 @@ export default function NewAccountScreen() {
                   color: type === t.key ? '#FFF' : themeColors.text,
                 }}>
                   {t.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Moneda */}
+          <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+            Moneda
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
+            {(['USD', 'BS', 'BOTH'] as CurrencyType[]).map((cur) => (
+              <TouchableOpacity
+                key={cur}
+                onPress={() => setCurrency(cur)}
+                style={{
+                  flex: 1,
+                  paddingVertical: 12,
+                  borderRadius: 12,
+                  backgroundColor: currency === cur ? themeColors.primary : themeColors.surface,
+                  alignItems: 'center',
+                  borderWidth: 1,
+                  borderColor: currency === cur ? themeColors.primary : themeColors.border,
+                }}
+              >
+                <Text style={{
+                  fontSize: 15,
+                  fontWeight: '600',
+                  color: currency === cur ? '#FFF' : themeColors.text,
+                }}>
+                  {cur === 'USD' ? '💰 USD' : cur === 'BS' ? '💵 BS' : '🔀 Ambas'}
                 </Text>
               </TouchableOpacity>
             ))}

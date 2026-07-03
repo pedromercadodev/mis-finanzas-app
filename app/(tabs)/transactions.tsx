@@ -23,6 +23,7 @@ import { useTransactions } from '../../src/store/useTransactions';
 import { getCategories } from '../../src/services/categories';
 import { getLatestRate } from '../../src/services/exchangeRate';
 import { getPeriodSummary } from '../../src/services/transactions';
+import { getAccountBalance } from '../../src/services/accounts';
 import { formatUSD, formatBS, formatDateShort, getCurrentMonthRange } from '../../src/utils/format';
 import type { Category, TransactionType } from '../../src/utils/types';
 
@@ -84,6 +85,7 @@ export default function TransactionsScreen() {
   const [amountUSD, setAmountUSD] = useState('');
   const [amountBS, setAmountBS] = useState('');
   const [selectedAccountId, setSelectedAccountId] = useState<number | null>(null);
+  const [transferToAccountId, setTransferToAccountId] = useState<number | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [txDate, setTxDate] = useState(new Date().toISOString().split('T')[0]);
   const [exchangeRate, setExchangeRate] = useState<number | null>(null);
@@ -171,6 +173,16 @@ export default function TransactionsScreen() {
       Alert.alert('Error', 'Selecciona una cuenta');
       return;
     }
+    if (txType === 'transfer') {
+      if (!transferToAccountId) {
+        Alert.alert('Error', 'Selecciona la cuenta destino');
+        return;
+      }
+      if (transferToAccountId === selectedAccountId) {
+        Alert.alert('Error', 'La cuenta destino debe ser diferente a la cuenta origen');
+        return;
+      }
+    }
     if (!selectedCategoryId) {
       Alert.alert('Error', 'Selecciona una categoría');
       return;
@@ -184,6 +196,25 @@ export default function TransactionsScreen() {
       return;
     }
 
+    // Validar saldo suficiente para gastos y transferencias
+    if (txType === 'expense' || txType === 'transfer') {
+      const balance = await getAccountBalance(selectedAccountId);
+      if (usd && usd > 0 && balance.balanceUSD < usd) {
+        Alert.alert(
+          'Saldo insuficiente',
+          `La cuenta tiene ${formatUSD(balance.balanceUSD)} pero intentas ${txType === 'transfer' ? 'transferir' : 'gastar'} ${formatUSD(usd)}.`
+        );
+        return;
+      }
+      if (bs && bs > 0 && balance.balanceBS < bs) {
+        Alert.alert(
+          'Saldo insuficiente',
+          `La cuenta tiene ${formatBS(balance.balanceBS)} pero intentas ${txType === 'transfer' ? 'transferir' : 'gastar'} ${formatBS(bs)}.`
+        );
+        return;
+      }
+    }
+
     await addTransaction({
       type: txType,
       description: description.trim(),
@@ -192,7 +223,7 @@ export default function TransactionsScreen() {
       currency: usd && bs ? 'BOTH' : usd ? 'USD' : 'BS',
       exchangeRate,
       accountId: selectedAccountId,
-      transferToAccountId: null,
+      transferToAccountId: txType === 'transfer' ? transferToAccountId : null,
       categoryId: selectedCategoryId,
       date: txDate,
       notes: null,
@@ -203,6 +234,7 @@ export default function TransactionsScreen() {
     setAmountUSD('');
     setAmountBS('');
     setTxType('expense');
+    setTransferToAccountId(null);
     await loadData();
     showToast('✅ Transacción guardada');
   };
@@ -555,6 +587,42 @@ export default function TransactionsScreen() {
                   </TouchableOpacity>
                 ))}
               </ScrollView>
+
+              {/* Cuenta Destino (solo para transferencias) */}
+              {txType === 'transfer' && (
+                <>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+                    Cuenta Destino
+                  </Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
+                    {accounts
+                      .filter((a) => a.id !== selectedAccountId)
+                      .map((account) => (
+                        <TouchableOpacity
+                          key={account.id}
+                          onPress={() => setTransferToAccountId(account.id)}
+                          style={{
+                            paddingHorizontal: 16,
+                            paddingVertical: 10,
+                            borderRadius: 12,
+                            backgroundColor: transferToAccountId === account.id ? account.color + '20' : themeColors.surface,
+                            marginRight: 8,
+                            borderWidth: 1,
+                            borderColor: transferToAccountId === account.id ? account.color : themeColors.border,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 6,
+                          }}
+                        >
+                          <Text style={{ fontSize: 16 }}>{account.icon}</Text>
+                          <Text style={{ fontSize: 14, fontWeight: '500', color: themeColors.text }}>
+                            {account.name}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                  </ScrollView>
+                </>
+              )}
 
               {/* Descripción */}
               <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>

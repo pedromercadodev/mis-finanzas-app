@@ -23,8 +23,10 @@ import type { Category, CategoryGroup, CategoryWithGroup } from '../../src/utils
 const CATEGORY_ICONS = [
   '🍔', '🚗', '💊', '📚', '🎮', '🏠', '💡', '👕',
   '💼', '💻', '📈', '📦', '🎵', '🎬', '✈️', '🐕',
-  '💊', '🎓', '🛒', '🍕', '☕', '🎂', '🍺', '🏋️',
+  '💵', '🎓', '🛒', '🍕', '☕', '🎂', '🍺', '🏋️',
 ];
+
+// Usar el índice como key para evitar duplicados
 
 const CATEGORY_COLORS = [
   '#EF4444', '#F59E0B', '#10B981', '#6366F1', '#8B5CF6',
@@ -39,6 +41,23 @@ export default function CategoriesScreen() {
   const [categories, setCategories] = useState<CategoryWithGroup[]>([]);
   const [groups, setGroups] = useState<CategoryGroup[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Set<number>>(new Set());
+
+  const toggleGroup = (groupId: number) => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(groupId)) {
+        next.delete(groupId);
+      } else {
+        next.add(groupId);
+      }
+      return next;
+    });
+  };
+
+  const getCategoriesByGroup = (groupId: number): CategoryWithGroup[] => {
+    return categories.filter((c) => c.groupId === groupId);
+  };
 
   // Modal de categoría
   const [showCatModal, setShowCatModal] = useState(false);
@@ -282,56 +301,131 @@ export default function CategoriesScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Sección de Grupos */}
+        {/* Sección de Grupos con Categorías Expandibles */}
         <Text style={{ fontSize: 14, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1 }}>
           Grupos ({groups.length})
         </Text>
         <View style={{ gap: 8, marginBottom: 24 }}>
-          {groups.map((g) => (
-            <View
-              key={g.id}
-              style={{
-                backgroundColor: themeColors.surface,
-                borderRadius: 14,
-                padding: 14,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                <View style={{
-                  width: 40, height: 40, borderRadius: 12,
-                  backgroundColor: g.color + '20',
-                  justifyContent: 'center', alignItems: 'center',
-                }}>
-                  <Text style={{ fontSize: 20 }}>{g.icon}</Text>
-                </View>
-                <View>
-                  <Text style={{ fontSize: 15, fontWeight: '600', color: themeColors.text }}>
-                    {g.name}
-                  </Text>
-                  <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>
-                    {g.type === 'expense' ? 'Gasto' : 'Ingreso'}
-                  </Text>
-                </View>
-              </View>
-              <View style={{ flexDirection: 'row', gap: 4 }}>
+          {groups.map((g) => {
+            const isExpanded = expandedGroups.has(g.id);
+            const groupCategories = getCategoriesByGroup(g.id);
+            return (
+              <View key={g.id} style={{ borderRadius: 14, overflow: 'hidden' }}>
                 <TouchableOpacity
-                  onPress={() => openEditGroup(g)}
-                  style={{ padding: 6 }}
+                  onPress={() => toggleGroup(g.id)}
+                  style={{
+                    backgroundColor: themeColors.surface,
+                    padding: 14,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
                 >
-                  <Ionicons name="pencil-outline" size={18} color={themeColors.textSecondary} />
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                    <View style={{
+                      width: 40, height: 40, borderRadius: 12,
+                      backgroundColor: g.color + '20',
+                      justifyContent: 'center', alignItems: 'center',
+                    }}>
+                      <Text style={{ fontSize: 20 }}>{g.icon}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 15, fontWeight: '600', color: themeColors.text }}>
+                        {g.name}
+                      </Text>
+                      <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>
+                        {groupCategories.length} categorías · {g.type === 'expense' ? 'Gasto' : 'Ingreso'}
+                      </Text>
+                    </View>
+                    <Ionicons
+                      name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                      size={20}
+                      color={themeColors.textSecondary}
+                    />
+                  </View>
+                  <View style={{ flexDirection: 'row', gap: 4, marginLeft: 8 }}>
+                    <TouchableOpacity
+                      onPress={() => openEditGroup(g)}
+                      style={{ padding: 6 }}
+                    >
+                      <Ionicons name="pencil-outline" size={18} color={themeColors.textSecondary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => handleDeleteGroup(g)}
+                      style={{ padding: 6 }}
+                    >
+                      <Ionicons name="trash-outline" size={18} color={themeColors.danger || '#EF4444'} />
+                    </TouchableOpacity>
+                  </View>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => handleDeleteGroup(g)}
-                  style={{ padding: 6 }}
-                >
-                  <Ionicons name="trash-outline" size={18} color={themeColors.danger || '#EF4444'} />
-                </TouchableOpacity>
+
+                {isExpanded && (
+                  <View style={{ backgroundColor: themeColors.background, paddingLeft: 14, paddingRight: 14, paddingBottom: 8, gap: 4 }}>
+                    {groupCategories.length === 0 ? (
+                      <Text style={{ fontSize: 13, color: themeColors.textSecondary, textAlign: 'center', paddingVertical: 12 }}>
+                        Sin categorías en este grupo
+                      </Text>
+                    ) : (
+                      groupCategories.map((cat) => (
+                        <TouchableOpacity
+                          key={cat.id}
+                          onPress={() => openEditCategory(cat)}
+                          style={{
+                            backgroundColor: themeColors.surface,
+                            borderRadius: 10,
+                            padding: 10,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            marginTop: 4,
+                          }}
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                            <Text style={{ fontSize: 18 }}>{cat.icon}</Text>
+                            <View>
+                              <Text style={{ fontSize: 14, fontWeight: '500', color: themeColors.text }}>
+                                {cat.name}
+                              </Text>
+                            </View>
+                          </View>
+                          <TouchableOpacity
+                            onPress={() => handleDeleteCategory(cat)}
+                            style={{ padding: 4 }}
+                          >
+                            <Ionicons name="trash-outline" size={16} color={themeColors.danger || '#EF4444'} />
+                          </TouchableOpacity>
+                        </TouchableOpacity>
+                      ))
+                    )}
+                    <TouchableOpacity
+                      onPress={() => {
+                        setCatGroupId(g.id);
+                        setCatType(g.type);
+                        openNewCategory();
+                      }}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 6,
+                        paddingVertical: 10,
+                        marginTop: 4,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: themeColors.border,
+                        borderStyle: 'dashed',
+                      }}
+                    >
+                      <Ionicons name="add-circle-outline" size={16} color={themeColors.primary} />
+                      <Text style={{ color: themeColors.primary, fontWeight: '500', fontSize: 13 }}>
+                        Nueva categoría
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
-            </View>
-          ))}
+            );
+          })}
           <TouchableOpacity
             onPress={openNewGroup}
             style={{
@@ -352,96 +446,6 @@ export default function CategoriesScreen() {
               Nuevo Grupo
             </Text>
           </TouchableOpacity>
-        </View>
-
-        {/* Gastos */}
-        <Text style={{ fontSize: 14, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1 }}>
-          Gastos ({expenseCategories.length})
-        </Text>
-        <View style={{ gap: 8, marginBottom: 24 }}>
-          {expenseCategories.map((cat) => (
-            <TouchableOpacity
-              key={cat.id}
-              onPress={() => openEditCategory(cat)}
-              style={{
-                backgroundColor: themeColors.surface,
-                borderRadius: 14,
-                padding: 14,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                <View style={{
-                  width: 40, height: 40, borderRadius: 12,
-                  backgroundColor: cat.color + '20',
-                  justifyContent: 'center', alignItems: 'center',
-                }}>
-                  <Text style={{ fontSize: 20 }}>{cat.icon}</Text>
-                </View>
-                <View>
-                  <Text style={{ fontSize: 15, fontWeight: '600', color: themeColors.text }}>
-                    {cat.name}
-                  </Text>
-                  <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>
-                    {getGroupName(cat.groupId)}
-                  </Text>
-                </View>
-              </View>
-              <TouchableOpacity
-                onPress={() => handleDeleteCategory(cat)}
-                style={{ padding: 4 }}
-              >
-                <Ionicons name="trash-outline" size={18} color={themeColors.danger || '#EF4444'} />
-              </TouchableOpacity>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Ingresos */}
-        <Text style={{ fontSize: 14, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1 }}>
-          Ingresos ({incomeCategories.length})
-        </Text>
-        <View style={{ gap: 8, marginBottom: 24 }}>
-          {incomeCategories.map((cat) => (
-            <TouchableOpacity
-              key={cat.id}
-              onPress={() => openEditCategory(cat)}
-              style={{
-                backgroundColor: themeColors.surface,
-                borderRadius: 14,
-                padding: 14,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                <View style={{
-                  width: 40, height: 40, borderRadius: 12,
-                  backgroundColor: cat.color + '20',
-                  justifyContent: 'center', alignItems: 'center',
-                }}>
-                  <Text style={{ fontSize: 20 }}>{cat.icon}</Text>
-                </View>
-                <View>
-                  <Text style={{ fontSize: 15, fontWeight: '600', color: themeColors.text }}>
-                    {cat.name}
-                  </Text>
-                  <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>
-                    {getGroupName(cat.groupId)}
-                  </Text>
-                </View>
-              </View>
-              <TouchableOpacity
-                onPress={() => handleDeleteCategory(cat)}
-                style={{ padding: 4 }}
-              >
-                <Ionicons name="trash-outline" size={18} color={themeColors.danger || '#EF4444'} />
-              </TouchableOpacity>
-            </TouchableOpacity>
-          ))}
         </View>
       </ScrollView>
 
@@ -583,9 +587,9 @@ export default function CategoriesScreen() {
                 Icono
               </Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
-                {CATEGORY_ICONS.map((ic) => (
+                {CATEGORY_ICONS.map((ic, index) => (
                   <TouchableOpacity
-                    key={ic}
+                    key={`cat-icon-${index}`}
                     onPress={() => setCatIcon(ic)}
                     style={{
                       width: 44, height: 44, borderRadius: 12,
@@ -605,9 +609,9 @@ export default function CategoriesScreen() {
                 Color
               </Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 32 }}>
-                {CATEGORY_COLORS.map((c) => (
+                {CATEGORY_COLORS.map((c, index) => (
                   <TouchableOpacity
-                    key={c}
+                    key={`cat-color-${index}`}
                     onPress={() => setCatColor(c)}
                     style={{
                       width: 36, height: 36, borderRadius: 10,
@@ -720,9 +724,9 @@ export default function CategoriesScreen() {
                 Icono
               </Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
-                {GROUP_ICONS.map((ic) => (
+                {GROUP_ICONS.map((ic, index) => (
                   <TouchableOpacity
-                    key={ic}
+                    key={`group-icon-${index}`}
                     onPress={() => setGroupIcon(ic)}
                     style={{
                       width: 44, height: 44, borderRadius: 12,
@@ -742,9 +746,9 @@ export default function CategoriesScreen() {
                 Color
               </Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 32 }}>
-                {CATEGORY_COLORS.map((c) => (
+                {CATEGORY_COLORS.map((c, index) => (
                   <TouchableOpacity
-                    key={c}
+                    key={`group-color-${index}`}
                     onPress={() => setGroupColor(c)}
                     style={{
                       width: 36, height: 36, borderRadius: 10,

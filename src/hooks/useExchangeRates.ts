@@ -71,10 +71,27 @@ export function useExchangeRates(autoRefreshInterval?: number) {
     }
   }, []);
 
-  // Cargar tasas al montar el componente
+  // Cargar tasas al montar el componente y hacer refresh si no hay datos
   useEffect(() => {
-    loadFromDB();
-  }, [loadFromDB]);
+    let mounted = true;
+    async function init() {
+      await loadFromDB();
+      // Verificar si realmente hay tasas válidas (rateUSDToBS > 0)
+      if (mounted) {
+        setState(prev => {
+          const hasValidBcv = prev.bcv && prev.bcv.rateUSDToBS > 0;
+          const hasValidParallel = prev.parallel && prev.parallel.rateUSDToBS > 0;
+          if (!hasValidBcv || !hasValidParallel) {
+            // Hacer refresh en el siguiente tick para no bloquear el montaje
+            setTimeout(() => refresh(), 100);
+          }
+          return prev;
+        });
+      }
+    }
+    init();
+    return () => { mounted = false; };
+  }, [loadFromDB, refresh]);
 
   // Auto-refresh opcional
   useEffect(() => {

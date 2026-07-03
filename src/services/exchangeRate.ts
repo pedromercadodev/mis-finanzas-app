@@ -11,7 +11,7 @@ export async function getLatestRate(): Promise<ExchangeRate | null> {
 export async function getLatestRateByType(type: RateType): Promise<ExchangeRate | null> {
   const db = await getDatabase();
   return await db.getFirstAsync<ExchangeRate>(
-    'SELECT * FROM exchange_rates WHERE rateType = ? ORDER BY date DESC, id DESC LIMIT 1',
+    "SELECT * FROM exchange_rates WHERE rateType = ? AND source != '_SEEDED_' ORDER BY date DESC, id DESC LIMIT 1",
     [type]
   );
 }
@@ -46,11 +46,15 @@ export async function fetchDolarApiRates(): Promise<{ bcv: number | null; parall
     let parallel: number | null = null;
 
     for (const item of data) {
-      if (item.fuente === 'oficial' && item.promedio) {
-        bcv = parseFloat(item.promedio);
+      // dolarapi.com puede devolver diferentes nombres de campo
+      const nombre = (item.nombre || item.fuente || item.title || '').toLowerCase();
+      const promedio = item.promedio || item.price || item.avg || null;
+      
+      if (nombre.includes('oficial') || nombre.includes('bcv')) {
+        if (promedio) bcv = parseFloat(promedio);
       }
-      if (item.fuente === 'paralelo' && item.promedio) {
-        parallel = parseFloat(item.promedio);
+      if (nombre.includes('paralelo') || nombre.includes('paralel')) {
+        if (promedio) parallel = parseFloat(promedio);
       }
     }
 
@@ -155,18 +159,90 @@ export async function fetchBCVFromExchangeRateAPI(): Promise<number | null> {
 }
 
 /**
+ * Obtiene la tasa desde el BCV directamente
+ * Endpoint: GET https://www.bcv.org.ve/ (scraping simplificado)
+ * Alternativa: API de terceros
+ */
+export async function fetchBCVFromDirectAPI(): Promise<number | null> {
+  try {
+    // Usamos una API alternativa que funciona en Venezuela
+    const response = await fetch('https://pydolarve.org/api/v1/dollar?page=bcv');
+    if (response.ok) {
+      const data = await response.json();
+      if (data?.price) {
+        return parseFloat(data.price);
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Obtiene la tasa desde el Paralelo (como respaldo para BCV)
+ * Endpoint: GET https://exchange.api.com/api/v1/rates
+ */
+export async function fetchBCVFromMonitordolar(): Promise<number | null> {
+  try {
+    const response = await fetch('https://monitordolarvenezuela.com/api/v1/rates');
+    if (response.ok) {
+      const data = await response.json();
+      if (data?.bcv) {
+        return parseFloat(data.bcv);
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Obtiene la tasa desde exchangerate.host como fallback adicional
+ * Endpoint: GET https://api.exchangerate.host/latest?base=USD&symbols=VES
+ */
+export async function fetchBCVFromExchangeRateHost(): Promise<number | null> {
+  try {
+    const response = await fetch('https://api.exchangerate.host/latest?base=USD&symbols=VES');
+    const data = await response.json();
+    if (data?.rates?.VES) {
+      return parseFloat(data.rates.VES);
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Obtiene la tasa BCV con sistema de fallback:
  * 1. dolarapi.com (principal) - fuente oficial BCV
- * 2. exchangerate-api.com (fallback) - tasa oficial VES
+ * 2. pydolarve.org (fallback 1) - API alternativa
+ * 3. exchangerate-api.com (fallback 2) - tasa oficial VES
+ * 4. exchangerate.host (fallback 3) - API gratuita
+ * 5. monitordolarvenezuela.com (fallback 4)
  */
 export async function fetchBCVRate(): Promise<number | null> {
   // Intento 1: dolarapi.com
   const dolarApi = await fetchDolarApiRates();
   if (dolarApi.bcv) return dolarApi.bcv;
 
-  // Intento 2: exchangerate-api.com
+  // Intento 2: pydolarve.org
+  const pydolarve = await fetchBCVFromDirectAPI();
+  if (pydolarve) return pydolarve;
+
+  // Intento 3: exchangerate-api.com
   const exchangeRate = await fetchBCVFromExchangeRateAPI();
   if (exchangeRate) return exchangeRate;
+
+  // Intento 4: exchangerate.host
+  const exchangeRateHost = await fetchBCVFromExchangeRateHost();
+  if (exchangeRateHost) return exchangeRateHost;
+
+  // Intento 5: monitordolarvenezuela.com
+  const monitorDolar = await fetchBCVFromMonitordolar();
+  if (monitorDolar) return monitorDolar;
 
   return null;
 }

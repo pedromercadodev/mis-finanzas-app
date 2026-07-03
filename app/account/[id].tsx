@@ -8,11 +8,14 @@ import {
   RefreshControl,
   Alert,
   TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { colors } from '../../src/theme/colors';
+import { colors, accountColors } from '../../src/theme/colors';
 import { useThemeColors } from '../../src/hooks/useThemeColors';
 import { useExchangeRates } from '../../src/hooks/useExchangeRates';
 import { useAccounts } from '../../src/store/useAccounts';
@@ -20,7 +23,7 @@ import { useTransactions } from '../../src/store/useTransactions';
 import { useSettings } from '../../src/store/useSettings';
 import { getAccountBalance } from '../../src/services/accounts';
 import { formatUSD, formatBS, formatDate } from '../../src/utils/format';
-import type { Transaction } from '../../src/utils/types';
+import type { Transaction, AccountType, CurrencyType } from '../../src/utils/types';
 
 const typeLabels: Record<string, string> = {
   exchange: 'Exchange',
@@ -29,6 +32,20 @@ const typeLabels: Record<string, string> = {
   cash: 'Efectivo',
   other: 'Otra',
 };
+
+const accountTypes: { key: AccountType; label: string; icon: string }[] = [
+  { key: 'exchange', label: 'Exchange', icon: '💰' },
+  { key: 'bank', label: 'Banco', icon: '🏦' },
+  { key: 'virtual_card', label: 'Tarjeta Virtual', icon: '💳' },
+  { key: 'cash', label: 'Efectivo', icon: '💵' },
+  { key: 'other', label: 'Otra', icon: '📦' },
+];
+
+const accountIcons = [
+  '💰', '🏦', '💳', '💵', '📱', '🌐', '🏧', '🎯',
+  '💼', '📊', '🪙', '💎', '🏠', '🚗', '✈️', '🎓',
+  '🛒', '🍔', '🎮', '👕', '💊', '🐕', '🎵', '📸',
+];
 
 export default function AccountDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -45,6 +62,11 @@ export default function AccountDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editName, setEditName] = useState('');
+  const [editType, setEditType] = useState<AccountType>('bank');
+  const [editCurrency, setEditCurrency] = useState<CurrencyType>('BOTH');
+  const [editIcon, setEditIcon] = useState('💰');
+  const [editColor, setEditColor] = useState('#4A90D9');
+  const [editPlatform, setEditPlatform] = useState('');
 
   const account = accounts.find((a) => a.id === accountId);
 
@@ -169,6 +191,11 @@ export default function AccountDetailScreen() {
               <TouchableOpacity
                 onPress={() => {
                   setEditName(account?.name || '');
+                  setEditType(account?.type || 'bank');
+                  setEditCurrency(account?.currency || 'BOTH');
+                  setEditIcon(account?.icon || '💰');
+                  setEditColor(account?.color || '#4A90D9');
+                  setEditPlatform(account?.platform || '');
                   setShowEditModal(true);
                 }}
                 style={{
@@ -429,94 +456,218 @@ export default function AccountDetailScreen() {
         </View>
       </ScrollView>
 
-      {/* Modal para editar nombre */}
-      {showEditModal && (
-        <View style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          justifyContent: 'center',
-          alignItems: 'center',
-          padding: 20,
-        }}>
-          <View style={{
-            backgroundColor: themeColors.surface,
-            borderRadius: 20,
-            padding: 24,
-            width: '100%',
-            maxWidth: 340,
-          }}>
-            <Text style={{
-              fontSize: 18,
-              fontWeight: '700',
-              color: themeColors.text,
-              marginBottom: 16,
-            }}>
-              Editar nombre
-            </Text>
-            <TextInput
-              value={editName}
-              onChangeText={setEditName}
-              placeholder="Nuevo nombre"
-              placeholderTextColor={themeColors.textSecondary}
-              autoFocus
-              style={{
-                backgroundColor: themeColors.background,
-                borderRadius: 12,
-                padding: 14,
-                fontSize: 15,
-                color: themeColors.text,
-                marginBottom: 20,
-                borderWidth: 1,
-                borderColor: themeColors.border,
-              }}
-            />
-            <View style={{ flexDirection: 'row', gap: 12, justifyContent: 'flex-end' }}>
-              <TouchableOpacity
-                onPress={() => setShowEditModal(false)}
+      {/* Modal para editar cuenta */}
+      <Modal visible={showEditModal} animationType="slide" presentationStyle="pageSheet">
+        <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={{ flex: 1 }}
+          >
+            <ScrollView contentContainerStyle={{ padding: 20 }} keyboardShouldPersistTaps="handled">
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                <Text style={{ fontSize: 22, fontWeight: '700', color: themeColors.text }}>
+                  Editar Cuenta
+                </Text>
+                <TouchableOpacity onPress={() => setShowEditModal(false)}>
+                  <Ionicons name="close" size={24} color={themeColors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Nombre */}
+              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+                Nombre
+              </Text>
+              <TextInput
+                value={editName}
+                onChangeText={setEditName}
+                placeholder="Nombre de la cuenta"
+                placeholderTextColor={themeColors.textSecondary}
                 style={{
-                  paddingHorizontal: 20,
-                  paddingVertical: 12,
-                  borderRadius: 12,
                   backgroundColor: themeColors.surface,
+                  borderRadius: 12,
+                  padding: 14,
+                  fontSize: 15,
+                  color: themeColors.text,
+                  marginBottom: 20,
                   borderWidth: 1,
                   borderColor: themeColors.border,
                 }}
-              >
-                <Text style={{ fontSize: 14, fontWeight: '600', color: themeColors.text }}>
-                  Cancelar
-                </Text>
-              </TouchableOpacity>
+              />
+
+              {/* Tipo */}
+              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+                Tipo de cuenta
+              </Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
+                {accountTypes.map((t) => (
+                  <TouchableOpacity
+                    key={t.key}
+                    onPress={() => setEditType(t.key)}
+                    style={{
+                      paddingHorizontal: 16,
+                      paddingVertical: 10,
+                      borderRadius: 12,
+                      backgroundColor: editType === t.key ? themeColors.primary : themeColors.surface,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      borderWidth: 1,
+                      borderColor: editType === t.key ? themeColors.primary : themeColors.border,
+                    }}
+                  >
+                    <Text style={{ fontSize: 16 }}>{t.icon}</Text>
+                    <Text style={{
+                      fontSize: 14,
+                      fontWeight: '500',
+                      color: editType === t.key ? '#FFF' : themeColors.text,
+                    }}>
+                      {t.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Moneda */}
+              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+                Moneda
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
+                {(['USD', 'BS', 'BOTH'] as CurrencyType[]).map((cur) => (
+                  <TouchableOpacity
+                    key={cur}
+                    onPress={() => setEditCurrency(cur)}
+                    style={{
+                      flex: 1,
+                      paddingVertical: 12,
+                      borderRadius: 12,
+                      backgroundColor: editCurrency === cur ? themeColors.primary : themeColors.surface,
+                      alignItems: 'center',
+                      borderWidth: 1,
+                      borderColor: editCurrency === cur ? themeColors.primary : themeColors.border,
+                    }}
+                  >
+                    <Text style={{
+                      fontSize: 15,
+                      fontWeight: '600',
+                      color: editCurrency === cur ? '#FFF' : themeColors.text,
+                    }}>
+                      {cur === 'USD' ? '💰 USD' : cur === 'BS' ? '💵 BS' : '🔀 Ambas'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Plataforma */}
+              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+                Plataforma (opcional)
+              </Text>
+              <TextInput
+                value={editPlatform}
+                onChangeText={setEditPlatform}
+                placeholder="Ej: Binance, Facebank..."
+                placeholderTextColor={themeColors.textSecondary}
+                style={{
+                  backgroundColor: themeColors.surface,
+                  borderRadius: 12,
+                  padding: 14,
+                  fontSize: 15,
+                  color: themeColors.text,
+                  marginBottom: 20,
+                  borderWidth: 1,
+                  borderColor: themeColors.border,
+                }}
+              />
+
+              {/* Icono */}
+              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+                Icono
+              </Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
+                {accountIcons.map((ic, index) => (
+                  <TouchableOpacity
+                    key={`edit-icon-${index}`}
+                    onPress={() => setEditIcon(ic)}
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 12,
+                      backgroundColor: editIcon === ic ? themeColors.primaryLight : themeColors.surface,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      borderWidth: 2,
+                      borderColor: editIcon === ic ? themeColors.primary : themeColors.border,
+                    }}
+                  >
+                    <Text style={{ fontSize: 22 }}>{ic}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Color */}
+              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+                Color
+              </Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 32 }}>
+                {accountColors.map((c) => (
+                  <TouchableOpacity
+                    key={c.hex}
+                    onPress={() => setEditColor(c.hex)}
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 12,
+                      backgroundColor: c.hex,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      borderWidth: editColor === c.hex ? 3 : 0,
+                      borderColor: themeColors.surface,
+                    }}
+                  >
+                    {editColor === c.hex && (
+                      <Ionicons name="checkmark" size={20} color="#FFF" />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Guardar */}
               <TouchableOpacity
                 onPress={async () => {
-                  if (!editName.trim()) return;
+                  if (!editName.trim()) {
+                    Alert.alert('Error', 'El nombre es requerido');
+                    return;
+                  }
                   try {
-                    await updateAccount(accountId, { name: editName.trim() });
+                    await updateAccount(accountId, {
+                      name: editName.trim(),
+                      type: editType,
+                      currency: editCurrency,
+                      icon: editIcon,
+                      color: editColor,
+                      platform: editPlatform.trim() || null,
+                    });
                     await loadData();
                     setShowEditModal(false);
-                    Alert.alert('✅ Listo', 'Nombre actualizado correctamente');
+                    Alert.alert('✅ Listo', 'Cuenta actualizada correctamente');
                   } catch (error: any) {
                     Alert.alert('Error', error?.message || 'No se pudo actualizar');
                   }
                 }}
                 style={{
-                  paddingHorizontal: 20,
-                  paddingVertical: 12,
-                  borderRadius: 12,
                   backgroundColor: themeColors.primary,
+                  borderRadius: 14,
+                  padding: 16,
+                  alignItems: 'center',
                 }}
               >
-                <Text style={{ fontSize: 14, fontWeight: '600', color: '#FFF' }}>
-                  Guardar
+                <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '600' }}>
+                  Guardar Cambios
                 </Text>
               </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      )}
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }

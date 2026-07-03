@@ -1,20 +1,60 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
-import { View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { View, ActivityIndicator, Text } from 'react-native';
 import { useAccounts } from '../src/store/useAccounts';
 import { useSettings } from '../src/store/useSettings';
 import { colors } from '../src/theme/colors';
+import { ensureDatabaseInitialized } from '../src/services/database';
 
 export default function RootLayout() {
   const loadAccounts = useAccounts((state) => state.loadAccounts);
   const useDarkMode = useSettings((state) => state.useDarkMode);
+  const [dbReady, setDbReady] = useState(false);
+  const [dbError, setDbError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadAccounts();
+    async function init() {
+      try {
+        // Inicializar BD antes que cualquier componente la necesite
+        await ensureDatabaseInitialized();
+        setDbReady(true);
+        // Cargar cuentas después de que la BD esté lista
+        await loadAccounts();
+      } catch (e: any) {
+        console.error('Error inicializando la aplicación:', e);
+        setDbError(e?.message || 'Error al inicializar la base de datos');
+      }
+    }
+    init();
   }, []);
 
   const themeColors = useDarkMode ? colors.dark : colors.light;
+
+  // Pantalla de carga mientras se inicializa la BD
+  if (!dbReady) {
+    return (
+      <View style={{ flex: 1, backgroundColor: themeColors.background, justifyContent: 'center', alignItems: 'center' }}>
+        {dbError ? (
+          <>
+            <Text style={{ color: '#EF4444', fontSize: 16, fontWeight: '600', marginBottom: 8 }}>
+              Error de inicialización
+            </Text>
+            <Text style={{ color: themeColors.textSecondary, fontSize: 14, textAlign: 'center', marginHorizontal: 40 }}>
+              {dbError}
+            </Text>
+          </>
+        ) : (
+          <>
+            <ActivityIndicator size="large" color={themeColors.primary} />
+            <Text style={{ color: themeColors.textSecondary, fontSize: 14, marginTop: 12 }}>
+              Inicializando...
+            </Text>
+          </>
+        )}
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: themeColors.background }}>

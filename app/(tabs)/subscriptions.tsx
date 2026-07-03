@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
   TextInput,
@@ -13,6 +12,7 @@ import {
   Switch,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../../src/hooks/useThemeColors';
@@ -159,12 +159,47 @@ export default function SubscriptionsScreen() {
     setSaving(true);
     try {
       const now = new Date();
-      const billingDay = parseInt(formBillingDay) || now.getDate();
-      const nextDate = new Date(now.getFullYear(), now.getMonth(), billingDay);
-      if (nextDate < now) {
-        nextDate.setMonth(nextDate.getMonth() + 1);
+      let nextBillingDate: string;
+      let billingDay = parseInt(formBillingDay) || now.getDate();
+
+      switch (formFrequency) {
+        case 'weekly': {
+          const nextDate = new Date(now);
+          nextDate.setDate(nextDate.getDate() + 7);
+          nextBillingDate = nextDate.toISOString().split('T')[0];
+          break;
+        }
+        case 'monthly': {
+          billingDay = parseInt(formBillingDay) || now.getDate();
+          const nextDate = new Date(now.getFullYear(), now.getMonth(), billingDay);
+          if (nextDate <= now) {
+            nextDate.setMonth(nextDate.getMonth() + 1);
+          }
+          nextBillingDate = nextDate.toISOString().split('T')[0];
+          break;
+        }
+        case 'yearly': {
+          const nextDate = new Date(now);
+          nextDate.setFullYear(nextDate.getFullYear() + 1);
+          nextBillingDate = nextDate.toISOString().split('T')[0];
+          break;
+        }
+        case 'custom': {
+          const intervalDays = parseInt(formIntervalDays) || 30;
+          const nextDate = new Date(now);
+          nextDate.setDate(nextDate.getDate() + intervalDays);
+          nextBillingDate = nextDate.toISOString().split('T')[0];
+          break;
+        }
+        default: {
+          billingDay = parseInt(formBillingDay) || now.getDate();
+          const nextDate = new Date(now.getFullYear(), now.getMonth(), billingDay);
+          if (nextDate <= now) {
+            nextDate.setMonth(nextDate.getMonth() + 1);
+          }
+          nextBillingDate = nextDate.toISOString().split('T')[0];
+        }
       }
-      const nextBillingDate = nextDate.toISOString().split('T')[0];
 
       const data = {
         name: formName.trim(),
@@ -527,6 +562,35 @@ export default function SubscriptionsScreen() {
                       }}
                     />
                   </View>
+                </View>
+
+                {/* Moneda */}
+                <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 6 }}>
+                  Moneda
+                </Text>
+                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+                  {(['USD', 'BS', 'BOTH'] as CurrencyType[]).map((cur) => (
+                    <TouchableOpacity
+                      key={cur}
+                      onPress={() => setFormCurrency(cur)}
+                      style={{
+                        flex: 1,
+                        paddingVertical: 10,
+                        borderRadius: 12,
+                        backgroundColor: formCurrency === cur ? themeColors.primary : themeColors.surface,
+                        alignItems: 'center',
+                        borderWidth: 1,
+                        borderColor: formCurrency === cur ? themeColors.primary : themeColors.border,
+                      }}>
+                      <Text style={{
+                        fontSize: 12,
+                        fontWeight: '600',
+                        color: formCurrency === cur ? '#FFFFFF' : themeColors.textSecondary,
+                      }}>
+                        {cur === 'USD' ? '💲 USD' : cur === 'BS' ? '💵 BS' : '🌎 Ambas'}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
                 </View>
 
                 {/* Categoría */}

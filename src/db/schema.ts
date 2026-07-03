@@ -1,21 +1,16 @@
 import { type SQLiteDatabase } from 'expo-sqlite';
 
 export async function initializeDatabase(db: SQLiteDatabase) {
-  // Migración: agregar columna platform si no existe (para BD creadas antes de FASE 5)
+  // Configurar PRAGMAs por separado (importante para evitar NullPointerException)
   try {
-    const tableInfo = await db.getAllAsync<{ name: string }>("PRAGMA table_info(accounts)");
-    const hasPlatform = tableInfo.some((col) => col.name === 'platform');
-    if (!hasPlatform) {
-      await db.execAsync('ALTER TABLE accounts ADD COLUMN platform TEXT');
-    }
-  } catch {
-    // Ignorar errores de la migración
-  }
+    await db.execAsync('PRAGMA journal_mode = WAL;');
+  } catch (_) {}
+  try {
+    await db.execAsync('PRAGMA foreign_keys = ON;');
+  } catch (_) {}
 
+  // Crear todas las tablas
   await db.execAsync(`
-    PRAGMA journal_mode = WAL;
-    PRAGMA foreign_keys = ON;
-
     CREATE TABLE IF NOT EXISTS accounts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,

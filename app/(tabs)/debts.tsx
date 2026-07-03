@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
   TextInput,
@@ -12,6 +11,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../../src/hooks/useThemeColors';
@@ -607,25 +607,35 @@ export default function DebtsScreen() {
                     <TouchableOpacity
                       onPress={() => viewPayments(debt.id)}
                       style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 4,
                         paddingVertical: 6,
                         paddingHorizontal: 12,
                         borderRadius: 8,
-                        backgroundColor: themeColors.background,
+                        backgroundColor: themeColors.primaryLight + '40',
                       }}
                     >
-                      <Ionicons name="receipt-outline" size={16} color={themeColors.textSecondary} />
+                      <Ionicons name="receipt-outline" size={14} color={themeColors.primary} />
+                      <Text style={{ fontSize: 12, fontWeight: '600', color: themeColors.primary }}>
+                        Pagos
+                      </Text>
                     </TouchableOpacity>
                     {debt.status !== 'paid' && (
                       <TouchableOpacity
                         onPress={() => openPaymentModal(debt.id)}
                         style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 4,
                           paddingVertical: 6,
                           paddingHorizontal: 12,
                           borderRadius: 8,
-                          backgroundColor: themeColors.primary + '20',
+                          backgroundColor: accentColor + '20',
                         }}
                       >
-                        <Text style={{ fontSize: 12, fontWeight: '600', color: themeColors.primary }}>
+                        <Ionicons name="add-circle-outline" size={14} color={accentColor} />
+                        <Text style={{ fontSize: 12, fontWeight: '600', color: accentColor }}>
                           Abonar
                         </Text>
                       </TouchableOpacity>

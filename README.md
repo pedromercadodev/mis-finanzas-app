@@ -9,14 +9,18 @@ Aplicación móvil de finanzas personales construida con **React Native (Expo)**
 ## 📋 Historial de Versiones
 
 ### v2.1.0 (Actual)
-- 🤖 **DeepSeek sin límites** — El asistente IA ahora maneja **17 tipos de acción**: transacciones, cuentas (crear/actualizar/eliminar), transferencias, metas, suscripciones, presupuestos y deudas
-- 💬 **Confirmación mejorada** — DeepSeek describe la acción en lenguaje natural y muestra botones de Confirmar/Cancelar con preview cards visuales
-- 🗑️ **Eliminación por IA** — DeepSeek puede eliminar transacciones, cuentas, metas, suscripciones y deudas
-- 🔄 **Transferencias por IA** — DeepSeek puede transferir dinero entre cuentas
-- 🎯 **Metas por IA** — Crear metas, agregar progreso y eliminarlas
-- 📅 **Suscripciones por IA** — Crear, actualizar y eliminar suscripciones
-- 📊 **Presupuestos por IA** — Asignar presupuestos por categoría y mes
-- 💳 **Deudas por IA** — Crear deudas/préstamos, registrar pagos y eliminarlas
+- 🐛 **Bugfix 1** — Selector de moneda (USD/BS/BOTH) en crear cuenta
+- 🐛 **Bugfix 2** — Edición completa de cuenta (nombre, tipo, moneda, icono, color)
+- 🐛 **Bugfix 3** — Selector de cuenta destino en transferencias
+- 🐛 **Bugfix 4** — Validación de saldo suficiente en gastos y transferencias
+- 🐛 **Bugfix 5** — Selector de moneda en suscripciones
+- 🐛 **Bugfix 6** — Cálculo correcto de próxima facturación según frecuencia
+- 🐛 **Bugfix 7** — Selector BCV/Paralelo para tasa manual
+- 🐛 **Bugfix 8** — Botón "Quitar tasa manual (volver a automática)"
+- 🏠 **Resumen de Metas** en el Dashboard con barra de progreso
+- 🔔 **Alertas de Suscripciones** próximas a vencer en Dashboard
+- 🤖 **System Prompt reforzado** — DeepSeek ahora SIEMPRE pide confirmación y usa ACCION: para TODA operación (17 acciones)
+- 🌡️ **Temperature 0.1** — Respuestas más deterministas y disciplinadas
 
 ### v2.0.0
 - ✨ **Exportación de Datos** — CSV y JSON con expo-sharing
@@ -123,7 +127,8 @@ Aplicación móvil de finanzas personales construida con **React Native (Expo)**
 
 ### ⚙️ Ajustes
 - Configuración de **API Key de DeepSeek** para entrada por IA
-- **Tasas de cambio** automáticas (BCV y Paralelo)
+- **Tasas de cambio** automáticas (BCV y Paralelo) con botón de actualización
+- **Tasa manual** con selector BCV/Paralelo y opción "Quitar tasa manual" para volver a tasas automáticas
 - Selector de tasa preferida para cálculo de BS total
 - Exportar datos
 - Navegación a: Categorías, Deudas y Préstamos

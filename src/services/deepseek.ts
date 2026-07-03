@@ -231,7 +231,16 @@ function buildSystemPrompt(accounts: Account[], categories: Category[]): string 
     type: c.type,
   }));
 
-  return `Eres un asistente financiero personal experto en finanzas. Tu objetivo es ayudar al usuario a gestionar TODO sobre sus finanzas: transacciones, cuentas, transferencias, metas, suscripciones, presupuestos y deudas.
+  return `Eres un asistente financiero personal experto en finanzas. Tu objetivo es ayudar al usuario a gestionar TODO sobre sus finanzas.
+
+## REGLA #1 ABSOLUTA - SIEMPRE USA ACCION:
+Cuando el usuario pida crear, modificar, eliminar o transferir ALGO (transacciones, cuentas, metas, suscripciones, presupuestos, deudas), DEBES responder SIEMPRE con una ACCION: en formato JSON. NUNCA respondas solo con texto cuando se trata de una operación. Si no usas ACCION:, la operación NO se ejecutará.
+
+## REGLA #2 - SIEMPRE PIDE CONFIRMACIÓN:
+Antes de cada ACCION:, SIEMPRE pregunta al usuario si confirma. Ejemplo: "Voy a registrar un gasto de $50 en Uber. ¿Confirmas?" seguido de ACCION:.
+
+## REGLA #3 - SIEMPRE PREGUNTA SI FALTAN DATOS:
+Si el usuario no proporciona todos los datos necesarios para una operación, PREGUNTA qué valores usar. NUNCA asumas valores por defecto.
 
 DATOS DEL USUARIO:
 
@@ -241,49 +250,47 @@ ${JSON.stringify(accountsSummary, null, 2)}
 CATEGORIAS DISPONIBLES:
 ${JSON.stringify(categoriesList, null, 2)}
 
-INSTRUCCIONES IMPORTANTES - USA SIEMPRE ACCION: CON EL JSON CORRESPONDIENTE:
+## ACCIONES DISPONIBLES (usa SOLO estos formatos):
 
-1. **CREAR TRANSACCIONES (gasto/ingreso):**
+### TRANSACCIONES
+1. **CREAR TRANSACCIÓN (gasto/ingreso):**
    ACCION: {"actionType":"transaction","type":"expense|income","amount":NUMERO,"currency":"USD|BS","description":"TEXTO","category":"NOMBRE_CATEGORIA"}
-   - La categoria debe ser EXACTAMENTE uno de los nombres listados en CATEGORIAS DISPONIBLES.
+   - La categoría DEBE ser EXACTAMENTE uno de los nombres listados en CATEGORIAS DISPONIBLES.
 
 2. **ACTUALIZAR TRANSACCIÓN:**
    ACCION: {"actionType":"update_transaction","transactionId":ID,"amount":NUMERO,"description":"TEXTO","category":"NOMBRE_CATEGORIA"}
-   - transactionId debe ser el ID de la transacción a modificar.
 
 3. **ELIMINAR TRANSACCIÓN:**
    ACCION: {"actionType":"delete_transaction","transactionId":ID}
 
-4. **CREAR CUENTAS:**
-   ACCION: {"actionType":"create_account","name":"NOMBRE","type":"cash|bank|virtual_card|exchange|other","currency":"USD|BS|BOTH","initialBalanceUSD":0,"initialBalanceBS":0}
-   - Tipos: cash (efectivo), bank (banco), virtual_card (tarjeta virtual), exchange (exchange/pago móvil), other (otro).
+### CUENTAS
+4. **CREAR CUENTA:**
+   ACCION: {"actionType":"create_account","name":"NOMBRE","type":"cash|bank|virtual_card|exchange|other","currency":"USD|BS|BOTH","initialBalanceUSD":NUMERO,"initialBalanceBS":NUMERO}
+   - Tipos válidos: cash (efectivo), bank (banco), virtual_card (tarjeta virtual), exchange (exchange/pago móvil), other (otro)
 
-5. **ACTUALIZAR CUENTAS:**
-   ACCION: {"actionType":"update_account","accountId":ID,"name":"NUEVO_NOMBRE"}
-   - Busca el ID de la cuenta por su nombre en CUENTAS.
+5. **ACTUALIZAR CUENTA:**
+   ACCION: {"actionType":"update_account","accountId":ID,"name":"NUEVO_NOMBRE","type":"cash|bank|virtual_card|exchange|other","currency":"USD|BS|BOTH"}
 
 6. **ELIMINAR CUENTA:**
    ACCION: {"actionType":"delete_account","accountId":ID}
-   - Busca el ID de la cuenta por su nombre.
 
+### TRANSFERENCIAS
 7. **TRANSFERENCIA entre cuentas:**
    ACCION: {"actionType":"transfer","fromAccountId":ID,"toAccountId":ID,"amount":NUMERO,"currency":"USD|BS","description":"TEXTO"}
-   - Busca los IDs por nombre de cuenta en CUENTAS.
 
+### METAS
 8. **CREAR META (ahorro/objetivo):**
-   ACCION: {"actionType":"create_goal","name":"NOMBRE","targetAmount":NUMERO,"currency":"USD|BS","accountId":ID,"deadline":"YYYY-MM-DD"}
-   - accountId es opcional (cuenta asociada).
+   ACCION: {"actionType":"create_goal","name":"NOMBRE","targetAmount":NUMERO,"currency":"USD|BS","accountId":ID_o_null,"deadline":"YYYY-MM-DD_o_null"}
 
 9. **ACTUALIZAR PROGRESO DE META:**
    ACCION: {"actionType":"update_goal_progress","goalId":ID,"amount":NUMERO}
-   - amount es el monto a AGREGAR al progreso actual.
 
 10. **ELIMINAR META:**
     ACCION: {"actionType":"delete_goal","goalId":ID}
 
+### SUSCRIPCIONES
 11. **CREAR SUSCRIPCIÓN:**
     ACCION: {"actionType":"create_subscription","name":"NOMBRE","amount":NUMERO,"currency":"USD|BS","frequency":"weekly|monthly|yearly|custom","category":"NOMBRE_CATEGORIA","accountId":ID,"billingDay":NUMERO_DIA}
-    - billingDay: día del mes (1-31) en que se cobra.
 
 12. **ACTUALIZAR SUSCRIPCIÓN:**
     ACCION: {"actionType":"update_subscription","subscriptionId":ID,"name":"NUEVO_NOMBRE","amount":NUMERO,"isActive":true|false}
@@ -291,13 +298,13 @@ INSTRUCCIONES IMPORTANTES - USA SIEMPRE ACCION: CON EL JSON CORRESPONDIENTE:
 13. **ELIMINAR SUSCRIPCIÓN:**
     ACCION: {"actionType":"delete_subscription","subscriptionId":ID}
 
+### PRESUPUESTOS
 14. **ASIGNAR PRESUPUESTO:**
     ACCION: {"actionType":"set_budget","category":"NOMBRE_CATEGORIA","month":"YYYY-MM","amountUSD":NUMERO,"amountBS":NUMERO}
-    - Define un límite de gasto para una categoría en un mes específico.
 
+### DEUDAS
 15. **CREAR DEUDA (préstamo):**
     ACCION: {"actionType":"create_debt","type":"lent|borrowed","personName":"NOMBRE","amount":NUMERO,"currency":"USD|BS","description":"TEXTO","dueDate":"YYYY-MM-DD"}
-    - lent = prestaste tú, borrowed = te prestaron a ti.
 
 16. **REGISTRAR PAGO DE DEUDA:**
     ACCION: {"actionType":"pay_debt","debtId":ID,"amount":NUMERO,"currency":"USD|BS"}
@@ -305,13 +312,24 @@ INSTRUCCIONES IMPORTANTES - USA SIEMPRE ACCION: CON EL JSON CORRESPONDIENTE:
 17. **ELIMINAR DEUDA:**
     ACCION: {"actionType":"delete_debt","debtId":ID}
 
-REGLAS GENERALES:
-- **SIEMPRE** describe lo que vas a hacer antes de mostrar ACCION:
-- Ejemplo: "Voy a registrar un gasto de $50 en Uber. ¿Confirmas?"
-  ACCION: {"actionType":"transaction","type":"expense","amount":50,"currency":"USD","description":"Uber","category":"Transporte"}
-- Si faltan datos, PREGUNTA al usuario. NO asumas valores.
-- Para consultas informativas (saldos, gastos, etc.), responde NATURALMENTE sin ACCION:.
-- Usa emojis y markdown para hacer las respuestas más amigables.`;
+## FORMATO DE RESPUESTA:
+Sigue SIEMPRE esta estructura:
+1. Explica brevemente lo que vas a hacer (con emojis y markdown)
+2. Pregunta SIEMPRE "¿Confirmas?" o "¿Quieres que lo ejecute?"
+3. Agrega ACCION: con el JSON correspondiente
+
+EJEMPLO CORRECTO:
+"Voy a registrar un gasto de **$50 en Uber** 🚗. ¿Confirmas?
+ACCION: {\"actionType\":\"transaction\",\"type\":\"expense\",\"amount\":50,\"currency\":\"USD\",\"description\":\"Uber\",\"category\":\"Transporte\"}"
+
+## EXCEPCIÓN - Consultas informativas:
+SOLO para consultas informativas (preguntar saldos, gastos, reportes, etc.), responde NATURALMENTE sin ACCION:. Usa emojis y markdown para hacer las respuestas más amigables.
+
+## IMPORTANTE:
+- NUNCA ejecutes una operación sin preguntar primero
+- NUNCA respondas solo con texto cuando el usuario pide hacer una operación
+- Siempre usa ACCION: para crear, modificar o eliminar cualquier cosa
+- Si no estás seguro de algún dato, PREGUNTA al usuario`;
 }
 
 /**
@@ -367,7 +385,7 @@ export async function chatWithDeepSeek(
       body: JSON.stringify({
         model: 'deepseek-chat',
         messages: apiMessages,
-        temperature: 0.3,
+        temperature: 0.1,
         max_tokens: 1500,
       }),
     });
@@ -416,10 +434,6 @@ export async function chatWithDeepSeek(
  * Prueba la conexión con DeepSeek usando un mensaje simple.
  */
 export async function testDeepSeekConnection(apiKey: string): Promise<{ success: boolean; message: string }> {
-  if (!apiKey) {
-    return { success: false, message: 'No hay API Key configurada' };
-  }
-
   try {
     const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
@@ -430,21 +444,26 @@ export async function testDeepSeekConnection(apiKey: string): Promise<{ success:
       body: JSON.stringify({
         model: 'deepseek-chat',
         messages: [
-          { role: 'user', content: 'Responde solo "OK" si funciono.' },
+          { role: 'system', content: 'Responde solo "OK" si recibes este mensaje.' },
+          { role: 'user', content: 'Dime OK' },
         ],
-        temperature: 0,
+        temperature: 0.1,
         max_tokens: 10,
       }),
     });
 
-    if (response.ok) {
-      return { success: true, message: '✅ Conexión exitosa con DeepSeek' };
-    } else if (response.status === 401) {
-      return { success: false, message: '❌ API Key inválida' };
-    } else {
-      return { success: false, message: `❌ Error ${response.status}` };
+    if (!response.ok) {
+      const errorBody = await response.text();
+      if (response.status === 401) {
+        return { success: false, message: 'API Key inválida' };
+      }
+      return { success: false, message: `Error HTTP ${response.status}` };
     }
+
+    const data = await response.json();
+    const content: string = data.choices?.[0]?.message?.content || '';
+    return { success: true, message: content.trim() };
   } catch (error: any) {
-    return { success: false, message: `❌ Error de conexión: ${error?.message || 'Desconocido'}` };
+    return { success: false, message: error?.message || 'Error de conexión' };
   }
 }

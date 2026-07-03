@@ -20,15 +20,17 @@ import { useExchangeRates } from '../../src/hooks/useExchangeRates';
 import { useSettings } from '../../src/store/useSettings';
 import { getAccountBalance, getAccountsByPlatform } from '../../src/services/accounts';
 import { getMonthlySummary } from '../../src/services/transactions';
+import { getGoals } from '../../src/services/goals';
+import { getDueSubscriptions } from '../../src/services/subscriptions';
 import { formatUSD, formatBS, formatDateShort, getCurrentMonthRange } from '../../src/utils/format';
-import type { Account } from '../../src/utils/types';
+import type { Account, Goal, Subscription } from '../../src/utils/types';
 
 export default function DashboardScreen() {
   const router = useRouter();
   const { accounts, loadAccounts } = useAccounts();
   const { transactions, loadTransactions } = useTransactions();
   const themeColors = useThemeColors();
-  const { preferredRateType, manualRate, setPreferredRateType } = useSettings();
+  const { preferredRateType, manualRate, manualRateType, setPreferredRateType } = useSettings();
   const {
     bcv: bcvRate,
     parallel: parallelRate,
@@ -42,14 +44,22 @@ export default function DashboardScreen() {
   const [freshAccounts, setFreshAccounts] = useState<Account[]>([]);
   const [accountFilter, setAccountFilter] = useState<'all' | 'USD' | 'BS'>('all');
   const [platformData, setPlatformData] = useState<{ platform: string; accounts: Account[]; totalUSD: number; totalBS: number }[]>([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [dueSubscriptions, setDueSubscriptions] = useState<Subscription[]>([]);
 
   const loadData = async () => {
     await loadAccounts();
     const month = getCurrentMonthRange().start.substring(0, 7);
     await loadTransactions({ limit: 5 });
 
-    const monthSummary = await getMonthlySummary(month);
+    const [monthSummary, goalsData, dueSubs] = await Promise.all([
+      getMonthlySummary(month),
+      getGoals(),
+      getDueSubscriptions(7),
+    ]);
     setSummary(monthSummary);
+    setGoals(goalsData);
+    setDueSubscriptions(dueSubs);
 
     // Leer cuentas directamente de la BD después de loadAccounts
     const { getAccounts } = await import('../../src/services/accounts');
@@ -103,9 +113,9 @@ export default function DashboardScreen() {
     return true; // 'all'
   });
 
-  // Sumar USD y BS reales de las cuentas filtradas
-  const rawTotalUSD = filteredAccounts.reduce((sum, acc) => sum + (balances[acc.id]?.balanceUSD || 0), 0);
-  const rawTotalBS = filteredAccounts.reduce((sum, acc) => sum + (balances[acc.id]?.balanceBS || 0), 0);
+  // Sumar USD y BS reales de TODAS las cuentas (el filtro solo afecta las tarjetas, no el saldo total)
+  const rawTotalUSD = freshAccounts.reduce((sum, acc) => sum + (balances[acc.id]?.balanceUSD || 0), 0);
+  const rawTotalBS = freshAccounts.reduce((sum, acc) => sum + (balances[acc.id]?.balanceBS || 0), 0);
   // Calcular totales convertidos usando la tasa activa
   // totalUSD = USD reales + BS convertidos a USD
   // totalBS = BS reales + USD convertidos a BS
@@ -187,24 +197,49 @@ export default function DashboardScreen() {
                 <Ionicons name="chevron-down" size={10} color={themeColors.primary} />
               </View>
             </View>
-            <Text style={{ fontSize: 36, fontWeight: '700', color: themeColors.text }}>
-              {formatUSD(totalUSD)}
-            </Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
-              <Text style={{ fontSize: 18, color: themeColors.textSecondary }}>
-                {formatBS(totalBS)}
-              </Text>
-              <View style={{
-                backgroundColor: themeColors.primaryLight + '40',
-                paddingHorizontal: 6,
-                paddingVertical: 2,
-                borderRadius: 4,
-              }}>
-                <Text style={{ fontSize: 10, color: themeColors.primary, fontWeight: '600' }}>
-                  {manualRate ? 'MANUAL' : preferredRateType === 'BCV' ? 'BCV' : 'PARALELO'}
+            {accountFilter === 'BS' ? (
+              <>
+                <Text style={{ fontSize: 36, fontWeight: '700', color: themeColors.text }}>
+                  {formatBS(totalBS)}
                 </Text>
-              </View>
-            </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                  <Text style={{ fontSize: 18, color: themeColors.textSecondary }}>
+                    {formatUSD(totalUSD)}
+                  </Text>
+                  <View style={{
+                    backgroundColor: themeColors.primaryLight + '40',
+                    paddingHorizontal: 6,
+                    paddingVertical: 2,
+                    borderRadius: 4,
+                  }}>
+                    <Text style={{ fontSize: 10, color: themeColors.primary, fontWeight: '600' }}>
+                      {manualRate ? (manualRateType === 'BCV' ? 'MANUAL BCV' : 'MANUAL PARALELO') : preferredRateType === 'BCV' ? 'BCV' : 'PARALELO'}
+                    </Text>
+                  </View>
+                </View>
+              </>
+            ) : (
+              <>
+                <Text style={{ fontSize: 36, fontWeight: '700', color: themeColors.text }}>
+                  {formatUSD(totalUSD)}
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                  <Text style={{ fontSize: 18, color: themeColors.textSecondary }}>
+                    {formatBS(totalBS)}
+                  </Text>
+                  <View style={{
+                    backgroundColor: themeColors.primaryLight + '40',
+                    paddingHorizontal: 6,
+                    paddingVertical: 2,
+                    borderRadius: 4,
+                  }}>
+                    <Text style={{ fontSize: 10, color: themeColors.primary, fontWeight: '600' }}>
+                      {manualRate ? (manualRateType === 'BCV' ? 'MANUAL BCV' : 'MANUAL PARALELO') : preferredRateType === 'BCV' ? 'BCV' : 'PARALELO'}
+                    </Text>
+                  </View>
+                </View>
+              </>
+            )}
           </View>
         </TouchableOpacity>
 
@@ -273,7 +308,7 @@ export default function DashboardScreen() {
                   )}
                 </View>
                 <Text style={{ fontSize: 18, fontWeight: '700', color: themeColors.text }}>
-                  {bcvRate ? formatBS(bcvRate.rateUSDToBS) : '—'}
+                  {bcvRate && bcvRate.rateUSDToBS > 0 ? formatBS(bcvRate.rateUSDToBS) : '—'}
                 </Text>
               </TouchableOpacity>
 
@@ -390,11 +425,11 @@ export default function DashboardScreen() {
 
         {/* Accesos Rápidos */}
         <View style={{ marginHorizontal: 20, marginBottom: 20 }}>
-          <View style={{ flexDirection: 'row', gap: 12 }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
             <TouchableOpacity
               onPress={() => router.push('/(tabs)/debts')}
               style={{
-                flex: 1,
+                width: '47%',
                 backgroundColor: '#FEE2E2',
                 borderRadius: 16,
                 padding: 16,
@@ -409,7 +444,7 @@ export default function DashboardScreen() {
             <TouchableOpacity
               onPress={() => router.push('/(tabs)/budgets')}
               style={{
-                flex: 1,
+                width: '47%',
                 backgroundColor: themeColors.primaryLight + '60',
                 borderRadius: 16,
                 padding: 16,
@@ -424,7 +459,7 @@ export default function DashboardScreen() {
             <TouchableOpacity
               onPress={() => router.push('/(tabs)/goals')}
               style={{
-                flex: 1,
+                width: '47%',
                 backgroundColor: themeColors.successLight,
                 borderRadius: 16,
                 padding: 16,
@@ -434,6 +469,21 @@ export default function DashboardScreen() {
               <Ionicons name="trophy" size={24} color={themeColors.success} />
               <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.success, marginTop: 6 }}>
                 Metas
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => router.push('/(tabs)/subscriptions')}
+              style={{
+                width: '47%',
+                backgroundColor: themeColors.warningLight + '60',
+                borderRadius: 16,
+                padding: 16,
+                alignItems: 'center',
+              }}
+            >
+              <Ionicons name="calendar" size={24} color={themeColors.warning} />
+              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.warning, marginTop: 6 }}>
+                Suscripciones
               </Text>
             </TouchableOpacity>
           </View>
@@ -578,6 +628,204 @@ export default function DashboardScreen() {
             </View>
           </View>
         </View>
+
+        {/* Alertas de Suscripciones */}
+        {dueSubscriptions.length > 0 && (
+          <View style={{ marginHorizontal: 20, marginBottom: 20 }}>
+            <TouchableOpacity
+              onPress={() => router.push('/(tabs)/subscriptions')}
+              activeOpacity={0.8}
+              style={{
+                backgroundColor: dueSubscriptions.some(
+                  (s) => s.nextBillingDate <= new Date().toISOString().split('T')[0]
+                ) ? '#FEE2E2' : '#FEF3C7',
+                borderRadius: 16,
+                padding: 16,
+                borderWidth: 1,
+                borderColor: dueSubscriptions.some(
+                  (s) => s.nextBillingDate <= new Date().toISOString().split('T')[0]
+                ) ? '#FCA5A5' : '#FCD34D',
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                <View style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  backgroundColor: dueSubscriptions.some(
+                    (s) => s.nextBillingDate <= new Date().toISOString().split('T')[0]
+                  ) ? '#EF4444' : '#F59E0B',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                  <Ionicons name="calendar" size={20} color="#FFFFFF" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{
+                    fontSize: 15,
+                    fontWeight: '700',
+                    color: dueSubscriptions.some(
+                      (s) => s.nextBillingDate <= new Date().toISOString().split('T')[0]
+                    ) ? '#991B1B' : '#92400E',
+                  }}>
+                    {dueSubscriptions.some(
+                      (s) => s.nextBillingDate <= new Date().toISOString().split('T')[0]
+                    ) ? '🔴 Suscripciones Vencidas' : '🟡 Suscripciones por Vencer'}
+                  </Text>
+                  <Text style={{
+                    fontSize: 12,
+                    color: dueSubscriptions.some(
+                      (s) => s.nextBillingDate <= new Date().toISOString().split('T')[0]
+                    ) ? '#991B1B' : '#92400E',
+                    marginTop: 2,
+                  }}>
+                    {dueSubscriptions.length} suscripción{dueSubscriptions.length !== 1 ? 'es' : ''} próxima{dueSubscriptions.length !== 1 ? 's' : ''} a vencer
+                  </Text>
+                </View>
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color={dueSubscriptions.some(
+                    (s) => s.nextBillingDate <= new Date().toISOString().split('T')[0]
+                  ) ? '#991B1B' : '#92400E'}
+                />
+              </View>
+              {dueSubscriptions.slice(0, 3).map((sub) => {
+                const today = new Date().toISOString().split('T')[0];
+                const isOverdue = sub.nextBillingDate <= today;
+                const daysDiff = Math.ceil(
+                  (new Date(sub.nextBillingDate).getTime() - new Date(today).getTime()) / (1000 * 60 * 60 * 24)
+                );
+                return (
+                  <View
+                    key={sub.id}
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      paddingVertical: 6,
+                      borderTopWidth: 1,
+                      borderTopColor: dueSubscriptions.some(
+                        (s) => s.nextBillingDate <= today
+                      ) ? '#FCA5A5' : '#FDE68A',
+                    }}
+                  >
+                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <Text style={{
+                        fontSize: 14,
+                        fontWeight: '600',
+                        color: dueSubscriptions.some(
+                          (s) => s.nextBillingDate <= today
+                        ) ? '#991B1B' : '#92400E',
+                      }} numberOfLines={1}>
+                        {sub.name}
+                      </Text>
+                    </View>
+                    <Text style={{
+                      fontSize: 12,
+                      fontWeight: '600',
+                      color: isOverdue ? '#DC2626' : '#D97706',
+                    }}>
+                      {isOverdue ? `Vencida (${Math.abs(daysDiff)}d)` : `En ${daysDiff}d`}
+                    </Text>
+                  </View>
+                );
+              })}
+              {dueSubscriptions.length > 3 && (
+                <Text style={{
+                  fontSize: 12,
+                  fontWeight: '500',
+                  color: dueSubscriptions.some(
+                    (s) => s.nextBillingDate <= new Date().toISOString().split('T')[0]
+                  ) ? '#991B1B' : '#92400E',
+                  textAlign: 'center',
+                  marginTop: 6,
+                }}>
+                  +{dueSubscriptions.length - 3} más
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Resumen de Metas */}
+        {goals.length > 0 && (
+          <View style={{ marginHorizontal: 20, marginBottom: 20 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <Text style={{ fontSize: 18, fontWeight: '600', color: themeColors.text }}>
+                🎯 Tus Metas
+              </Text>
+              <TouchableOpacity onPress={() => router.push('/(tabs)/goals')}>
+                <Text style={{ color: themeColors.primary, fontSize: 14, fontWeight: '500' }}>
+                  Ver todo
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <View style={{
+              backgroundColor: themeColors.surface,
+              borderRadius: 16,
+              padding: 16,
+              borderWidth: 1,
+              borderColor: themeColors.border,
+            }}>
+              {goals.slice(0, 4).map((goal) => {
+                const progress = goal.targetAmount > 0
+                  ? Math.min(goal.currentAmount / goal.targetAmount, 1)
+                  : 0;
+                const progressPercent = Math.round(progress * 100);
+                const isCompleted = goal.currentAmount >= goal.targetAmount;
+                const isUSD = goal.currency === 'USD';
+                const currentFormatted = isUSD ? formatUSD(goal.currentAmount) : formatBS(goal.currentAmount);
+                const targetFormatted = isUSD ? formatUSD(goal.targetAmount) : formatBS(goal.targetAmount);
+
+                return (
+                  <TouchableOpacity
+                    key={goal.id}
+                    onPress={() => router.push('/(tabs)/goals')}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingVertical: 10,
+                      borderBottomWidth: goal.id !== goals.slice(0, 4)[goals.slice(0, 4).length - 1]?.id ? 1 : 0,
+                      borderBottomColor: themeColors.border,
+                    }}
+                  >
+                    <View style={{ flex: 1, marginRight: 12 }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                        <Text style={{ fontSize: 14, fontWeight: '600', color: themeColors.text }} numberOfLines={1}>
+                          {goal.name}
+                        </Text>
+                        <Text style={{ fontSize: 12, fontWeight: '600', color: isCompleted ? themeColors.success : themeColors.textSecondary }}>
+                          {progressPercent}%
+                        </Text>
+                      </View>
+                      <View style={{
+                        height: 8,
+                        backgroundColor: themeColors.primaryLight + '40',
+                        borderRadius: 4,
+                        overflow: 'hidden',
+                        marginBottom: 4,
+                      }}>
+                        <View style={{
+                          width: `${progressPercent}%`,
+                          height: '100%',
+                          backgroundColor: isCompleted ? themeColors.success : themeColors.primary,
+                          borderRadius: 4,
+                        }} />
+                      </View>
+                      <Text style={{ fontSize: 11, color: themeColors.textSecondary }}>
+                        {currentFormatted} / {targetFormatted}
+                      </Text>
+                    </View>
+                    {isCompleted && (
+                      <Ionicons name="checkmark-circle" size={20} color={themeColors.success} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
 
         {/* Últimas Transacciones */}
         <View style={{ marginHorizontal: 20 }}>
