@@ -386,7 +386,7 @@ export async function chatWithDeepSeek(
         model: 'deepseek-chat',
         messages: apiMessages,
         temperature: 0.1,
-        max_tokens: 1500,
+        max_tokens: 2000,
       }),
     });
 
@@ -465,5 +465,82 @@ export async function testDeepSeekConnection(apiKey: string): Promise<{ success:
     return { success: true, message: content.trim() };
   } catch (error: any) {
     return { success: false, message: error?.message || 'Error de conexión' };
+  }
+}
+
+/**
+ * Sugiere una categoría para una descripción de transacción usando DeepSeek.
+ * Esta función es llamada cuando el usuario termina de escribir la descripción (onBlur).
+ *
+ * @param description - La descripción de la transacción
+ * @param categories - Lista de categorías disponibles
+ * @param apiKey - API Key de DeepSeek
+ * @returns El ID de la categoría sugerida, o null si no se pudo determinar
+ */
+export async function suggestCategory(
+  description: string,
+  categories: Category[],
+  apiKey: string
+): Promise<{ categoryId: number | null; categoryName: string | null }> {
+  if (!description.trim() || !apiKey || categories.length === 0) {
+    return { categoryId: null, categoryName: null };
+  }
+
+  const categoriesList = categories.map((c) => `- ${c.name} (${c.icon}): ${c.type}`).join('\n');
+
+  const systemPrompt = `Eres un asistente que categoriza transacciones financieras.
+Dada una descripción, responde SOLO con el nombre exacto de la categoría que mejor corresponda.
+Categorías disponibles:
+${categoriesList}
+
+Responde únicamente con el nombre de la categoría, nada más.`;
+
+  try {
+    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Descripción: "${description}"\n¿Qué categoría le asignas?` },
+        ],
+        temperature: 0.1,
+        max_tokens: 50,
+      }),
+    });
+
+    if (!response.ok) {
+      return { categoryId: null, categoryName: null };
+    }
+
+    const data = await response.json();
+    const suggestedName: string = data.choices?.[0]?.message?.content?.trim() || '';
+
+    // Buscar la categoría que coincida con el nombre sugerido
+    const match = categories.find(
+      (c) => c.name.toLowerCase() === suggestedName.toLowerCase()
+    );
+
+    if (match) {
+      return { categoryId: match.id, categoryName: match.name };
+    }
+
+    // Si no hay match exacto, buscar coincidencia parcial
+    const partialMatch = categories.find(
+      (c) => suggestedName.toLowerCase().includes(c.name.toLowerCase()) ||
+             c.name.toLowerCase().includes(suggestedName.toLowerCase())
+    );
+
+    if (partialMatch) {
+      return { categoryId: partialMatch.id, categoryName: partialMatch.name };
+    }
+
+    return { categoryId: null, categoryName: null };
+  } catch {
+    return { categoryId: null, categoryName: null };
   }
 }

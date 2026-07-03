@@ -16,7 +16,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import { colors } from '../../src/theme/colors';
 import { useThemeColors } from '../../src/hooks/useThemeColors';
-import AnimatedTransition from '../../src/components/AnimatedTransition';
 import { getGoals, createGoal, deleteGoal, markGoalCelebrated, updateGoalProgress } from '../../src/services/goals';
 import { getItemsByGoalId, createItem, deleteItem, toggleItemCompleted, recalculateGoalProgress } from '../../src/services/goalItems';
 import { formatUSD, formatBS } from '../../src/utils/format';
@@ -303,7 +302,6 @@ export default function GoalsScreen() {
   };
 
   return (
-    <AnimatedTransition>
     <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
       <ScrollView
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -882,6 +880,5 @@ export default function GoalsScreen() {
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
-    </AnimatedTransition>
   );
 }

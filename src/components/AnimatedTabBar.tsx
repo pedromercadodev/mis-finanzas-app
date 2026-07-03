@@ -1,9 +1,19 @@
-import { View, Text, TouchableOpacity, Animated, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { usePathname, useRouter } from 'expo-router';
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  withSequence,
+  interpolate,
+  Easing,
+} from 'react-native-reanimated';
+import { haptic } from '../utils/haptics';
 
 const TABS = [
   { name: 'index', title: 'Resumen', icon: 'home-outline', iconActive: 'home' },
@@ -15,6 +25,9 @@ const TABS = [
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const TAB_WIDTH = SCREEN_WIDTH / TABS.length;
+
+const SPRING_CONFIG = { damping: 15, stiffness: 200, mass: 0.8 };
+const SCALE_SPRING = { damping: 12, stiffness: 250, mass: 0.6 };
 
 export default function AnimatedTabBar() {
   const themeColors = useThemeColors();
@@ -28,26 +41,56 @@ export default function AnimatedTabBar() {
   });
   const currentIndex = activeIndex >= 0 ? activeIndex : 0;
 
-  const slideAnim = useRef(new Animated.Value(currentIndex * TAB_WIDTH)).current;
-  const scaleAnims = useRef(TABS.map(() => new Animated.Value(0))).current;
+  // Shared values para animaciones
+  const slideOffset = useSharedValue(currentIndex * TAB_WIDTH);
+  const prevIndex = useSharedValue(currentIndex);
+
+  // Valores por tab: progreso de morphing (0=outline, 1=filled)
+  const morphProgress = TABS.map(() => useSharedValue(0));
+  // Escala del icono
+  const iconScale = TABS.map(() => useSharedValue(1));
+  // Rotación (solo para sparkles)
+  const iconRotation = TABS.map(() => useSharedValue(0));
 
   useEffect(() => {
-    Animated.spring(slideAnim, {
-      toValue: currentIndex * TAB_WIDTH,
-      useNativeDriver: true,
-      tension: 120,
-      friction: 10,
-    }).start();
+    if (prevIndex.value === currentIndex) return;
 
-    TABS.forEach((_, i) => {
-      Animated.spring(scaleAnims[i], {
-        toValue: i === currentIndex ? 1 : 0,
-        useNativeDriver: true,
-        tension: 200,
-        friction: 8,
-      }).start();
-    });
+    // Animación del indicador deslizante
+    slideOffset.value = withSpring(currentIndex * TAB_WIDTH, SPRING_CONFIG);
+
+    // Resetear tab anterior
+    const oldIdx = Math.round(prevIndex.value);
+    if (oldIdx >= 0 && oldIdx < TABS.length) {
+      morphProgress[oldIdx].value = withSpring(0, SPRING_CONFIG);
+      iconScale[oldIdx].value = withSpring(1, SPRING_CONFIG);
+      // Reset rotación del tab anterior si es sparkles
+      if (TABS[oldIdx].name === 'ai-chat') {
+        iconRotation[oldIdx].value = withTiming(0, { duration: 200 });
+      }
+    }
+
+    // Activar nuevo tab
+    morphProgress[currentIndex].value = withSpring(1, SPRING_CONFIG);
+    iconScale[currentIndex].value = withSpring(1.12, SCALE_SPRING);
+
+    // Rotación especial para sparkles (Asistente)
+    if (TABS[currentIndex].name === 'ai-chat') {
+      iconRotation[currentIndex].value = withSequence(
+        withTiming(360, { duration: 600, easing: Easing.out(Easing.cubic) }),
+        withTiming(0, { duration: 0 })
+      );
+    }
+
+    // Haptic feedback sutil al cambiar de tab
+    haptic('light');
+
+    prevIndex.value = currentIndex;
   }, [currentIndex]);
+
+  // Animación del indicador deslizante
+  const indicatorStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: slideOffset.value }],
+  }));
 
   const navigate = useCallback((name: string) => {
     if (name === 'ai-chat') {
@@ -77,26 +120,52 @@ export default function AnimatedTabBar() {
         elevation: 10,
       }}
     >
-      {/* Indicador deslizante redondeado */}
+      {/* Indicador deslizante redondeado con Reanimated */}
       <Animated.View
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: TAB_WIDTH * 0.2,
-          width: TAB_WIDTH * 0.6,
-          height: 3,
-          backgroundColor: themeColors.primary,
-          borderRadius: 2,
-          transform: [{ translateX: slideAnim }],
-        }}
+        style={[
+          {
+            position: 'absolute',
+            top: 0,
+            left: TAB_WIDTH * 0.2,
+            width: TAB_WIDTH * 0.6,
+            height: 3,
+            backgroundColor: themeColors.primary,
+            borderRadius: 2,
+          },
+          indicatorStyle,
+        ]}
       />
 
       {TABS.map((tab, index) => {
         const isActive = index === currentIndex;
-        const scale = scaleAnims[index].interpolate({
-          inputRange: [0, 1],
-          outputRange: [1, 1.12],
+
+        // Estilo animado para el contenedor del icono
+        const iconContainerStyle = useAnimatedStyle(() => {
+          const scale = iconScale[index].value;
+          return {
+            transform: [{ scale }],
+          };
         });
+
+        // Estilo animado para el icono outline (se desvanece cuando está activo)
+        const outlineIconStyle = useAnimatedStyle(() => ({
+          opacity: 1 - morphProgress[index].value,
+          transform: [
+            { scale: interpolate(morphProgress[index].value, [0, 1], [1, 0.8]) },
+          ],
+        }));
+
+        // Estilo animado para el icono filled (aparece cuando está activo)
+        const filledIconStyle = useAnimatedStyle(() => ({
+          opacity: morphProgress[index].value,
+          position: 'absolute',
+          transform: [
+            { scale: interpolate(morphProgress[index].value, [0, 1], [0.8, 1]) },
+            tab.name === 'ai-chat'
+              ? { rotate: `${iconRotation[index].value}deg` }
+              : { rotate: '0deg' },
+          ],
+        }));
 
         return (
           <TouchableOpacity
@@ -111,22 +180,36 @@ export default function AnimatedTabBar() {
             }}
           >
             <Animated.View
-              style={{
-                width: 46,
-                height: 46,
-                borderRadius: 23,
-                backgroundColor: isActive ? themeColors.primary + '18' : 'transparent',
-                justifyContent: 'center',
-                alignItems: 'center',
-                transform: [{ scale }],
-                marginBottom: 3,
-              }}
+              style={[
+                {
+                  width: 46,
+                  height: 46,
+                  borderRadius: 23,
+                  backgroundColor: isActive ? themeColors.primary + '18' : 'transparent',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  marginBottom: 3,
+                },
+                iconContainerStyle,
+              ]}
             >
-              <Ionicons
-                name={isActive ? (tab.iconActive as any) : (tab.icon as any)}
-                size={isActive ? 24 : 22}
-                color={isActive ? themeColors.primary : themeColors.textSecondary}
-              />
+              {/* Icono outline (se desvanece) */}
+              <Animated.View style={outlineIconStyle}>
+                <Ionicons
+                  name={tab.icon as any}
+                  size={24}
+                  color={isActive ? themeColors.primary : themeColors.textSecondary}
+                />
+              </Animated.View>
+
+              {/* Icono filled (aparece con morphing) */}
+              <Animated.View style={filledIconStyle}>
+                <Ionicons
+                  name={tab.iconActive as any}
+                  size={24}
+                  color={themeColors.primary}
+                />
+              </Animated.View>
             </Animated.View>
             <Text
               style={{

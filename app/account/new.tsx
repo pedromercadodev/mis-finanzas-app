@@ -16,6 +16,7 @@ import { colors } from '../../src/theme/colors';
 import { accountColors } from '../../src/theme/colors';
 import { useThemeColors } from '../../src/hooks/useThemeColors';
 import { useAccounts } from '../../src/store/useAccounts';
+import AnimatedScreen from '../../src/components/AnimatedScreen';
 import type { AccountType, CurrencyType } from '../../src/utils/types';
 
 const accountTypes: { key: AccountType; label: string; icon: string }[] = [
@@ -77,6 +78,7 @@ export default function NewAccountScreen() {
   };
 
   return (
+    <AnimatedScreen>
     <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -330,5 +332,6 @@ export default function NewAccountScreen() {
         </View>
       )}
     </SafeAreaView>
+    </AnimatedScreen>
   );
 }

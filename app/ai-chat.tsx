@@ -35,6 +35,7 @@ import {
   clearChatHistory,
   type ChatHistoryMessage,
 } from '../src/services/chatHistory';
+import AnimatedScreen from '../src/components/AnimatedScreen';
 import type { DeepSeekMessage, DeepSeekAction, TransactionAction, CreateAccountAction, UpdateAccountAction, TransferAction, CreateGoalAction, UpdateGoalProgressAction, DeleteGoalAction, CreateSubscriptionAction, UpdateSubscriptionAction, DeleteSubscriptionAction, SetBudgetAction, CreateDebtAction, PayDebtAction, DeleteDebtAction, UpdateTransactionAction, DeleteTransactionAction, DeleteAccountAction } from '../src/services/deepseek';
 import type { Category } from '../src/utils/types';
 
@@ -1408,6 +1409,7 @@ export default function AIChatScreen() {
   }, [themeColors, confirmAction, cancelAction, isLoading]);
 
   return (
+    <AnimatedScreen>
     <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -1684,5 +1686,6 @@ export default function AIChatScreen() {
         </View>
       </Modal>
     </SafeAreaView>
+    </AnimatedScreen>
   );
 }

@@ -8,8 +8,15 @@ Aplicación móvil de finanzas personales construida con **React Native (Expo)**
 
 ## 📋 Historial de Versiones
 
-### v2.1.0 (Actual)
-- 🐛 **Bugfix 1** — Selector de moneda (USD/BS/BOTH) en crear cuenta
+### v2.2.0 (Actual)
+- 🎨 **Transición centralizada** — `AnimatedTransition` movido al layout de tabs, eliminado de 9 pantallas individuales
+- 🚫 **Bloqueo de doble animación** — `animatingRef` evita ejecución múltiple por actualizaciones intermedias de `usePathname()`
+- ⏳ **Loading overlay** — Indicador "Cargando..." con ícono animado durante transiciones entre tabs
+- 🧹 **Limpieza** — Eliminado import no usado de `PieChart` en reports
+- 🐛 **Bugfix doble animación** — Corrección del error donde las animaciones se ejecutaban 2 veces al cambiar de pantalla
+
+### v2.1.0
+-  **Bugfix 1** — Selector de moneda (USD/BS/BOTH) en crear cuenta
 - 🐛 **Bugfix 2** — Edición completa de cuenta (nombre, tipo, moneda, icono, color)
 - 🐛 **Bugfix 3** — Selector de cuenta destino en transferencias
 - 🐛 **Bugfix 4** — Validación de saldo suficiente en gastos y transferencias

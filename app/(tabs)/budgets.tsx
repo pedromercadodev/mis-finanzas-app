@@ -15,7 +15,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import { useThemeColors } from '../../src/hooks/useThemeColors';
-import AnimatedTransition from '../../src/components/AnimatedTransition';
 import { getGroupSummaries, setAllocation } from '../../src/services/budgetAllocations';
 import { formatUSD, getCurrentMonthRange } from '../../src/utils/format';
 import type { GroupWithCategories } from '../../src/utils/types';
@@ -114,7 +113,6 @@ export default function BudgetsScreen() {
   };
 
   return (
-    <AnimatedTransition>
     <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
       <ScrollView
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -400,6 +398,5 @@ export default function BudgetsScreen() {
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
-    </AnimatedTransition>
   );
 }

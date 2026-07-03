@@ -1,5 +1,33 @@
 # Changelog
 
+## v2.2.0 (2026-07-03)
+
+### 🎨 Animaciones y Experiencia de Usuario
+
+#### Transición centralizada entre tabs
+- **Archivo:** [`src/components/AnimatedTransition.tsx`](src/components/AnimatedTransition.tsx)
+- Se centralizó `AnimatedTransition` en el layout de tabs (`(tabs)/_layout.tsx`) eliminándolo de las 9 pantallas individuales.
+- Se agregó **bloqueo de animación** (`animatingRef`) para evitar doble ejecución por actualizaciones intermedias de `usePathname()`.
+- Se completó el `tabOrder` con todas las rutas de tabs (incluyendo `reports`, `subscriptions`, `debts`).
+- Se agregó **loading overlay** con ícono animado y texto "Cargando..." durante la transición entre pantallas.
+
+#### Archivos modificados:
+- [`app/(tabs)/_layout.tsx`](app/(tabs)/_layout.tsx) — Envuelve `<Tabs>` con `<AnimatedTransition>`
+- [`app/(tabs)/index.tsx`](app/(tabs)/index.tsx) — Eliminado `AnimatedTransition` import y wrapper
+- [`app/(tabs)/transactions.tsx`](app/(tabs)/transactions.tsx) — Eliminado `AnimatedTransition` import y wrapper
+- [`app/(tabs)/reports.tsx`](app/(tabs)/reports.tsx) — Eliminado `AnimatedTransition` import y wrapper
+- [`app/(tabs)/settings.tsx`](app/(tabs)/settings.tsx) — Eliminado `AnimatedTransition` import y wrapper
+- [`app/(tabs)/accounts.tsx`](app/(tabs)/accounts.tsx) — Eliminado `AnimatedTransition` import y wrapper
+- [`app/(tabs)/budgets.tsx`](app/(tabs)/budgets.tsx) — Eliminado `AnimatedTransition` import y wrapper
+- [`app/(tabs)/goals.tsx`](app/(tabs)/goals.tsx) — Eliminado `AnimatedTransition` import y wrapper
+- [`app/(tabs)/subscriptions.tsx`](app/(tabs)/subscriptions.tsx) — Eliminado `AnimatedTransition` import y wrapper
+- [`app/(tabs)/debts.tsx`](app/(tabs)/debts.tsx) — Eliminado `AnimatedTransition` import y wrapper
+
+### 🧹 Limpieza
+- [`app/(tabs)/reports.tsx`](app/(tabs)/reports.tsx) — Eliminado import no usado de `PieChart` de `react-native-chart-kit`
+
+---
+
 ## v2.1.0 (2026-07-03)
 
 ### 🐛 Bugfixes y Mejoras

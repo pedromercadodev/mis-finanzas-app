@@ -15,7 +15,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../../src/hooks/useThemeColors';
-import AnimatedTransition from '../../src/components/AnimatedTransition';
 import { formatUSD, formatBS, formatDate } from '../../src/utils/format';
 import {
   getDebts,
@@ -329,7 +328,6 @@ export default function DebtsScreen() {
   };
 
   return (
-    <AnimatedTransition>
       <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
         <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
           {/* Header */}
@@ -1026,6 +1024,5 @@ export default function DebtsScreen() {
           </SafeAreaView>
         </Modal>
       </SafeAreaView>
-    </AnimatedTransition>
   );
 }

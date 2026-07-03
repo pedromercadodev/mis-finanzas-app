@@ -1,4 +1,11 @@
 import { useCallback, useEffect, useState, useRef } from 'react';
+import { useEffect as useEffectAnim } from 'react';
+import Animated, {
+  useSharedValue,
+  withTiming,
+  useAnimatedStyle,
+  Easing,
+} from 'react-native-reanimated';
 import {
   View,
   Text,
@@ -13,9 +20,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useAccounts } from '../../src/store/useAccounts';
-import AnimatedTransition from '../../src/components/AnimatedTransition';
 import { useTransactions } from '../../src/store/useTransactions';
 import { useThemeColors } from '../../src/hooks/useThemeColors';
+import { DashboardSkeleton } from '../../src/components/Skeleton';
 import { useExchangeRates } from '../../src/hooks/useExchangeRates';
 import { useSettings } from '../../src/store/useSettings';
 import { getAccountBalance, getAccountsByPlatform } from '../../src/services/accounts';
@@ -24,6 +31,7 @@ import { getGoals } from '../../src/services/goals';
 import { getDueSubscriptions } from '../../src/services/subscriptions';
 import { formatUSD, formatBS, formatDateShort, getCurrentMonthRange } from '../../src/utils/format';
 import type { Account, Goal, Subscription } from '../../src/utils/types';
+import { haptic } from '../../src/utils/haptics';
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -38,6 +46,7 @@ export default function DashboardScreen() {
     lastUpdated: ratesLastUpdated,
     refresh: refreshRates,
   } = useExchangeRates();
+  const [loading, setLoading] = useState(true);
   const [balances, setBalances] = useState<Record<number, { balanceUSD: number; balanceBS: number }>>({});
   const [summary, setSummary] = useState({ incomeUSD: 0, incomeBS: 0, expenseUSD: 0, expenseBS: 0 });
   const [refreshing, setRefreshing] = useState(false);
@@ -48,6 +57,7 @@ export default function DashboardScreen() {
   const [dueSubscriptions, setDueSubscriptions] = useState<Subscription[]>([]);
 
   const loadData = async () => {
+    setLoading(true);
     await loadAccounts();
     const month = getCurrentMonthRange().start.substring(0, 7);
     await loadTransactions({ limit: 5 });
@@ -75,6 +85,7 @@ export default function DashboardScreen() {
     // Cargar billeteras digitales agrupadas por plataforma
     const platforms = await getAccountsByPlatform();
     setPlatformData(platforms);
+    setLoading(false);
   };
 
   // Recargar datos cada vez que la pantalla obtiene foco (navegación entre tabs)
@@ -122,23 +133,6 @@ export default function DashboardScreen() {
   const totalUSD = rawTotalUSD + (activeRate ? rawTotalBS / activeRate : 0);
   const totalBS = rawTotalBS + (rawTotalUSD * (activeRate || 0));
 
-  const handleLongPressTotal = () => {
-    Alert.alert('Filtrar cuentas', 'Selecciona qué cuentas mostrar en el saldo total:', [
-      {
-        text: `💲 Solo USD ${accountFilter === 'USD' ? '✓' : ''}`,
-        onPress: () => setAccountFilter(accountFilter === 'USD' ? 'all' : 'USD'),
-      },
-      {
-        text: `💵 Solo BS ${accountFilter === 'BS' ? '✓' : ''}`,
-        onPress: () => setAccountFilter(accountFilter === 'BS' ? 'all' : 'BS'),
-      },
-      {
-        text: `🌎 Multidivisa ${accountFilter === 'all' ? '✓' : ''}`,
-        onPress: () => setAccountFilter('all'),
-      },
-    ]);
-  };
-
   const getFilterLabel = () => {
     switch (accountFilter) {
       case 'USD': return '💲 USD';
@@ -148,30 +142,36 @@ export default function DashboardScreen() {
   };
 
   return (
-    <AnimatedTransition>
     <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
+      {loading && freshAccounts.length === 0 ? (
+        <DashboardSkeleton />
+      ) : (
       <ScrollView
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: 100 }}
       >
-        {/* Header */}
+        {/* Header - Saludo Personalizado */}
         <View style={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 10 }}>
-          <Text style={{ fontSize: 28, fontWeight: '700', color: themeColors.text }}>
-            Mis Finanzas
+          <Text style={{ fontSize: 22, fontWeight: '700', color: themeColors.text }}>
+            {(() => {
+              const hour = new Date().getHours();
+              const greeting = hour < 12 ? 'Buenos días' : hour < 18 ? 'Buenas tardes' : 'Buenas noches';
+              return `${greeting} 👋`;
+            })()}
+          </Text>
+          <Text style={{ fontSize: 13, color: themeColors.textSecondary, marginTop: 2 }}>
+            {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
           </Text>
         </View>
 
         {/* Saldo Total */}
-        <TouchableOpacity
-          onLongPress={handleLongPressTotal}
-          activeOpacity={0.9}
-          style={{ marginHorizontal: 20, marginBottom: 16 }}
-        >
+        <View style={{ marginHorizontal: 20, marginBottom: 16 }}>
           <View style={{
             backgroundColor: themeColors.surface,
             borderRadius: 20,
             padding: 24,
+            paddingBottom: 16,
             shadowColor: themeColors.primary,
             shadowOffset: { width: 0, height: 4 },
             shadowOpacity: 0.15,
@@ -182,20 +182,6 @@ export default function DashboardScreen() {
               <Text style={{ fontSize: 14, color: themeColors.textSecondary }}>
                 Saldo Total
               </Text>
-              <View style={{
-                backgroundColor: themeColors.primaryLight + '30',
-                paddingHorizontal: 8,
-                paddingVertical: 3,
-                borderRadius: 6,
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 4,
-              }}>
-                <Text style={{ fontSize: 10, color: themeColors.primary, fontWeight: '700' }}>
-                  {getFilterLabel()}
-                </Text>
-                <Ionicons name="chevron-down" size={10} color={themeColors.primary} />
-              </View>
             </View>
             {accountFilter === 'BS' ? (
               <>
@@ -240,8 +226,39 @@ export default function DashboardScreen() {
                 </View>
               </>
             )}
+            {/* Filter Chips */}
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 16 }}>
+              {([
+                { key: 'all', label: '🌎 Todo' },
+                { key: 'USD', label: '💲 USD' },
+                { key: 'BS', label: '💵 BS' },
+              ] as const).map((chip) => {
+                const isActive = accountFilter === chip.key;
+                return (
+                  <TouchableOpacity
+                    key={chip.key}
+                    onPress={() => setAccountFilter(chip.key)}
+                    activeOpacity={0.7}
+                    style={{
+                      paddingHorizontal: 14,
+                      paddingVertical: 7,
+                      borderRadius: 20,
+                      backgroundColor: isActive ? themeColors.primary : themeColors.primaryLight + '40',
+                    }}
+                  >
+                    <Text style={{
+                      fontSize: 12,
+                      fontWeight: '700',
+                      color: isActive ? '#FFF' : themeColors.primary,
+                    }}>
+                      {chip.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
-        </TouchableOpacity>
+        </View>
 
         {/* Widget de Tasas de Cambio */}
         <View style={{ marginHorizontal: 20, marginBottom: 20 }}>
@@ -588,44 +605,87 @@ export default function DashboardScreen() {
           </ScrollView>
         </View>
 
-        {/* Resumen del Mes */}
+        {/* Resumen del Mes con barra de progreso */}
         <View style={{ marginHorizontal: 20, marginBottom: 20 }}>
           <Text style={{ fontSize: 18, fontWeight: '600', color: themeColors.text, marginBottom: 12 }}>
             Resumen del Mes
           </Text>
-          <View style={{ flexDirection: 'row', gap: 12 }}>
-            <View style={{
-              flex: 1,
-              backgroundColor: themeColors.successLight,
-              borderRadius: 16,
-              padding: 16,
-            }}>
-              <Text style={{ fontSize: 12, color: themeColors.success, fontWeight: '500', marginBottom: 4 }}>
-                Ingresos
-              </Text>
-              <Text style={{ fontSize: 18, fontWeight: '700', color: themeColors.success }}>
-                {formatUSD(summary.incomeUSD + (activeRate ? summary.incomeBS / activeRate : 0))}
-              </Text>
-              <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>
-                {formatBS(summary.incomeBS + (summary.incomeUSD * (activeRate || 0)))}
-              </Text>
+          <View style={{
+            backgroundColor: themeColors.surface,
+            borderRadius: 16,
+            padding: 16,
+          }}>
+            <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
+              <View style={{
+                flex: 1,
+                backgroundColor: themeColors.successLight,
+                borderRadius: 12,
+                padding: 12,
+              }}>
+                <Text style={{ fontSize: 12, color: themeColors.success, fontWeight: '500', marginBottom: 4 }}>
+                  Ingresos
+                </Text>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: themeColors.success }}>
+                  {formatUSD(summary.incomeUSD + (activeRate ? summary.incomeBS / activeRate : 0))}
+                </Text>
+                <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>
+                  {formatBS(summary.incomeBS + (summary.incomeUSD * (activeRate || 0)))}
+                </Text>
+              </View>
+              <View style={{
+                flex: 1,
+                backgroundColor: themeColors.dangerLight,
+                borderRadius: 12,
+                padding: 12,
+              }}>
+                <Text style={{ fontSize: 12, color: themeColors.danger, fontWeight: '500', marginBottom: 4 }}>
+                  Gastos
+                </Text>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: themeColors.danger }}>
+                  {formatUSD(summary.expenseUSD + (activeRate ? summary.expenseBS / activeRate : 0))}
+                </Text>
+                <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>
+                  {formatBS(summary.expenseBS + (summary.expenseUSD * (activeRate || 0)))}
+                </Text>
+              </View>
             </View>
-            <View style={{
-              flex: 1,
-              backgroundColor: themeColors.dangerLight,
-              borderRadius: 16,
-              padding: 16,
-            }}>
-              <Text style={{ fontSize: 12, color: themeColors.danger, fontWeight: '500', marginBottom: 4 }}>
-                Gastos
-              </Text>
-              <Text style={{ fontSize: 18, fontWeight: '700', color: themeColors.danger }}>
-                {formatUSD(summary.expenseUSD + (activeRate ? summary.expenseBS / activeRate : 0))}
-              </Text>
-              <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>
-                {formatBS(summary.expenseBS + (summary.expenseUSD * (activeRate || 0)))}
-              </Text>
-            </View>
+            {/* Barra de progreso ingresos vs gastos */}
+            {(() => {
+              const totalIncome = summary.incomeUSD + (activeRate ? summary.incomeBS / activeRate : 0);
+              const totalExpense = summary.expenseUSD + (activeRate ? summary.expenseBS / activeRate : 0);
+              if (totalIncome === 0 && totalExpense === 0) return null;
+              const ratio = totalIncome > 0 ? Math.min(totalExpense / totalIncome, 1) : 1;
+              const isOverBudget = totalExpense > totalIncome;
+              const barColor = isOverBudget ? themeColors.danger : themeColors.success;
+              const barBg = isOverBudget ? themeColors.dangerLight : themeColors.successLight;
+              const ProgressBar = () => {
+                const widthAnim = useSharedValue(0);
+                useEffectAnim(() => {
+                  widthAnim.value = withTiming(ratio, { duration: 800, easing: Easing.out(Easing.ease) });
+                }, [ratio]);
+                const barStyle = useAnimatedStyle(() => ({
+                  width: `${widthAnim.value * 100}%`,
+                }));
+                return (
+                  <View style={{ height: 8, backgroundColor: barBg, borderRadius: 4, overflow: 'hidden', marginTop: 4 }}>
+                    <Animated.View style={[{ height: '100%', backgroundColor: barColor, borderRadius: 4 }, barStyle]} />
+                  </View>
+                );
+              };
+              return (
+                <View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={{ fontSize: 12, color: themeColors.textSecondary, fontWeight: '500' }}>
+                      Gastos vs Ingresos
+                    </Text>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: barColor }}>
+                      {isOverBudget ? `${Math.round((ratio) * 100)}%` : `${Math.round(ratio * 100)}%`}
+                    </Text>
+                  </View>
+                  <ProgressBar />
+                </View>
+              );
+            })()}
           </View>
         </View>
 
@@ -899,6 +959,7 @@ export default function DashboardScreen() {
           ))}
         </View>
       </ScrollView>
+      )}
 
       {/* FAB - Nueva Transacción */}
       <TouchableOpacity
@@ -923,6 +984,5 @@ export default function DashboardScreen() {
         <Ionicons name="add" size={28} color="#FFFFFF" />
       </TouchableOpacity>
     </SafeAreaView>
-    </AnimatedTransition>
   );
 }

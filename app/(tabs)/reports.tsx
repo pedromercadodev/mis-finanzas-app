@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
+import SegmentedControl from '../../src/components/SegmentedControl';
+import PieChartInteractive from '../../src/components/PieChartInteractive';
+import type { PieSlice } from '../../src/components/PieChartInteractive';
 import {
   View,
   Text,
@@ -10,17 +13,19 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { LineChart, PieChart } from 'react-native-chart-kit';
+import CashFlowChart from '../../src/components/CashFlowChart';
 import { useThemeColors } from '../../src/hooks/useThemeColors';
-import AnimatedTransition from '../../src/components/AnimatedTransition';
+import { ReportsSkeleton } from '../../src/components/Skeleton';
 import { formatUSD, formatBS } from '../../src/utils/format';
 import {
   getCategoryBreakdown,
   getCashFlowHistory,
   getReportSummary,
+  getPeriodComparison,
   CategoryBreakdown,
   CashFlowPoint,
   ReportSummary,
+  PeriodComparison,
 } from '../../src/services/reports';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -76,6 +81,7 @@ export default function ReportsScreen() {
   const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [categoryData, setCategoryData] = useState<CategoryBreakdown[]>([]);
   const [cashFlowData, setCashFlowData] = useState<CashFlowPoint[]>([]);
+  const [comparison, setComparison] = useState<PeriodComparison | null>(null);
 
   const loadData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -84,16 +90,33 @@ export default function ReportsScreen() {
     try {
       const { start, end } = getPeriodRange(period);
 
-      const [summaryResult, expenseBreakdown, incomeBreakdown, cashFlow] = await Promise.all([
+      const [summaryResult, expenseBreakdown, incomeBreakdown, cashFlow, comparisonResult] = await Promise.all([
         getReportSummary(start, end),
         getCategoryBreakdown('expense', start, end),
         getCategoryBreakdown('income', start, end),
         getCashFlowHistory(start, end, 'month'),
+        getPeriodComparison(period),
       ]);
 
       setSummary(summaryResult);
       setCategoryData(activeTab === 'expense' ? expenseBreakdown : incomeBreakdown);
       setCashFlowData(cashFlow);
+
+      // Calcular cambios reales con los valores actuales
+      if (comparisonResult && summaryResult) {
+        const calcChange = (current: number, previous: number): number | null => {
+          if (previous === 0) return current > 0 ? 100 : null;
+          return Math.round(((current - previous) / previous) * 100);
+        };
+        setComparison({
+          ...comparisonResult,
+          incomeChange: calcChange(summaryResult.totalIncomeUSD, comparisonResult.previousIncomeUSD),
+          expenseChange: calcChange(summaryResult.totalExpenseUSD, comparisonResult.previousExpenseUSD),
+          netChange: calcChange(summaryResult.netUSD, comparisonResult.previousNetUSD),
+        });
+      } else {
+        setComparison(null);
+      }
     } catch (error) {
       console.error('Error loading reports:', error);
     } finally {
@@ -116,81 +139,21 @@ export default function ReportsScreen() {
     setActiveTab(tab);
   };
 
-  // Preparar datos para el gráfico de pastel
-  const pieChartData = categoryData.slice(0, 8).map((cat) => ({
-    name: cat.categoryName.length > 12 ? cat.categoryName.substring(0, 12) + '…' : cat.categoryName,
-    amount: cat.totalUSD > 0 ? cat.totalUSD : (cat.totalBS > 0 ? cat.totalBS : 0),
-    color: cat.color || '#999',
-    legendFontColor: themeColors.text,
-    legendFontSize: 12,
-  }));
-
-  // Si no hay datos, agregar un placeholder
-  if (pieChartData.length === 0) {
-    pieChartData.push({
-      name: 'Sin datos',
-      amount: 1,
-      color: '#E5E7EB',
-      legendFontColor: themeColors.textSecondary as any,
-      legendFontSize: 12,
-    });
-  }
-
-  // Preparar datos para el gráfico de línea (flujo de caja)
-  const lineLabels = cashFlowData.map((p) => {
-    // Acortar label: mostrar solo mes/año
-    const parts = p.date.split('-');
-    if (parts.length >= 2) {
-      const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-      return months[parseInt(parts[1]) - 1] || p.date;
-    }
-    return p.date;
+  // Preparar datos para PieChartInteractive
+  const totalAmount = categoryData.reduce((sum, cat) => sum + (cat.totalUSD > 0 ? cat.totalUSD : cat.totalBS), 0);
+  const pieSlices: PieSlice[] = categoryData.slice(0, 8).map((cat) => {
+    const value = cat.totalUSD > 0 ? cat.totalUSD : cat.totalBS;
+    return {
+      id: String(cat.categoryId),
+      label: cat.categoryName,
+      value,
+      color: cat.color || '#999',
+      percentage: totalAmount > 0 ? (value / totalAmount) * 100 : 0,
+    };
   });
 
-  const lineData = {
-    labels: lineLabels.length > 6 ? lineLabels.filter((_, i) => i % Math.ceil(lineLabels.length / 6) === 0) : lineLabels,
-    datasets: [
-      {
-        data: cashFlowData.length > 0 ? cashFlowData.map((p) => p.balanceUSD) : [0],
-        color: (opacity = 1) => `rgba(99, 102, 241, ${opacity})`,
-        strokeWidth: 2,
-      },
-      {
-        data: cashFlowData.length > 0 ? cashFlowData.map((p) => p.incomeUSD) : [0],
-        color: (opacity = 1) => `rgba(16, 185, 129, ${opacity})`,
-        strokeWidth: 2,
-      },
-      {
-        data: cashFlowData.length > 0 ? cashFlowData.map((p) => p.expenseUSD) : [0],
-        color: (opacity = 1) => `rgba(239, 68, 68, ${opacity})`,
-        strokeWidth: 2,
-      },
-    ],
-    legend: ['Balance', 'Ingresos', 'Gastos'],
-  };
-
-  const chartConfig = {
-    backgroundColor: themeColors.surface,
-    backgroundGradientFrom: themeColors.surface,
-    backgroundGradientTo: themeColors.surface,
-    decimalPlaces: 0,
-    color: (opacity = 1) => `rgba(107, 114, 128, ${opacity})`,
-    labelColor: () => themeColors.textSecondary,
-    style: { borderRadius: 16 },
-    propsForDots: {
-      r: '4',
-      strokeWidth: '2',
-      stroke: themeColors.primary,
-    },
-    propsForBackgroundLines: {
-      strokeDasharray: '4 4',
-      stroke: themeColors.border,
-    },
-  };
-
   return (
-    <AnimatedTransition>
-      <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
         <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
           {/* Header */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
@@ -201,37 +164,16 @@ export default function ReportsScreen() {
           </View>
 
           {/* Selector de período */}
-          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
-            {PERIODS.map((p) => (
-              <TouchableOpacity
-                key={p.key}
-                onPress={() => setPeriod(p.key)}
-                style={{
-                  flex: 1,
-                  paddingVertical: 10,
-                  borderRadius: 12,
-                  backgroundColor: period === p.key ? themeColors.primary : themeColors.surface,
-                  alignItems: 'center',
-                }}>
-                <Text
-                  style={{
-                    fontSize: 13,
-                    fontWeight: '600',
-                    color: period === p.key ? '#FFFFFF' : themeColors.textSecondary,
-                  }}>
-                  {p.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
+          <View style={{ marginBottom: 20 }}>
+            <SegmentedControl
+              options={PERIODS}
+              selected={period}
+              onSelect={setPeriod}
+            />
           </View>
 
           {loading ? (
-            <View style={{ alignItems: 'center', paddingVertical: 60 }}>
-              <ActivityIndicator size="large" color={themeColors.primary} />
-              <Text style={{ marginTop: 12, color: themeColors.textSecondary, fontSize: 14 }}>
-                Cargando reportes...
-              </Text>
-            </View>
+            <ReportsSkeleton />
           ) : (
             <>
               {/* Resumen del período */}
@@ -262,6 +204,18 @@ export default function ReportsScreen() {
                           {formatBS(summary.totalIncomeBS)}
                         </Text>
                       )}
+                      {comparison?.incomeChange !== null && comparison?.incomeChange !== undefined && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 4 }}>
+                          <Ionicons
+                            name={comparison.incomeChange >= 0 ? 'arrow-up' : 'arrow-down'}
+                            size={11}
+                            color={comparison.incomeChange >= 0 ? themeColors.success : themeColors.danger}
+                          />
+                          <Text style={{ fontSize: 11, fontWeight: '600', color: comparison.incomeChange >= 0 ? themeColors.success : themeColors.danger }}>
+                            {Math.abs(comparison.incomeChange)}%
+                          </Text>
+                        </View>
+                      )}
                     </View>
                     <View style={{ flex: 1, alignItems: 'center', padding: 12, backgroundColor: themeColors.dangerLight, borderRadius: 12 }}>
                       <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>Gastos</Text>
@@ -273,6 +227,18 @@ export default function ReportsScreen() {
                           {formatBS(summary.totalExpenseBS)}
                         </Text>
                       )}
+                      {comparison?.expenseChange !== null && comparison?.expenseChange !== undefined && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 4 }}>
+                          <Ionicons
+                            name={comparison.expenseChange >= 0 ? 'arrow-up' : 'arrow-down'}
+                            size={11}
+                            color={comparison.expenseChange >= 0 ? themeColors.danger : themeColors.success}
+                          />
+                          <Text style={{ fontSize: 11, fontWeight: '600', color: comparison.expenseChange >= 0 ? themeColors.danger : themeColors.success }}>
+                            {Math.abs(comparison.expenseChange)}%
+                          </Text>
+                        </View>
+                      )}
                     </View>
                     <View style={{ flex: 1, alignItems: 'center', padding: 12, backgroundColor: themeColors.primaryLight, borderRadius: 12 }}>
                       <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>Neto</Text>
@@ -283,6 +249,18 @@ export default function ReportsScreen() {
                         <Text style={{ fontSize: 11, color: summary.netBS >= 0 ? themeColors.success : themeColors.danger, marginTop: 2 }}>
                           {formatBS(summary.netBS)}
                         </Text>
+                      )}
+                      {comparison?.netChange !== null && comparison?.netChange !== undefined && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 4 }}>
+                          <Ionicons
+                            name={comparison.netChange >= 0 ? 'arrow-up' : 'arrow-down'}
+                            size={11}
+                            color={comparison.netChange >= 0 ? themeColors.success : themeColors.danger}
+                          />
+                          <Text style={{ fontSize: 11, fontWeight: '600', color: comparison.netChange >= 0 ? themeColors.success : themeColors.danger }}>
+                            {Math.abs(comparison.netChange)}%
+                          </Text>
+                        </View>
                       )}
                     </View>
                   </View>
@@ -345,13 +323,10 @@ export default function ReportsScreen() {
                     Historial de Flujo de Caja (USD)
                   </Text>
                   {cashFlowData.length > 0 ? (
-                    <LineChart
-                      data={lineData}
+                    <CashFlowChart
+                      data={cashFlowData}
                       width={SCREEN_WIDTH - 72}
                       height={256}
-                      chartConfig={chartConfig}
-                      bezier
-                      style={{ borderRadius: 16 }}
                     />
                   ) : (
                     <View style={{ alignItems: 'center', paddingVertical: 40 }}>
@@ -361,22 +336,6 @@ export default function ReportsScreen() {
                       </Text>
                     </View>
                   )}
-
-                  {/* Leyenda */}
-                  <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 20, marginTop: 12 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <View style={{ width: 12, height: 3, backgroundColor: '#6366F1', borderRadius: 2 }} />
-                      <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>Balance</Text>
-                    </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <View style={{ width: 12, height: 3, backgroundColor: '#10B981', borderRadius: 2 }} />
-                      <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>Ingresos</Text>
-                    </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <View style={{ width: 12, height: 3, backgroundColor: '#EF4444', borderRadius: 2 }} />
-                      <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>Gastos</Text>
-                    </View>
-                  </View>
                 </View>
               ) : (
                 /* GRÁFICO DE PASTEL - Gastos/Ingresos por categoría */
@@ -397,53 +356,10 @@ export default function ReportsScreen() {
                   </Text>
                   {categoryData.length > 0 ? (
                     <>
-                      <PieChart
-                        data={pieChartData}
-                        width={SCREEN_WIDTH - 72}
-                        height={220}
-                        chartConfig={chartConfig}
-                        accessor="amount"
-                        backgroundColor="transparent"
-                        paddingLeft="15"
-                        absolute
+                      <PieChartInteractive
+                        data={pieSlices}
+                        size={SCREEN_WIDTH - 80}
                       />
-                      {/* Lista detallada de categorías */}
-                      <View style={{ marginTop: 16, gap: 8 }}>
-                        {categoryData.slice(0, 10).map((cat) => (
-                          <View
-                            key={cat.categoryId}
-                            style={{
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              paddingVertical: 6,
-                              borderBottomWidth: 1,
-                              borderBottomColor: themeColors.border,
-                            }}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                              <View
-                                style={{
-                                  width: 10,
-                                  height: 10,
-                                  borderRadius: 5,
-                                  backgroundColor: cat.color || '#999',
-                                }}
-                              />
-                              <Text style={{ fontSize: 13, color: themeColors.text, flex: 1 }} numberOfLines={1}>
-                                {cat.icon} {cat.categoryName}
-                              </Text>
-                            </View>
-                            <View style={{ alignItems: 'flex-end' }}>
-                              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.text }}>
-                                {formatUSD(cat.totalUSD)}
-                              </Text>
-                              <Text style={{ fontSize: 11, color: themeColors.textSecondary }}>
-                                {cat.percentage}%
-                              </Text>
-                            </View>
-                          </View>
-                        ))}
-                      </View>
                     </>
                   ) : (
                     <View style={{ alignItems: 'center', paddingVertical: 40 }}>
@@ -458,7 +374,6 @@ export default function ReportsScreen() {
             </>
           )}
         </ScrollView>
-      </SafeAreaView>
-    </AnimatedTransition>
+    </SafeAreaView>
   );
 }

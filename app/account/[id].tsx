@@ -23,6 +23,7 @@ import { useTransactions } from '../../src/store/useTransactions';
 import { useSettings } from '../../src/store/useSettings';
 import { getAccountBalance } from '../../src/services/accounts';
 import { formatUSD, formatBS, formatDate } from '../../src/utils/format';
+import AnimatedScreen from '../../src/components/AnimatedScreen';
 import type { Transaction, AccountType, CurrencyType } from '../../src/utils/types';
 
 const typeLabels: Record<string, string> = {
@@ -134,6 +135,7 @@ export default function AccountDetailScreen() {
 
   if (!account) {
     return (
+      <AnimatedScreen>
       <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
           <Ionicons name="sad-outline" size={48} color={themeColors.textSecondary} />
@@ -154,10 +156,12 @@ export default function AccountDetailScreen() {
           </TouchableOpacity>
         </View>
       </SafeAreaView>
+    </AnimatedScreen>
     );
   }
 
   return (
+    <AnimatedScreen>
     <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
       <ScrollView
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -669,5 +673,6 @@ export default function AccountDetailScreen() {
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
+    </AnimatedScreen>
   );
 }

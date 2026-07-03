@@ -1,4 +1,25 @@
-export const colors = {
+export type ThemeColorSet = {
+  background: string;
+  surface: string;
+  primary: string;
+  primaryLight: string;
+  secondary: string;
+  text: string;
+  textSecondary: string;
+  success: string;
+  successLight: string;
+  danger: string;
+  dangerLight: string;
+  warning: string;
+  warningLight: string;
+  usd: string;
+  bs: string;
+  border: string;
+  shadow: string;
+  cardShadow: string;
+};
+
+export const colors: { light: ThemeColorSet; dark: ThemeColorSet } = {
   // Modo Claro
   light: {
     background: '#F8F9FA',

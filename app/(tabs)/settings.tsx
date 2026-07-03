@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,28 +8,32 @@ import {
   Switch,
   Alert,
   ActivityIndicator,
+  useColorScheme,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
-import AnimatedTransition from '../../src/components/AnimatedTransition';
 import { colors } from '../../src/theme/colors';
 import { useThemeColors } from '../../src/hooks/useThemeColors';
 import { useExchangeRates } from '../../src/hooks/useExchangeRates';
 import { useSettings } from '../../src/store/useSettings';
 import { formatBS } from '../../src/utils/format';
 import type { RateType } from '../../src/utils/types';
+import type { ThemeMode } from '../../src/store/useSettings';
 import { exportData, shareFile } from '../../src/services/export';
+import { shareBackup, importBackup, getLastBackupInfo } from '../../src/services/backup';
 import { testDeepSeekConnection } from '../../src/services/deepseek';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const themeColors = useThemeColors();
+  const systemColorScheme = useColorScheme();
   const {
     deepseekKey, setDeepseekKey,
     manualRate, setManualRate,
     manualRateType, setManualRateType,
     useDarkMode, setUseDarkMode,
+    themeMode, setThemeMode,
     preferredRateType, setPreferredRateType,
   } = useSettings();
   const {
@@ -42,6 +46,15 @@ export default function SettingsScreen() {
   const [showDeepseek, setShowDeepseek] = useState(false);
   const [showRate, setShowRate] = useState(false);
   const [rateInput, setRateInput] = useState(manualRate?.toString() || '');
+  const [backupInfo, setBackupInfo] = useState<{ exists: boolean; fileName: string | null; fileSize: string | null; fileDate: string | null }>({ exists: false, fileName: null, fileSize: null, fileDate: null });
+  const [importing, setImporting] = useState(false);
+
+  // Cargar info del respaldo al enfocar la pantalla
+  useFocusEffect(
+    useCallback(() => {
+      getLastBackupInfo().then(setBackupInfo).catch(() => {});
+    }, [])
+  );
 
   const handleUpdateRate = async () => {
     await refreshRates();
@@ -111,7 +124,6 @@ export default function SettingsScreen() {
   );
 
   return (
-    <AnimatedTransition>
     <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
         <Text style={{ fontSize: 28, fontWeight: '700', color: themeColors.text, marginBottom: 24 }}>
@@ -495,6 +507,8 @@ export default function SettingsScreen() {
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: 16,
+            borderBottomWidth: 1,
+            borderBottomColor: themeColors.border,
           }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: themeColors.warningLight, justifyContent: 'center', alignItems: 'center' }}>
@@ -506,37 +520,140 @@ export default function SettingsScreen() {
             </View>
             <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
           </TouchableOpacity>
-        </View>
-
-        {/* Sección Apariencia */}
-        <Text style={{ fontSize: 12, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
-          Apariencia
-        </Text>
-        <View style={{ backgroundColor: themeColors.surface, borderRadius: 16, marginBottom: 24 }}>
-          <View style={{
+          <TouchableOpacity
+            onPress={async () => {
+              try {
+                await shareBackup();
+                const info = await getLastBackupInfo();
+                setBackupInfo(info);
+              } catch (error: any) {
+                Alert.alert('Error', error.message || 'No se pudo crear el respaldo');
+              }
+            }}
+            style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: 16,
+            borderBottomWidth: 1,
+            borderBottomColor: themeColors.border,
+          }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#DBEAFE', justifyContent: 'center', alignItems: 'center' }}>
+                <Ionicons name="cloud-upload" size={18} color="#2563EB" />
+              </View>
+              <View>
+                <Text style={{ fontSize: 15, fontWeight: '600', color: themeColors.text }}>
+                  Respaldar base de datos
+                </Text>
+                {backupInfo.exists && (
+                  <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginTop: 2 }}>
+                    Último: {backupInfo.fileSize} • {backupInfo.fileDate}
+                  </Text>
+                )}
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={async () => {
+              if (importing) return;
+              setImporting(true);
+              try {
+                const success = await importBackup();
+                if (success) {
+                  Alert.alert(
+                    'Restaurado',
+                    'Base de datos restaurada correctamente. La app se cerrará para aplicar los cambios.',
+                    [{ text: 'OK', onPress: () => { /* El usuario debe reiniciar la app */ } }]
+                  );
+                }
+              } catch (error: any) {
+                Alert.alert('Error', error.message || 'No se pudo restaurar el respaldo');
+              } finally {
+                setImporting(false);
+              }
+            }}
+            style={{
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: 16,
           }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: themeColors.primaryLight, justifyContent: 'center', alignItems: 'center' }}>
-                <Ionicons name="moon" size={18} color={themeColors.primary} />
+              <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#FEE2E2', justifyContent: 'center', alignItems: 'center' }}>
+                {importing ? (
+                  <ActivityIndicator size="small" color="#DC2626" />
+                ) : (
+                  <Ionicons name="cloud-download" size={18} color="#DC2626" />
+                )}
               </View>
               <Text style={{ fontSize: 15, fontWeight: '600', color: themeColors.text }}>
-                Modo oscuro
+                Restaurar respaldo
               </Text>
             </View>
-            <Switch
-              value={useDarkMode}
-              onValueChange={setUseDarkMode}
-              trackColor={{ false: themeColors.border, true: themeColors.primary }}
-              thumbColor="#FFF"
-            />
-          </View>
+            <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Sección Apariencia */}
+        <Text style={{ fontSize: 12, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
+          Apariencia
+        </Text>
+        <View style={{ backgroundColor: themeColors.surface, borderRadius: 16, marginBottom: 24, overflow: 'hidden' }}>
+          {([
+            { key: 'light' as ThemeMode, icon: 'sunny', label: 'Claro' },
+            { key: 'dark' as ThemeMode, icon: 'moon', label: 'Oscuro' },
+            { key: 'system' as ThemeMode, icon: 'phone-portrait', label: 'Sistema' },
+          ]).map((option, index) => {
+            const isActive = themeMode === option.key;
+            const isLast = index === 2;
+            return (
+              <TouchableOpacity
+                key={option.key}
+                onPress={() => {
+                  setThemeMode(option.key);
+                  // Sincronizar useDarkMode para compatibilidad con código legacy
+                  if (option.key === 'dark') setUseDarkMode(true);
+                  else if (option.key === 'light') setUseDarkMode(false);
+                  else setUseDarkMode(systemColorScheme === 'dark');
+                }}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: 16,
+                  borderBottomWidth: isLast ? 0 : 1,
+                  borderBottomColor: themeColors.border,
+                  backgroundColor: isActive ? themeColors.primaryLight : 'transparent',
+                }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <View style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
+                    backgroundColor: isActive ? themeColors.primary : themeColors.primaryLight,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}>
+                    <Ionicons
+                      name={option.icon as any}
+                      size={18}
+                      color={isActive ? '#FFF' : themeColors.primary}
+                    />
+                  </View>
+                  <Text style={{ fontSize: 15, fontWeight: '600', color: themeColors.text }}>
+                    {option.label}
+                  </Text>
+                </View>
+                {isActive && (
+                  <Ionicons name="checkmark-circle" size={22} color={themeColors.primary} />
+                )}
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </ScrollView>
     </SafeAreaView>
-    </AnimatedTransition>
   );
 }

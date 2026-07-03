@@ -12,7 +12,6 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useAccounts } from '../../src/store/useAccounts';
 import { useThemeColors } from '../../src/hooks/useThemeColors';
 import { useExchangeRates } from '../../src/hooks/useExchangeRates';
-import AnimatedTransition from '../../src/components/AnimatedTransition';
 import { getAccountBalance, getAccounts as getAccountsFromDB } from '../../src/services/accounts';
 import { formatUSD, formatBS } from '../../src/utils/format';
 import { useSettings } from '../../src/store/useSettings';
@@ -60,7 +59,6 @@ export default function AccountsScreen() {
   };
 
   return (
-    <AnimatedTransition>
     <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
       <ScrollView
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -175,6 +173,5 @@ export default function AccountsScreen() {
         </View>
       </ScrollView>
     </SafeAreaView>
-    </AnimatedTransition>
   );
 }

@@ -16,7 +16,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../../src/hooks/useThemeColors';
-import AnimatedTransition from '../../src/components/AnimatedTransition';
 import { formatUSD, formatBS, formatDate } from '../../src/utils/format';
 import {
   getSubscriptions,
@@ -307,8 +306,7 @@ export default function SubscriptionsScreen() {
   };
 
   return (
-    <AnimatedTransition>
-      <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
         <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
           {/* Header */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
@@ -798,7 +796,6 @@ export default function SubscriptionsScreen() {
             </KeyboardAvoidingView>
           </SafeAreaView>
         </Modal>
-      </SafeAreaView>
-    </AnimatedTransition>
+    </SafeAreaView>
   );
 }

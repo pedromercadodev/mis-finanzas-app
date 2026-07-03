@@ -30,6 +30,15 @@ export interface ReportSummary {
   netBS: number;
 }
 
+export interface PeriodComparison {
+  incomeChange: number | null;   // porcentaje de cambio vs período anterior
+  expenseChange: number | null;
+  netChange: number | null;
+  previousIncomeUSD: number;
+  previousExpenseUSD: number;
+  previousNetUSD: number;
+}
+
 /**
  * Obtiene el desglose de gastos o ingresos agrupados por categoría
  * con sus porcentajes sobre el total del período.
@@ -167,5 +176,85 @@ export async function getReportSummary(
     totalExpenseBS: result?.totalExpenseBS || 0,
     netUSD: (result?.totalIncomeUSD || 0) - (result?.totalExpenseUSD || 0),
     netBS: (result?.totalIncomeBS || 0) - (result?.totalExpenseBS || 0),
+  };
+}
+
+/**
+ * Calcula el rango de fechas del período anterior basado en el período actual.
+ */
+export function getPreviousPeriodRange(
+  period: 'month' | 'quarter' | 'year' | 'all'
+): { start: string; end: string } | null {
+  const now = new Date();
+
+  switch (period) {
+    case 'month': {
+      // Mes anterior: retroceder 1 mes
+      const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const prevEnd = new Date(now.getFullYear(), now.getMonth(), 0); // último día del mes anterior
+      return {
+        start: prev.toISOString().split('T')[0],
+        end: prevEnd.toISOString().split('T')[0],
+      };
+    }
+    case 'quarter': {
+      // Trimestre anterior: retroceder 3 meses
+      const prevStart = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+      const prevEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+      return {
+        start: prevStart.toISOString().split('T')[0],
+        end: prevEnd.toISOString().split('T')[0],
+      };
+    }
+    case 'year': {
+      // Año anterior
+      return {
+        start: `${now.getFullYear() - 1}-01-01`,
+        end: `${now.getFullYear() - 1}-12-31`,
+      };
+    }
+    case 'all':
+    default:
+      return null; // No hay período anterior para "todo"
+  }
+}
+
+/**
+ * Obtiene la comparativa con el período anterior.
+ * Calcula el cambio porcentual para ingresos, gastos y neto.
+ */
+export async function getPeriodComparison(
+  period: 'month' | 'quarter' | 'year' | 'all',
+  currentIncomeUSD?: number,
+  currentExpenseUSD?: number,
+  currentNetUSD?: number
+): Promise<PeriodComparison> {
+  const prevRange = getPreviousPeriodRange(period);
+
+  if (!prevRange) {
+    return {
+      incomeChange: null,
+      expenseChange: null,
+      netChange: null,
+      previousIncomeUSD: 0,
+      previousExpenseUSD: 0,
+      previousNetUSD: 0,
+    };
+  }
+
+  const prevSummary = await getReportSummary(prevRange.start, prevRange.end);
+
+  const calcChange = (current: number, previous: number): number | null => {
+    if (previous === 0) return current > 0 ? 100 : null;
+    return Math.round(((current - previous) / previous) * 100);
+  };
+
+  return {
+    incomeChange: currentIncomeUSD !== undefined ? calcChange(currentIncomeUSD, prevSummary.totalIncomeUSD) : null,
+    expenseChange: currentExpenseUSD !== undefined ? calcChange(currentExpenseUSD, prevSummary.totalExpenseUSD) : null,
+    netChange: currentNetUSD !== undefined ? calcChange(currentNetUSD, prevSummary.netUSD) : null,
+    previousIncomeUSD: prevSummary.totalIncomeUSD,
+    previousExpenseUSD: prevSummary.totalExpenseUSD,
+    previousNetUSD: prevSummary.netUSD,
   };
 }
