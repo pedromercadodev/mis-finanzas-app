@@ -29,6 +29,7 @@ import { getLatestRate } from '../../src/services/exchangeRate';
 import { getPeriodSummary } from '../../src/services/transactions';
 import { getAccountBalance } from '../../src/services/accounts';
 import { formatUSD, formatBS, formatDateShort, getCurrentMonthRange } from '../../src/utils/format';
+import { getLocalDateString, getLocalDate } from '../../src/utils/date';
 import { suggestCategory } from '../../src/services/deepseek';
 import type { Category, TransactionType } from '../../src/utils/types';
 import { haptic } from '../../src/utils/haptics';
@@ -36,10 +37,8 @@ import { haptic } from '../../src/utils/haptics';
 type PeriodFilter = 'today' | 'week' | 'month' | 'year';
 
 function getPeriodDates(filter: PeriodFilter): { start: string; end: string; label: string } {
-  const now = new Date();
-  // Ajustar a hora local de Venezuela (UTC-4)
-  const localDate = new Date(now.getTime() - 4 * 60 * 60 * 1000);
-  const todayStr = localDate.toISOString().split('T')[0];
+  const localDate = getLocalDate();
+  const todayStr = getLocalDateString();
 
   switch (filter) {
     case 'today': {

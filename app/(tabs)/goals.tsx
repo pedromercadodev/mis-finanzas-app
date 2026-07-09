@@ -407,8 +407,12 @@ export default function GoalsScreen() {
                     {Math.round(progress)}%
                   </Text>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 16, fontWeight: '600', color: themeColors.text, marginBottom: 4 }}>
+                <View style={{ flex: 1, flexShrink: 1 }}>
+                  <Text
+                    style={{ fontSize: 16, fontWeight: '600', color: themeColors.text, marginBottom: 4 }}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
                     {goal.name}
                   </Text>
                   <Text style={{ fontSize: 14, color: themeColors.textSecondary }}>

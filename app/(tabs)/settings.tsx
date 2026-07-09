@@ -165,7 +165,7 @@ export default function SettingsScreen() {
             <View style={{ padding: 16, gap: 10 }}>
               <TextInput
                 value={deepseekKey}
-                onChangeText={setDeepseekKey}
+                onChangeText={(text) => { setDeepseekKey(text); }}
                 placeholder="sk-..."
                 placeholderTextColor={themeColors.textSecondary}
                 secureTextEntry

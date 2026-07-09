@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { getLocalDateString } from '../src/utils/date';
 import {
   View,
   Text,
@@ -39,22 +40,21 @@ import AnimatedScreen from '../src/components/AnimatedScreen';
 import type { DeepSeekMessage, DeepSeekAction, TransactionAction, CreateAccountAction, UpdateAccountAction, TransferAction, CreateGoalAction, UpdateGoalProgressAction, DeleteGoalAction, CreateSubscriptionAction, UpdateSubscriptionAction, DeleteSubscriptionAction, SetBudgetAction, CreateDebtAction, PayDebtAction, DeleteDebtAction, UpdateTransactionAction, DeleteTransactionAction, DeleteAccountAction } from '../src/services/deepseek';
 import type { Category } from '../src/utils/types';
 
-// Mapeo de nombres de categoría a IDs numéricos
-const CATEGORY_MAP: Record<string, number> = {
-  'Comida': 1,
-  'Transporte': 2,
-  'Salud': 3,
-  'Educacion': 4,
-  'Educación': 4,
-  'Entretenimiento': 5,
-  'Vivienda': 6,
-  'Servicios': 7,
-  'Ropa': 8,
-  'Salario': 9,
-  'Freelance': 10,
-  'Inversiones': 11,
-  'Otros': 12,
-};
+// ============================================================
+// Funciones helper (fuera del componente para ser reutilizables)
+// ============================================================
+
+/**
+ * Construye un mapa dinámico de nombre de categoría → ID a partir
+ * del array de categorías obtenido de la BD.
+ */
+function buildCategoryMap(categories: Category[]): Record<string, number> {
+  const map: Record<string, number> = {};
+  for (const cat of categories) {
+    map[cat.name] = cat.id;
+  }
+  return map;
+}
 
 interface ChatMessage {
   id: string;
@@ -101,6 +101,51 @@ function getMarkdownStyles(textColor: string, surfaceColor: string, bgColor: str
   };
 }
 
+/**
+ * Genera un resumen del historial antiguo de forma asíncrona (no bloqueante).
+ * Se llama en segundo plano para mantener el sliding window.
+ */
+async function generarResumenAsync(
+  historialAntiguo: DeepSeekMessage[],
+  apiKey: string
+): Promise<string | null> {
+  if (!apiKey || historialAntiguo.length === 0) return null;
+
+  try {
+    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [
+          {
+            role: 'system',
+            content: 'Resume la siguiente conversación financiera en 2-3 oraciones. Incluye solo la información relevante: transacciones registradas, cuentas creadas, metas, deudas, y preferencias del usuario. Ignora saludos y mensajes triviales.',
+          },
+          {
+            role: 'user',
+            content: historialAntiguo
+              .map((m) => `${m.role === 'user' ? 'Usuario' : 'Asistente'}: ${m.content}`)
+              .join('\n'),
+          },
+        ],
+        temperature: 0.0,
+        max_tokens: 300,
+      }),
+    });
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content || null;
+  } catch {
+    return null; // Si falla el resumen, se ignora silenciosamente
+  }
+}
+
 export default function AIChatScreen() {
   const router = useRouter();
   const themeColors = useThemeColors();
@@ -118,6 +163,142 @@ export default function AIChatScreen() {
   const [chatSessions, setChatSessions] = useState<{ id: string; preview: string; date: string; count: number }[]>([]);
   const flatListRef = useRef<FlatList>(null);
 
+  // T15: UI de razonamiento - pasos visibles
+  const [thinkingStep, setThinkingStep] = useState<string | null>(null);
+  const thinkingSteps = useRef<string[]>([]);
+  const thinkingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Sliding Window: mantener un resumen del historial antiguo
+  const ULTIMOS_MSGS = 6;
+  const resumenAntiguoRef = useRef<string>('');
+  const resumiendoRef = useRef<boolean>(false);
+
+  // Mapa dinámico de categorías (se actualiza cuando cambian las categorías)
+  const categoryMapRef = useRef<Record<string, number>>({});
+
+  // Estado para el selector de cuenta cuando hay múltiples cuentas
+  const [showAccountPicker, setShowAccountPicker] = useState(false);
+  const [pendingAction, setPendingAction] = useState<ChatMessage | null>(null);
+  const [pendingAccountCallback, setPendingAccountCallback] = useState<((accountId: number) => void) | null>(null);
+
+
+  /**
+   * Sanitiza texto ingresado por el usuario o proveniente del LLM
+   * para prevenir HTML/script injection y limitar longitud.
+   */
+  const sanitizeInput = useCallback((text: string | null | undefined, maxLength: number = 200): string => {
+    if (!text) return '';
+    // Eliminar etiquetas HTML/XML
+    let clean = text.replace(/<[^>]*>/g, '');
+    // Eliminar caracteres de control (excepto saltos de línea básicos)
+    clean = clean.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
+    // Limitar longitud
+    clean = clean.slice(0, maxLength);
+    return clean.trim();
+  }, []);
+
+  // ============================================================
+  // T14: Manejo de errores granular
+  // ============================================================
+
+  /**
+   * Obtiene un mensaje de error específico según el tipo de error.
+   */
+  const getErrorMessage = useCallback((error: any, context?: string): string => {
+    if (!error) return '⚠️ **Error inesperado.** Intenta de nuevo.';
+
+    const msg = (error?.message || String(error)).toLowerCase();
+
+    // Errores de red / conexión
+    if (msg.includes('network') || msg.includes('fetch') || msg.includes('enqueue') ||
+        msg.includes('timeout') || msg.includes('abort') || msg.includes('econnrefused')) {
+      return '🌐 **Error de conexión.** Verifica tu conexión a internet y vuelve a intentar.';
+    }
+
+    // Error de API Key
+    if (msg.includes('401') || msg.includes('unauthorized') || msg.includes('api key') ||
+        msg.includes('authentication') || msg.includes('invalid key')) {
+      return '🔑 **API Key inválida.** Ve a Ajustes > DeepSeek API Key para verificar tu clave.';
+    }
+
+    // Error de DeepSeek (rate limit, servidor ocupado)
+    if (msg.includes('429') || msg.includes('rate limit') || msg.includes('too many requests')) {
+      return '⏳ **Demasiadas solicitudes.** Espera unos segundos y vuelve a intentar.';
+    }
+    if (msg.includes('500') || msg.includes('502') || msg.includes('503') || msg.includes('service')) {
+      return '🔧 **El servidor de DeepSeek está temporalmente ocupado.** Intenta de nuevo en un momento.';
+    }
+
+    // Error de base de datos
+    if (msg.includes('database') || msg.includes('sqlite') || msg.includes('sql') ||
+        msg.includes('disk') || msg.includes('storage')) {
+      return '💾 **Error de base de datos.** Reinicia la aplicación o contacta al soporte.';
+    }
+
+    // Error de validación de datos
+    if (msg.includes('validation') || msg.includes('invalid') || msg.includes('required') ||
+        msg.includes('not found') || msg.includes('no such')) {
+      return `📋 **Error de validación.** ${context ? context + ' ' : ''}Revisa los datos e intenta de nuevo.`;
+    }
+
+    // Error de parseo JSON
+    if (msg.includes('json') || msg.includes('parse') || msg.includes('syntax')) {
+      return '🔍 **Error al procesar la respuesta.** Intenta reformular tu mensaje.';
+    }
+
+    // Error genérico con código HTTP
+    const httpMatch = error?.message?.match(/\b(\d{3})\b/);
+    if (httpMatch) {
+      return `🌐 **Error HTTP ${httpMatch[1]}.** Verifica tu conexión e intenta de nuevo.`;
+    }
+
+    // Fallback: mensaje genérico pero útil
+    return `⚠️ **Error:** ${error?.message || 'Algo salió mal inesperadamente.'} Intenta de nuevo o contacta al soporte.`;
+  }, []);
+
+  // ============================================================
+  // T15: UI de razonamiento - pasos visibles
+  // ============================================================
+
+  /**
+   * Inicia la animación de pasos de razonamiento.
+   */
+  const startThinking = useCallback(() => {
+    thinkingSteps.current = [
+      '🔍 Analizando tu mensaje...',
+      '🤔 Procesando solicitud...',
+      '📊 Consultando datos...',
+      '✍️ Preparando respuesta...',
+    ];
+    let stepIndex = 0;
+    setThinkingStep(thinkingSteps.current[0]);
+
+    if (thinkingTimerRef.current) {
+      clearInterval(thinkingTimerRef.current);
+    }
+
+    thinkingTimerRef.current = setInterval(() => {
+      stepIndex++;
+      if (stepIndex < thinkingSteps.current.length) {
+        setThinkingStep(thinkingSteps.current[stepIndex]);
+      } else {
+        // Mantener el último paso
+        setThinkingStep('✍️ Finalizando...');
+      }
+    }, 2500);
+  }, []);
+
+  /**
+   * Detiene la animación de razonamiento.
+   */
+  const stopThinking = useCallback(() => {
+    if (thinkingTimerRef.current) {
+      clearInterval(thinkingTimerRef.current);
+      thinkingTimerRef.current = null;
+    }
+    setThinkingStep(null);
+  }, []);
+
   // Cargar historial y categorías al montar
   useEffect(() => {
     loadCategories();
@@ -128,6 +309,7 @@ export default function AIChatScreen() {
     try {
       const cats = await getCategories();
       setCategories(cats);
+      categoryMapRef.current = buildCategoryMap(cats);
     } catch (error) {
       console.error('Error loading categories:', error);
     }
@@ -219,10 +401,11 @@ export default function AIChatScreen() {
     }
 
     setIsLoading(true);
+    startThinking();
 
     try {
-      // Construir historial para DeepSeek
-      const history: DeepSeekMessage[] = messages
+      // Construir historial para DeepSeek con Sliding Window
+      const allHistory: DeepSeekMessage[] = messages
         .filter((m) => m.role === 'user' || (m.role === 'assistant' && !m.isAction))
         .map((m) => ({
           role: m.role,
@@ -232,18 +415,60 @@ export default function AIChatScreen() {
         }));
 
       // Agregar el mensaje actual
-      history.push({ role: 'user', content: trimmedText });
+      allHistory.push({ role: 'user', content: trimmedText });
+
+      // Sliding Window: mantener últimos N mensajes + resumen asíncrono de los antiguos
+      let history: DeepSeekMessage[] = allHistory;
+      if (allHistory.length > ULTIMOS_MSGS) {
+        const antiguos = allHistory.slice(0, -ULTIMOS_MSGS);
+        const recientes = allHistory.slice(-ULTIMOS_MSGS);
+
+        // Si hay un resumen previo, lo usamos; si no, generamos uno en segundo plano
+        if (resumenAntiguoRef.current) {
+          history = [
+            { role: 'system', content: `[Resumen de la conversación anterior: ${resumenAntiguoRef.current}]` },
+            ...recientes,
+          ];
+        } else {
+          history = recientes;
+        }
+
+        // Generar resumen asíncrono en segundo plano (no bloquea la respuesta)
+        if (!resumiendoRef.current) {
+          resumiendoRef.current = true;
+          generarResumenAsync(antiguos, deepseekKey)
+            .then((resumen) => {
+              if (resumen) {
+                resumenAntiguoRef.current = resumen;
+              }
+            })
+            .catch(() => {})
+            .finally(() => {
+              resumiendoRef.current = false;
+            });
+        }
+      }
 
       const response = await chatWithDeepSeek(history, accounts, categories, deepseekKey);
 
       if (response.type === 'action' && response.action) {
-        await addMessage({
-          id: (Date.now() + 1).toString(),
+        const msgId = (Date.now() + 1).toString();
+        const newMsg: ChatMessage = {
+          id: msgId,
           role: 'assistant',
           content: response.content || '¿Quieres que ejecute esta operación?',
           action: response.action,
           isAction: true,
-        });
+        };
+
+        // Si skip_confirmation es true, ejecutar directamente sin mostrar botones
+        if ((response.action as any).skip_confirmation === true) {
+          await addMessage({ ...newMsg, isConfirmed: true });
+          // Ejecutar la acción inmediatamente
+          setTimeout(() => confirmAction(newMsg), 100);
+        } else {
+          await addMessage(newMsg);
+        }
       } else {
         await addMessage({
           id: (Date.now() + 1).toString(),
@@ -252,15 +477,19 @@ export default function AIChatScreen() {
         });
       }
     } catch (error: any) {
+      // T14: Manejo de errores granular
+      const errorMsg = getErrorMessage(error, 'No se pudo procesar tu solicitud.');
+      console.error('[AI-CHAT ERROR]', error?.message || error);
       await addMessage({
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: `⚠️ **Error:** ${error?.message || 'Algo salió mal'}`,
+        content: errorMsg,
       });
     } finally {
       setIsLoading(false);
+      stopThinking();
     }
-  }, [isLoading, deepseekKey, messages, accounts, categories, addMessage]);
+  }, [isLoading, deepseekKey, messages, accounts, categories, addMessage, startThinking, stopThinking, getErrorMessage]);
 
   // Buscar cuenta por nombre o ID
   const findAccount = useCallback((identifier: string | number) => {
@@ -269,6 +498,47 @@ export default function AIChatScreen() {
     }
     return accounts.find((a) => a.name.toLowerCase() === String(identifier).toLowerCase());
   }, [accounts]);
+
+  // Función helper para ejecutar una transacción (reutilizada por el selector de cuenta)
+  const executeTransaction = useCallback(async (
+    txAction: TransactionAction,
+    categoryId: number,
+    accountId: number,
+    msg: ChatMessage
+  ) => {
+    const transaction: any = {
+      type: txAction.type,
+      description: sanitizeInput(txAction.description, 200),
+      amountUSD: txAction.currency === 'USD' ? txAction.amount : null,
+      amountBS: txAction.currency === 'BS' ? txAction.amount : null,
+      currency: txAction.currency,
+      exchangeRate: null,
+      accountId,
+      transferToAccountId: null,
+      categoryId,
+      date: getLocalDateString(),
+      notes: null,
+    };
+
+    await createTransaction(transaction);
+    await loadAccounts();
+    await loadTransactions();
+
+    const currencySymbol = txAction.currency === 'USD' ? '$' : 'Bs.';
+    await addMessage({
+      id: (Date.now() + 1).toString(),
+      role: 'assistant',
+      content: `✅ **¡Listo!** Se registró un ${txAction.type === 'expense' ? 'gasto' : 'ingreso'} de **${currencySymbol}${txAction.amount}** en "${txAction.description}" (${txAction.category}).`,
+      isSuccess: true,
+    });
+
+    // Marcar mensaje como confirmado
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === msg.id ? { ...m, isConfirmed: true, isAction: false } : m
+      )
+    );
+  }, [sanitizeInput, loadAccounts, loadTransactions, addMessage]);
 
   // Confirmar acción
   const confirmAction = useCallback(async (msg: ChatMessage) => {
@@ -282,33 +552,21 @@ export default function AIChatScreen() {
       if (action.actionType === 'transaction') {
         // === CREAR TRANSACCIÓN ===
         const txAction = action as TransactionAction;
-        const categoryId = CATEGORY_MAP[txAction.category] || 12;
+        const categoryId = categoryMapRef.current[txAction.category] || 12;
 
-        const transaction: any = {
-          type: txAction.type,
-          description: txAction.description,
-          amountUSD: txAction.currency === 'USD' ? txAction.amount : null,
-          amountBS: txAction.currency === 'BS' ? txAction.amount : null,
-          currency: txAction.currency,
-          exchangeRate: null,
-          accountId: accounts[0]?.id || 1,
-          transferToAccountId: null,
-          categoryId,
-          date: new Date().toISOString().split('T')[0],
-          notes: null,
-        };
+        // Si hay múltiples cuentas y no se especificó accountId, preguntar al usuario
+        if (accounts.length > 1 && !(txAction as any).accountId) {
+          setPendingAction(msg);
+          setPendingAccountCallback(() => async (selectedAccountId: number) => {
+            await executeTransaction(txAction, categoryId, selectedAccountId, msg);
+          });
+          setShowAccountPicker(true);
+          setIsLoading(false);
+          return;
+        }
 
-        await createTransaction(transaction);
-        await loadAccounts();
-        await loadTransactions();
-
-        const currencySymbol = txAction.currency === 'USD' ? '$' : 'Bs.';
-        await addMessage({
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: `✅ **¡Listo!** Se registró un ${txAction.type === 'expense' ? 'gasto' : 'ingreso'} de **${currencySymbol}${txAction.amount}** en "${txAction.description}" (${txAction.category}).`,
-          isSuccess: true,
-        });
+        const accountId = (txAction as any).accountId || accounts[0]?.id || 1;
+        await executeTransaction(txAction, categoryId, accountId, msg);
 
       } else if (action.actionType === 'update_transaction') {
         // === ACTUALIZAR TRANSACCIÓN ===
@@ -319,8 +577,8 @@ export default function AIChatScreen() {
           if (updTx.currency === 'USD') updates.amountUSD = updTx.amount;
           else if (updTx.currency === 'BS') updates.amountBS = updTx.amount;
         }
-        if (updTx.description) updates.description = updTx.description;
-        if (updTx.category) updates.categoryId = CATEGORY_MAP[updTx.category] || 12;
+        if (updTx.description) updates.description = sanitizeInput(updTx.description, 200);
+        if (updTx.category) updates.categoryId = categoryMapRef.current[updTx.category] || 12;
 
         await updateTransaction(updTx.transactionId, updates);
         await loadTransactions();
@@ -459,7 +717,7 @@ export default function AIChatScreen() {
 
         await createTransaction({
           type: 'transfer',
-          description: trf.description || `Transferencia a ${toAcc.name}`,
+          description: sanitizeInput(trf.description, 200) || `Transferencia a ${sanitizeInput(toAcc.name, 50)}`,
           amountUSD: trf.currency === 'USD' ? trf.amount : null,
           amountBS: trf.currency === 'BS' ? trf.amount : null,
           currency: trf.currency,
@@ -467,7 +725,7 @@ export default function AIChatScreen() {
           accountId: fromAcc.id,
           transferToAccountId: toAcc.id,
           categoryId: 12,
-          date: new Date().toISOString().split('T')[0],
+          date: getLocalDateString(),
           notes: null,
         });
 
@@ -486,7 +744,7 @@ export default function AIChatScreen() {
         // === CREAR META ===
         const goal = action as CreateGoalAction;
         await createGoal({
-          name: goal.name,
+          name: sanitizeInput(goal.name, 100),
           targetAmount: goal.targetAmount,
           currentAmount: 0,
           currency: goal.currency,
@@ -531,11 +789,11 @@ export default function AIChatScreen() {
       } else if (action.actionType === 'create_subscription') {
         // === CREAR SUSCRIPCIÓN ===
         const sub = action as CreateSubscriptionAction;
-        const catId = CATEGORY_MAP[sub.category] || 12;
+        const catId = categoryMapRef.current[sub.category] || 12;
 
         await createSubscription({
-          name: sub.name,
-          description: sub.description || null,
+          name: sanitizeInput(sub.name, 100),
+          description: sanitizeInput(sub.description, 200) || null,
           amountUSD: sub.currency === 'USD' ? sub.amount : null,
           amountBS: sub.currency === 'BS' ? sub.amount : null,
           currency: sub.currency,
@@ -544,7 +802,7 @@ export default function AIChatScreen() {
           frequency: sub.frequency,
           intervalDays: null,
           billingDay: sub.billingDay,
-          nextBillingDate: new Date().toISOString().split('T')[0],
+          nextBillingDate: getLocalDateString(),
           isActive: 1,
           autoGenerate: 1,
           notes: null,
@@ -593,12 +851,13 @@ export default function AIChatScreen() {
       } else if (action.actionType === 'set_budget') {
         // === ASIGNAR PRESUPUESTO ===
         const bg = action as SetBudgetAction;
-        const bgCatId = CATEGORY_MAP[bg.category];
+        const bgCatId = categoryMapRef.current[bg.category];
         if (!bgCatId) {
+          const catsList = categories.map(c => c.name).join(', ');
           await addMessage({
             id: (Date.now() + 1).toString(),
             role: 'assistant',
-            content: `⚠️ La categoría "${bg.category}" no es válida. Categorías: ${Object.keys(CATEGORY_MAP).filter(k => k !== 'Educacion').join(', ')}.`,
+            content: `⚠️ La categoría "${bg.category}" no es válida. Categorías disponibles: ${catsList}.`,
             isSuccess: false,
           });
           setMessages((prev) =>
@@ -620,10 +879,11 @@ export default function AIChatScreen() {
       } else if (action.actionType === 'create_debt') {
         // === CREAR DEUDA ===
         const debt = action as CreateDebtAction;
+        // type y personName son requeridos en este punto (validados en deepseek.ts)
         await createDebt({
-          type: debt.type,
-          personName: debt.personName,
-          description: debt.description || null,
+          type: debt.type!,
+          personName: sanitizeInput(debt.personName!, 100),
+          description: sanitizeInput(debt.description, 200) || null,
           amountUSD: debt.currency === 'USD' ? debt.amount : null,
           amountBS: debt.currency === 'BS' ? debt.amount : null,
           currency: debt.currency,
@@ -652,7 +912,7 @@ export default function AIChatScreen() {
           pd.debtId,
           pd.currency === 'USD' ? pd.amount : 0,
           pd.currency === 'BS' ? pd.amount : 0,
-          new Date().toISOString().split('T')[0]
+          getLocalDateString()
         );
 
         await addMessage({
@@ -683,11 +943,19 @@ export default function AIChatScreen() {
       );
 
     } catch (error: any) {
-      Alert.alert('Error', error?.message || 'No se pudo completar la operación');
+      // T14: Manejo de errores granular en confirmAction
+      const errorMsg = getErrorMessage(error, 'No se pudo completar la operación.');
+      console.error('[AI-CHAT CONFIRM ERROR]', error?.message || error);
+      addMessage({
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: `❌ **Error al ejecutar:** ${errorMsg}`,
+        isSuccess: false,
+      });
     } finally {
       setIsLoading(false);
     }
-  }, [accounts, loadAccounts, loadTransactions, addMessage, findAccount]);
+  }, [accounts, loadAccounts, loadTransactions, addMessage, findAccount, sanitizeInput, getErrorMessage]);
 
   // Cancelar acción
   const cancelAction = useCallback((msg: ChatMessage) => {
@@ -777,6 +1045,8 @@ export default function AIChatScreen() {
 
       if (sessionMsgs.length > 0) {
         setMessages(sessionMsgs);
+        // Al cargar una sesión, reiniciamos el resumen para que se recalcule
+        resumenAntiguoRef.current = '';
       }
     } catch (error) {
       console.error('Error loading session:', error);
@@ -795,6 +1065,7 @@ export default function AIChatScreen() {
           style: 'destructive',
           onPress: async () => {
             await clearChatHistory();
+            resumenAntiguoRef.current = '';
             setMessages([
               {
                 id: Date.now().toString(),
@@ -1461,7 +1732,7 @@ export default function AIChatScreen() {
           onLayout={scrollToBottom}
         />
 
-        {/* Indicador de carga */}
+        {/* Indicador de carga con UI de razonamiento (T15) */}
         {isLoading && (
           <View
             style={{
@@ -1474,7 +1745,7 @@ export default function AIChatScreen() {
           >
             <ActivityIndicator size="small" color={themeColors.primary} />
             <Text style={{ fontSize: 13, color: themeColors.textSecondary }}>
-              Pensando...
+              {thinkingStep || 'Pensando...'}
             </Text>
           </View>
         )}
@@ -1682,6 +1953,143 @@ export default function AIChatScreen() {
                 ))}
               </ScrollView>
             )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal para seleccionar cuenta cuando hay múltiples cuentas */}
+      <Modal visible={showAccountPicker} animationType="fade" transparent>
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 24,
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: themeColors.surface,
+              borderRadius: 20,
+              width: '100%',
+              maxWidth: 380,
+              padding: 24,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.15,
+              shadowRadius: 12,
+              elevation: 8,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 20,
+                fontWeight: '700',
+                color: themeColors.text,
+                marginBottom: 4,
+                textAlign: 'center',
+              }}
+            >
+              💳 Seleccionar cuenta
+            </Text>
+            <Text
+              style={{
+                fontSize: 14,
+                color: themeColors.textSecondary,
+                marginBottom: 20,
+                textAlign: 'center',
+              }}
+            >
+              ¿En qué cuenta deseas registrar esta transacción?
+            </Text>
+
+            <ScrollView style={{ maxHeight: 300 }}>
+              {accounts.map((account) => (
+                <TouchableOpacity
+                  key={account.id}
+                  onPress={() => {
+                    pendingAccountCallback?.(account.id);
+                    setShowAccountPicker(false);
+                    setPendingAction(null);
+                    setPendingAccountCallback(null);
+                  }}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingVertical: 14,
+                    paddingHorizontal: 16,
+                    borderRadius: 12,
+                    marginBottom: 8,
+                    backgroundColor: themeColors.background,
+                  }}
+                >
+                  <View
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 20,
+                      backgroundColor: account.type === 'cash' ? '#D1FAE5' : account.type === 'bank' ? '#DBEAFE' : '#FEF3C7',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      marginRight: 12,
+                    }}
+                  >
+                    <Text style={{ fontSize: 18 }}>
+                      {account.type === 'cash' ? '💵' : account.type === 'bank' ? '🏦' : '💳'}
+                    </Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={{
+                        fontSize: 16,
+                        fontWeight: '600',
+                        color: themeColors.text,
+                      }}
+                    >
+                      {account.name}
+                    </Text>
+                    <Text style={{ fontSize: 13, color: themeColors.textSecondary, marginTop: 2 }}>
+                      {account.type === 'cash' ? 'Efectivo' : account.type === 'bank' ? 'Banco' : 'Crédito'}
+                    </Text>
+                  </View>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    {account.initialBalanceUSD != null && (
+                      <Text style={{ fontSize: 14, fontWeight: '600', color: themeColors.text }}>
+                        ${account.initialBalanceUSD.toFixed(2)}
+                      </Text>
+                    )}
+                    {account.initialBalanceBS != null && (
+                      <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>
+                        Bs. {account.initialBalanceBS.toFixed(2)}
+                      </Text>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <TouchableOpacity
+              onPress={() => {
+                if (pendingAction) {
+                  cancelAction(pendingAction);
+                }
+                setShowAccountPicker(false);
+                setPendingAction(null);
+                setPendingAccountCallback(null);
+              }}
+              style={{
+                marginTop: 12,
+                paddingVertical: 14,
+                borderRadius: 12,
+                backgroundColor: themeColors.background,
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ fontSize: 16, fontWeight: '500', color: '#EF4444' }}>
+                Cancelar
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
