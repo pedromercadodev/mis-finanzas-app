@@ -14,7 +14,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { colors } from '../../src/theme/colors';
+import { shadows } from '../../src/theme/shadows';
 import { useThemeColors } from '../../src/hooks/useThemeColors';
+import ThemedText from '../../src/components/ThemedText';
 import { useExchangeRates } from '../../src/hooks/useExchangeRates';
 import { useSettings } from '../../src/store/useSettings';
 import { formatBS } from '../../src/utils/format';
@@ -126,24 +128,23 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
-        <Text style={{ fontSize: 28, fontWeight: '700', color: themeColors.text, marginBottom: 24 }}>
+        <ThemedText type="h1" themeColor="text" style={{ marginBottom: 24 }}>
           Ajustes
-        </Text>
+        </ThemedText>
 
         {/* Sección APIs */}
-        <Text style={{ fontSize: 12, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
+        <ThemedText type="small" themeColor="textSecondary" style={{ marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
           APIs
-        </Text>
-        <View style={{ backgroundColor: themeColors.surface, borderRadius: 16, marginBottom: 24, overflow: 'hidden' }}>
+        </ThemedText>
+        <View style={{ backgroundColor: themeColors.surface, borderRadius: 16, marginBottom: 24, overflow: 'hidden', ...shadows.md }}>
           <TouchableOpacity
+            accessibilityLabel={showDeepseek ? 'Ocultar configuración de DeepSeek' : 'Configurar DeepSeek API Key'}
             onPress={() => setShowDeepseek(!showDeepseek)}
             style={{
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'space-between',
               padding: 16,
-              borderBottomWidth: 1,
-              borderBottomColor: themeColors.border,
             }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
@@ -151,12 +152,12 @@ export default function SettingsScreen() {
                 <Ionicons name="sparkles" size={18} color={themeColors.primary} />
               </View>
               <View>
-                <Text style={{ fontSize: 15, fontWeight: '600', color: themeColors.text }}>
+                <ThemedText type="body" themeColor="text">
                   DeepSeek API Key
-                </Text>
-                <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>
+                </ThemedText>
+                <ThemedText type="caption" themeColor="textSecondary">
                   {deepseekKey ? '✓ Configurada' : 'No configurada'}
-                </Text>
+                </ThemedText>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
@@ -175,11 +176,11 @@ export default function SettingsScreen() {
                   padding: 12,
                   fontSize: 14,
                   color: themeColors.text,
-                  borderWidth: 1,
-                  borderColor: themeColors.border,
+                  ...shadows.sm,
                 }}
               />
               <TouchableOpacity
+                accessibilityLabel="Probar conexión con DeepSeek"
                 onPress={async () => {
                   const result = await testDeepSeekConnection(deepseekKey);
                   Alert.alert('DeepSeek', result.message);
@@ -189,24 +190,24 @@ export default function SettingsScreen() {
                   borderRadius: 10,
                   padding: 12,
                   alignItems: 'center',
+                  ...shadows.primary,
                 }}
               >
-                <Text style={{ color: '#FFF', fontWeight: '600' }}>
+                <ThemedText style={{ color: '#FFF' }} type="button">
                   Probar conexión
-                </Text>
+                </ThemedText>
               </TouchableOpacity>
             </View>
           )}
 
           <TouchableOpacity
+            accessibilityLabel={showRate ? 'Ocultar tasas de cambio' : 'Configurar tasas de cambio'}
             onPress={() => setShowRate(!showRate)}
             style={{
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'space-between',
               padding: 16,
-              borderBottomWidth: 1,
-              borderBottomColor: themeColors.border,
             }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
@@ -214,12 +215,12 @@ export default function SettingsScreen() {
                 <Ionicons name="trending-up" size={18} color={themeColors.warning} />
               </View>
               <View>
-                <Text style={{ fontSize: 15, fontWeight: '600', color: themeColors.text }}>
+                <ThemedText type="body" themeColor="text">
                   Tasas de Cambio
-                </Text>
-                <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>
+                </ThemedText>
+                <ThemedText type="caption" themeColor="textSecondary">
                   {manualRate ? `Manual ${manualRateType === 'BCV' ? 'BCV' : 'Paralelo'}: ${formatBS(manualRate)}` : 'Automática'}
-                </Text>
+                </ThemedText>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
@@ -232,38 +233,35 @@ export default function SettingsScreen() {
                 borderRadius: 12,
                 padding: 12,
                 gap: 8,
+                ...shadows.sm,
               }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Text style={{ fontSize: 13, color: themeColors.textSecondary }}>🏛️ BCV</Text>
-                  <Text style={{ fontSize: 15, fontWeight: '700', color: themeColors.text }}>
+                  <ThemedText type="caption" themeColor="textSecondary">BCV</ThemedText>
+                  <ThemedText type="body" themeColor="text" style={{ fontWeight: '700' }}>
                     {bcvRate ? formatBS(bcvRate.rateUSDToBS) : '—'}
-                  </Text>
+                  </ThemedText>
                 </View>
                 <View style={{ height: 1, backgroundColor: themeColors.border }} />
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Text style={{ fontSize: 13, color: themeColors.textSecondary }}>💱 Paralelo (USDT)</Text>
-                  <Text style={{ fontSize: 15, fontWeight: '700', color: themeColors.text }}>
+                  <ThemedText type="caption" themeColor="textSecondary">Paralelo (USDT)</ThemedText>
+                  <ThemedText type="body" themeColor="text" style={{ fontWeight: '700' }}>
                     {parallelRate ? formatBS(parallelRate.rateUSDToBS) : '—'}
-                  </Text>
+                  </ThemedText>
                 </View>
                 {ratesLastUpdated && (
-                  <Text style={{
-                    fontSize: 10,
-                    color: themeColors.textSecondary,
-                    textAlign: 'right',
-                    marginTop: 4,
-                  }}>
+                  <ThemedText type="badge" themeColor="textSecondary" style={{ textAlign: 'right', marginTop: 4 }}>
                     Última actualización: {ratesLastUpdated.toLocaleString('es-VE', {
                       hour: '2-digit',
                       minute: '2-digit',
                       day: '2-digit',
                       month: '2-digit',
                     })}
-                  </Text>
+                  </ThemedText>
                 )}
               </View>
 
               <TouchableOpacity
+                accessibilityLabel="Actualizar tasas automáticas"
                 onPress={handleUpdateRate}
                 disabled={ratesLoading}
                 style={{
@@ -272,22 +270,24 @@ export default function SettingsScreen() {
                   padding: 12,
                   alignItems: 'center',
                   opacity: ratesLoading ? 0.6 : 1,
+                  ...shadows.primary,
                 }}
               >
                 {ratesLoading ? (
                   <ActivityIndicator size="small" color="#FFF" />
                 ) : (
-                  <Text style={{ color: '#FFF', fontWeight: '600' }}>
+                  <ThemedText style={{ color: '#FFF' }} type="button">
                     Actualizar tasas automáticas
-                  </Text>
+                  </ThemedText>
                 )}
               </TouchableOpacity>
 
               {/* Selector de tipo para tasa manual */}
               <View style={{ flexDirection: 'row', gap: 8 }}>
-                {([{ label: '🏛️ BCV', value: 'BCV' as RateType }, { label: '💱 Paralelo', value: 'PARALLEL' as RateType }]).map((opt) => (
+                {([{ label: 'BCV', value: 'BCV' as RateType, icon: 'business-outline' as const }, { label: 'Paralelo', value: 'PARALLEL' as RateType, icon: 'trending-up-outline' as const }]).map((opt) => (
                   <TouchableOpacity
                     key={opt.value}
+                    accessibilityLabel={`Seleccionar tipo de tasa ${opt.label}`}
                     onPress={() => setManualRateType(opt.value)}
                     style={{
                       flex: 1,
@@ -295,16 +295,19 @@ export default function SettingsScreen() {
                       borderRadius: 10,
                       backgroundColor: manualRateType === opt.value ? themeColors.primary : themeColors.background,
                       alignItems: 'center',
-                      borderWidth: 1,
-                      borderColor: manualRateType === opt.value ? themeColors.primary : themeColors.border,
+                      minHeight: 44,
+                      justifyContent: 'center',
+                      ...(manualRateType === opt.value ? shadows.primary : shadows.sm),
                     }}>
-                    <Text style={{
-                      fontSize: 13,
-                      fontWeight: '600',
-                      color: manualRateType === opt.value ? '#FFF' : themeColors.textSecondary,
-                    }}>
-                      {opt.label}
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Ionicons name={opt.icon} size={16} color={manualRateType === opt.value ? '#FFF' : themeColors.textSecondary} />
+                      <ThemedText
+                        type="buttonSmall"
+                        color={manualRateType === opt.value ? '#FFF' : themeColors.textSecondary}
+                      >
+                        {opt.label}
+                      </ThemedText>
+                    </View>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -323,26 +326,28 @@ export default function SettingsScreen() {
                     padding: 12,
                     fontSize: 14,
                     color: themeColors.text,
-                    borderWidth: 1,
-                    borderColor: themeColors.border,
+                    ...shadows.sm,
                   }}
                 />
                 <TouchableOpacity
+                  accessibilityLabel="Guardar tasa manual"
                   onPress={handleSaveManualRate}
                   style={{
                     backgroundColor: themeColors.success,
                     borderRadius: 10,
                     paddingHorizontal: 16,
                     justifyContent: 'center',
+                    ...shadows.sm,
                   }}
                 >
-                  <Text style={{ color: '#FFF', fontWeight: '600' }}>Guardar</Text>
+                  <ThemedText style={{ color: '#FFF' }} type="button">Guardar</ThemedText>
                 </TouchableOpacity>
               </View>
 
               {/* Botón para volver a tasas automáticas */}
               {manualRate !== null && (
                 <TouchableOpacity
+                  accessibilityLabel="Quitar tasa manual y volver a automática"
                   onPress={() => {
                     setManualRate(null);
                     setRateInput('');
@@ -353,11 +358,12 @@ export default function SettingsScreen() {
                     borderRadius: 10,
                     padding: 12,
                     alignItems: 'center',
+                    ...shadows.sm,
                   }}
                 >
-                  <Text style={{ color: '#FFF', fontWeight: '600' }}>
+                  <ThemedText style={{ color: '#FFF' }} type="button">
                     Quitar tasa manual (volver a automática)
-                  </Text>
+                  </ThemedText>
                 </TouchableOpacity>
               )}
             </View>
@@ -365,22 +371,22 @@ export default function SettingsScreen() {
         </View>
 
         {/* Sección Cálculos */}
-        <Text style={{ fontSize: 12, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
+        <ThemedText type="small" themeColor="textSecondary" style={{ marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
           Cálculos
-        </Text>
-        <View style={{ backgroundColor: themeColors.surface, borderRadius: 16, marginBottom: 24, overflow: 'hidden' }}>
+        </ThemedText>
+        <View style={{ backgroundColor: themeColors.surface, borderRadius: 16, marginBottom: 24, overflow: 'hidden', ...shadows.md }}>
           <View style={{ padding: 16 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 }}>
               <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: themeColors.primaryLight, justifyContent: 'center', alignItems: 'center' }}>
                 <Ionicons name="calculator" size={18} color={themeColors.primary} />
               </View>
               <View>
-                <Text style={{ fontSize: 15, fontWeight: '600', color: themeColors.text }}>
+                <ThemedText type="body" themeColor="text">
                   Tasa para calcular Bs total
-                </Text>
-                <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>
+                </ThemedText>
+                <ThemedText type="caption" themeColor="textSecondary">
                   Usar tasa {preferredRateType === 'BCV' ? 'BCV (Oficial)' : 'Paralelo (USDT)'}
-                </Text>
+                </ThemedText>
               </View>
             </View>
 
@@ -389,6 +395,7 @@ export default function SettingsScreen() {
               return (
                 <TouchableOpacity
                   key={option.value}
+                  accessibilityLabel={`Seleccionar tasa ${option.label} para cálculos`}
                   onPress={() => setPreferredRateType(option.value)}
                   style={{
                     flexDirection: 'row',
@@ -403,13 +410,13 @@ export default function SettingsScreen() {
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                     <Text style={{ fontSize: 18 }}>{option.icon}</Text>
-                    <Text style={{
-                      fontSize: 14,
-                      fontWeight: isSelected ? '600' : '400',
-                      color: themeColors.text,
-                    }}>
+                    <ThemedText
+                      type="body"
+                      themeColor="text"
+                      style={{ fontWeight: isSelected ? '600' : '400' }}
+                    >
                       {option.label}
-                    </Text>
+                    </ThemedText>
                   </View>
                   {isSelected && (
                     <Ionicons name="checkmark-circle" size={22} color={themeColors.primary} />
@@ -418,44 +425,39 @@ export default function SettingsScreen() {
               );
             })}
 
-            <Text style={{
-              fontSize: 11,
-              color: themeColors.textSecondary,
-              marginTop: 8,
-              lineHeight: 16,
-            }}>
+            <ThemedText type="caption" themeColor="textSecondary" style={{ marginTop: 8, lineHeight: 16 }}>
               Esta tasa se usará para convertir tus saldos en USD a Bs en la pantalla principal.
               {manualRate && ` Actualmente hay una tasa manual de ${formatBS(manualRate)} configurada.`}
-            </Text>
+            </ThemedText>
           </View>
         </View>
 
         {/* Sección Gestión */}
-        <Text style={{ fontSize: 12, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
+        <ThemedText type="small" themeColor="textSecondary" style={{ marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
           Gestión
-        </Text>
-        <View style={{ backgroundColor: themeColors.surface, borderRadius: 16, marginBottom: 24, overflow: 'hidden' }}>
+        </ThemedText>
+        <View style={{ backgroundColor: themeColors.surface, borderRadius: 16, marginBottom: 24, overflow: 'hidden', ...shadows.md }}>
           <TouchableOpacity
+            accessibilityLabel="Ir a Cuentas"
             onPress={() => router.push('/(tabs)/accounts')}
             style={{
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: 16,
-            borderBottomWidth: 1,
-            borderBottomColor: themeColors.border,
           }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: themeColors.successLight, justifyContent: 'center', alignItems: 'center' }}>
                 <Ionicons name="wallet" size={18} color={themeColors.success} />
               </View>
-              <Text style={{ fontSize: 15, fontWeight: '600', color: themeColors.text }}>
+              <ThemedText type="body" themeColor="text">
                 Cuentas
-              </Text>
+              </ThemedText>
             </View>
             <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
           </TouchableOpacity>
           <TouchableOpacity
+            accessibilityLabel="Ir a Categorías"
             onPress={() => router.push('/categories')}
             style={{
             flexDirection: 'row',
@@ -467,60 +469,59 @@ export default function SettingsScreen() {
               <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: themeColors.primaryLight, justifyContent: 'center', alignItems: 'center' }}>
                 <Ionicons name="folder" size={18} color={themeColors.primary} />
               </View>
-              <Text style={{ fontSize: 15, fontWeight: '600', color: themeColors.text }}>
+              <ThemedText type="body" themeColor="text">
                 Categorías
-              </Text>
+              </ThemedText>
             </View>
             <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
           </TouchableOpacity>
           <TouchableOpacity
+            accessibilityLabel="Ir a Deudas y Préstamos"
             onPress={() => router.push('/(tabs)/debts')}
             style={{
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: 16,
-            borderTopWidth: 1,
-            borderTopColor: themeColors.border,
           }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#FEE2E2', justifyContent: 'center', alignItems: 'center' }}>
                 <Ionicons name="cash" size={18} color="#DC2626" />
               </View>
-              <Text style={{ fontSize: 15, fontWeight: '600', color: themeColors.text }}>
+              <ThemedText type="body" themeColor="text">
                 Deudas y Préstamos
-              </Text>
+              </ThemedText>
             </View>
             <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
           </TouchableOpacity>
         </View>
 
         {/* Sección Datos */}
-        <Text style={{ fontSize: 12, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
+        <ThemedText type="small" themeColor="textSecondary" style={{ marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
           Datos
-        </Text>
-        <View style={{ backgroundColor: themeColors.surface, borderRadius: 16, marginBottom: 24, overflow: 'hidden' }}>
+        </ThemedText>
+        <View style={{ backgroundColor: themeColors.surface, borderRadius: 16, marginBottom: 24, overflow: 'hidden', ...shadows.md }}>
           <TouchableOpacity
+            accessibilityLabel="Exportar datos"
             onPress={showExportOptions}
             style={{
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: 16,
-            borderBottomWidth: 1,
-            borderBottomColor: themeColors.border,
           }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: themeColors.warningLight, justifyContent: 'center', alignItems: 'center' }}>
                 <Ionicons name="download" size={18} color={themeColors.warning} />
               </View>
-              <Text style={{ fontSize: 15, fontWeight: '600', color: themeColors.text }}>
+              <ThemedText type="body" themeColor="text">
                 Exportar datos
-              </Text>
+              </ThemedText>
             </View>
             <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
           </TouchableOpacity>
           <TouchableOpacity
+            accessibilityLabel="Respaldar base de datos"
             onPress={async () => {
               try {
                 await shareBackup();
@@ -535,27 +536,26 @@ export default function SettingsScreen() {
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: 16,
-            borderBottomWidth: 1,
-            borderBottomColor: themeColors.border,
           }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#DBEAFE', justifyContent: 'center', alignItems: 'center' }}>
                 <Ionicons name="cloud-upload" size={18} color="#2563EB" />
               </View>
               <View>
-                <Text style={{ fontSize: 15, fontWeight: '600', color: themeColors.text }}>
+                <ThemedText type="body" themeColor="text">
                   Respaldar base de datos
-                </Text>
+                </ThemedText>
                 {backupInfo.exists && (
-                  <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginTop: 2 }}>
+                  <ThemedText type="caption" themeColor="textSecondary" style={{ marginTop: 2 }}>
                     Último: {backupInfo.fileSize} • {backupInfo.fileDate}
-                  </Text>
+                  </ThemedText>
                 )}
               </View>
             </View>
             <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
           </TouchableOpacity>
           <TouchableOpacity
+            accessibilityLabel="Restaurar respaldo de base de datos"
             onPress={async () => {
               if (importing) return;
               setImporting(true);
@@ -581,36 +581,36 @@ export default function SettingsScreen() {
             padding: 16,
           }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#FEE2E2', justifyContent: 'center', alignItems: 'center' }}>
+              <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: themeColors.dangerLight, justifyContent: 'center', alignItems: 'center' }}>
                 {importing ? (
-                  <ActivityIndicator size="small" color="#DC2626" />
+                  <ActivityIndicator size="small" color={themeColors.danger} />
                 ) : (
-                  <Ionicons name="cloud-download" size={18} color="#DC2626" />
+                  <Ionicons name="cloud-download" size={18} color={themeColors.danger} />
                 )}
               </View>
-              <Text style={{ fontSize: 15, fontWeight: '600', color: themeColors.text }}>
+              <ThemedText type="body" themeColor="text">
                 Restaurar respaldo
-              </Text>
+              </ThemedText>
             </View>
             <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
           </TouchableOpacity>
         </View>
 
         {/* Sección Apariencia */}
-        <Text style={{ fontSize: 12, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
+        <ThemedText type="small" themeColor="textSecondary" style={{ marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
           Apariencia
-        </Text>
-        <View style={{ backgroundColor: themeColors.surface, borderRadius: 16, marginBottom: 24, overflow: 'hidden' }}>
+        </ThemedText>
+        <View style={{ backgroundColor: themeColors.surface, borderRadius: 16, marginBottom: 24, overflow: 'hidden', ...shadows.md }}>
           {([
             { key: 'light' as ThemeMode, icon: 'sunny', label: 'Claro' },
             { key: 'dark' as ThemeMode, icon: 'moon', label: 'Oscuro' },
             { key: 'system' as ThemeMode, icon: 'phone-portrait', label: 'Sistema' },
           ]).map((option, index) => {
             const isActive = themeMode === option.key;
-            const isLast = index === 2;
             return (
               <TouchableOpacity
                 key={option.key}
+                accessibilityLabel={`Tema ${option.label}`}
                 onPress={() => {
                   setThemeMode(option.key);
                   // Sincronizar useDarkMode para compatibilidad con código legacy
@@ -623,8 +623,6 @@ export default function SettingsScreen() {
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   padding: 16,
-                  borderBottomWidth: isLast ? 0 : 1,
-                  borderBottomColor: themeColors.border,
                   backgroundColor: isActive ? themeColors.primaryLight : 'transparent',
                 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
@@ -642,9 +640,9 @@ export default function SettingsScreen() {
                       color={isActive ? '#FFF' : themeColors.primary}
                     />
                   </View>
-                  <Text style={{ fontSize: 15, fontWeight: '600', color: themeColors.text }}>
+                  <ThemedText type="body" themeColor="text">
                     {option.label}
-                  </Text>
+                  </ThemedText>
                 </View>
                 {isActive && (
                   <Ionicons name="checkmark-circle" size={22} color={themeColors.primary} />

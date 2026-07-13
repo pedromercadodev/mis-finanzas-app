@@ -15,6 +15,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import { useThemeColors } from '../../src/hooks/useThemeColors';
+import ThemedText from '../../src/components/ThemedText';
+import { shadows } from '../../src/theme/shadows';
 import { getGroupSummaries, setAllocation } from '../../src/services/budgetAllocations';
 import { formatUSD, getCurrentMonthRange } from '../../src/utils/format';
 import type { GroupWithCategories } from '../../src/utils/types';
@@ -120,21 +122,21 @@ export default function BudgetsScreen() {
       >
         {/* Header */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-          <Text style={{ fontSize: 28, fontWeight: '700', color: themeColors.text }}>
+          <ThemedText type="h1" themeColor="text">
             Presupuestos
-          </Text>
+          </ThemedText>
         </View>
-        <Text style={{ fontSize: 14, color: themeColors.textSecondary, marginBottom: 20 }}>
+        <ThemedText type="body" themeColor="textSecondary" style={{ marginBottom: 20 }}>
           {getMonthLabel(currentMonth)}
-        </Text>
+        </ThemedText>
 
         {/* Grupos */}
         {groups.length === 0 && (
           <View style={{ alignItems: 'center', paddingVertical: 40 }}>
             <Text style={{ fontSize: 40, marginBottom: 12 }}>📊</Text>
-            <Text style={{ fontSize: 16, color: themeColors.textSecondary, textAlign: 'center' }}>
+            <ThemedText type="body" themeColor="textSecondary" style={{ textAlign: 'center' }}>
               No hay categorías de gasto.{'\n'}Crea categorías en la sección de Categorías.
-            </Text>
+            </ThemedText>
           </View>
         )}
 
@@ -153,11 +155,7 @@ export default function BudgetsScreen() {
                 borderRadius: 16,
                 marginBottom: 12,
                 overflow: 'hidden',
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.05,
-                shadowRadius: 4,
-                elevation: 2,
+                ...shadows.sm,
               }}
             >
               {/* Group Header */}
@@ -168,19 +166,20 @@ export default function BudgetsScreen() {
                   alignItems: 'center',
                   padding: 16,
                 }}
+                accessibilityLabel={`${isExpanded ? 'Colapsar' : 'Expandir'} grupo ${groupWrapper.group.name}`}
               >
                 <Text style={{ fontSize: 20, marginRight: 10 }}>
                   {groupWrapper.group.icon}
                 </Text>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Text style={{ fontSize: 15, fontWeight: '700', color: themeColors.text }}>
+                    <ThemedText type="body" themeColor="text" style={{ fontWeight: '700' }}>
                       {groupWrapper.group.name}
-                    </Text>
+                    </ThemedText>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      <Text style={{ fontSize: 13, fontWeight: '600', color: groupBarColor }}>
+                      <ThemedText type="caption" color={groupBarColor} style={{ fontWeight: '600' }}>
                         {formatUSD(groupWrapper.totalSpentUSD)} / {formatUSD(groupWrapper.totalBudgetUSD)}
-                      </Text>
+                      </ThemedText>
                       <Ionicons
                         name={isExpanded ? 'chevron-up' : 'chevron-down'}
                         size={18}
@@ -210,9 +209,9 @@ export default function BudgetsScreen() {
               {isExpanded && (
                 <View style={{ paddingHorizontal: 16, paddingBottom: 12, gap: 2 }}>
                   {groupWrapper.categories.length === 0 && (
-                    <Text style={{ fontSize: 13, color: themeColors.textSecondary, fontStyle: 'italic', paddingVertical: 8, paddingLeft: 34 }}>
+                    <ThemedText type="body" themeColor="textSecondary" style={{ fontStyle: 'italic', paddingVertical: 8, paddingLeft: 34 }}>
                       Sin categorías
-                    </Text>
+                    </ThemedText>
                   )}
                   {groupWrapper.categories.map((cat) => {
                     const spent = cat.spending?.spentUSD || 0;
@@ -232,16 +231,17 @@ export default function BudgetsScreen() {
                           borderRadius: 10,
                         }}
                         activeOpacity={0.6}
+                        accessibilityLabel={`Asignar presupuesto a ${cat.name}`}
                       >
-                        <Text style={{ fontSize: 16, marginRight: 8 }}>{cat.icon}</Text>
+                        <Ionicons name={(cat.icon as any) || 'cube-outline'} size={18} color={themeColors.primary} style={{ marginRight: 8 }} />
                         <View style={{ flex: 1 }}>
                           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Text style={{ fontSize: 14, fontWeight: '500', color: themeColors.text }}>
+                            <ThemedText type="body" themeColor="text">
                               {cat.name}
-                            </Text>
-                            <Text style={{ fontSize: 13, fontWeight: '600', color: barColor }}>
+                            </ThemedText>
+                            <ThemedText type="caption" color={barColor} style={{ fontWeight: '600' }}>
                               {formatUSD(spent)} / {formatUSD(budget)}
-                            </Text>
+                            </ThemedText>
                           </View>
                           <View style={{
                             height: 6,
@@ -265,9 +265,9 @@ export default function BudgetsScreen() {
                               gap: 4,
                             }}>
                               <Text style={{ fontSize: 11 }}>⚠️</Text>
-                              <Text style={{ fontSize: 11, color: barColor, fontWeight: '500' }}>
+                              <ThemedText type="badge" color={barColor}>
                                 {percentage >= 100 ? 'Límite alcanzado' : 'Cerca del límite'}
-                              </Text>
+                              </ThemedText>
                             </View>
                           )}
                         </View>
@@ -290,56 +290,54 @@ export default function BudgetsScreen() {
           >
             <ScrollView contentContainerStyle={{ padding: 20 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                <Text style={{ fontSize: 22, fontWeight: '700', color: themeColors.text }}>
+                <ThemedText type="h2" themeColor="text">
                   Asignar Presupuesto
-                </Text>
-                <TouchableOpacity onPress={() => setShowAllocationModal(false)}>
+                </ThemedText>
+                <TouchableOpacity onPress={() => setShowAllocationModal(false)} accessibilityLabel="Cerrar modal de asignación">
                   <Ionicons name="close" size={24} color={themeColors.text} />
                 </TouchableOpacity>
               </View>
 
               {/* Categoría */}
-              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 6 }}>
+              <ThemedText type="caption" themeColor="textSecondary" style={{ marginBottom: 6 }}>
                 Categoría
-              </Text>
+              </ThemedText>
               <View style={{
                 backgroundColor: themeColors.surface,
                 borderRadius: 12,
                 padding: 14,
-                borderWidth: 1,
-                borderColor: themeColors.border,
+                ...shadows.sm,
                 marginBottom: 20,
               }}>
-                <Text style={{ fontSize: 16, fontWeight: '600', color: themeColors.text }}>
+                <ThemedText type="body" themeColor="text" style={{ fontWeight: '600' }}>
                   {allocCategoryName}
-                </Text>
+                </ThemedText>
               </View>
 
               {/* Mes */}
-              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 6 }}>
+              <ThemedText type="caption" themeColor="textSecondary" style={{ marginBottom: 6 }}>
                 Mes
-              </Text>
+              </ThemedText>
               <View style={{
                 backgroundColor: themeColors.surface,
                 borderRadius: 12,
                 padding: 14,
-                borderWidth: 1,
-                borderColor: themeColors.border,
+                ...shadows.sm,
                 marginBottom: 20,
               }}>
-                <Text style={{ fontSize: 16, color: themeColors.text }}>
+                <ThemedText type="body" themeColor="text">
                   {getMonthLabel(currentMonth)}
-                </Text>
+                </ThemedText>
               </View>
 
               {/* Presupuesto USD */}
-              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 6 }}>
+              <ThemedText type="caption" themeColor="textSecondary" style={{ marginBottom: 6 }}>
                 Presupuesto en USD
-              </Text>
+              </ThemedText>
               <TextInput
                 value={allocAmount}
                 onChangeText={setAllocAmount}
-                placeholder="0.00"
+                placeholder="Ej: 500.00"
                 placeholderTextColor={themeColors.textSecondary}
                 keyboardType="decimal-pad"
                 style={{
@@ -349,8 +347,7 @@ export default function BudgetsScreen() {
                   fontSize: 20,
                   fontWeight: '700',
                   color: themeColors.text,
-                  borderWidth: 1,
-                  borderColor: themeColors.border,
+                  ...shadows.sm,
                   marginBottom: 20,
                 }}
               />
@@ -360,38 +357,39 @@ export default function BudgetsScreen() {
                 backgroundColor: themeColors.surface,
                 borderRadius: 12,
                 padding: 16,
-                borderWidth: 1,
-                borderColor: themeColors.border,
+                ...shadows.sm,
                 marginBottom: 32,
               }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <Text style={{ fontSize: 14, color: themeColors.textSecondary }}>Gasto actual:</Text>
-                  <Text style={{ fontSize: 14, fontWeight: '600', color: themeColors.text }}>
+                  <ThemedText type="body" themeColor="textSecondary">Gasto actual:</ThemedText>
+                  <ThemedText type="body" themeColor="text" style={{ fontWeight: '600' }}>
                     {formatUSD(allocCurrentSpent)}
-                  </Text>
+                  </ThemedText>
                 </View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <Text style={{ fontSize: 14, color: themeColors.textSecondary }}>Presupuesto anterior:</Text>
-                  <Text style={{ fontSize: 14, fontWeight: '600', color: themeColors.text }}>
+                  <ThemedText type="body" themeColor="textSecondary">Presupuesto anterior:</ThemedText>
+                  <ThemedText type="body" themeColor="text" style={{ fontWeight: '600' }}>
                     {formatUSD(allocCurrentBudget)}
-                  </Text>
+                  </ThemedText>
                 </View>
               </View>
 
               <TouchableOpacity
                 onPress={handleSaveAllocation}
                 disabled={saving}
+                accessibilityLabel={saving ? 'Guardando asignación' : 'Guardar asignación de presupuesto'}
                 style={{
                   backgroundColor: saving ? themeColors.textSecondary : themeColors.primary,
                   borderRadius: 14,
                   padding: 16,
                   alignItems: 'center',
                   opacity: saving ? 0.6 : 1,
+                  ...shadows.primary,
                 }}
               >
-                <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 16 }}>
+                <ThemedText style={{ color: '#FFF' }} type="button">
                   {saving ? 'Guardando...' : 'Guardar Asignación'}
-                </Text>
+                </ThemedText>
               </TouchableOpacity>
             </ScrollView>
           </KeyboardAvoidingView>

@@ -6,6 +6,8 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { useThemeColors } from '../hooks/useThemeColors';
+import { useReducedMotion } from '../hooks/useReducedMotion';
+import { shadows } from '../theme/shadows';
 
 interface SegmentedControlOption<T extends string> {
   key: T;
@@ -19,11 +21,21 @@ interface SegmentedControlProps<T extends string> {
   onSelect: (key: T) => void;
 }
 
-const SPRING_CONFIG = { damping: 18, stiffness: 220, mass: 0.7 };
+/**
+ * Spring con critical damping — respuesta rápida sin overshoot.
+ * El indicador "sigue" al dedo sin pasarse.
+ */
+const SPRING_CRITICAL = { damping: 24, stiffness: 300, mass: 0.5 };
 
 /**
- * Control de segmentos animado con indicador deslizante.
- * Reemplaza los botones de filtro de período con un sliding indicator estilo iOS.
+ * SegmentedControl — control de segmentos con indicador deslizante.
+ * Sin bordes sólidos, usa sombra interior para el indicador.
+ *
+ * Principios aplicados:
+ * - Emil §3: sin borderWidth, sombra interior (shadows.inner) para el indicador
+ * - Emil §4: spring con critical damping (sin overshoot)
+ * - Apple §5: respuesta inmediata, masa ligera
+ * - Apple §16: reduced motion respetado
  */
 export default function SegmentedControl<T extends string>({
   options,
@@ -31,6 +43,7 @@ export default function SegmentedControl<T extends string>({
   onSelect,
 }: SegmentedControlProps<T>) {
   const themeColors = useThemeColors();
+  const reducedMotion = useReducedMotion();
   const [containerWidth, setContainerWidth] = useState(0);
   const itemRefs = useRef<{ [key: string]: number }>({});
 
@@ -49,7 +62,11 @@ export default function SegmentedControl<T extends string>({
   const handlePress = (key: T, index: number) => {
     onSelect(key);
     const segWidth = containerWidth / options.length;
-    indicatorOffset.value = withSpring(index * segWidth, SPRING_CONFIG);
+    if (reducedMotion) {
+      indicatorOffset.value = index * segWidth;
+    } else {
+      indicatorOffset.value = withSpring(index * segWidth, SPRING_CRITICAL);
+    }
   };
 
   const indicatorStyle = useAnimatedStyle(() => ({
@@ -66,11 +83,10 @@ export default function SegmentedControl<T extends string>({
         borderRadius: 12,
         padding: 3,
         position: 'relative',
-        borderWidth: 1,
-        borderColor: themeColors.border,
+        // Sin borderWidth — la profundidad viene de la sombra interior del indicador
       }}
     >
-      {/* Indicador deslizante */}
+      {/* Indicador deslizante con sombra interior */}
       <Animated.View
         style={[
           {
@@ -79,6 +95,7 @@ export default function SegmentedControl<T extends string>({
             bottom: 3,
             borderRadius: 10,
             backgroundColor: themeColors.primary,
+            ...shadows.inner,
           },
           indicatorStyle,
         ]}
@@ -91,15 +108,18 @@ export default function SegmentedControl<T extends string>({
             key={option.key}
             onPress={() => handlePress(option.key, index)}
             activeOpacity={0.7}
+            accessibilityLabel={option.label}
+            accessibilityRole="tab"
             style={{
               flex: 1,
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'center',
-              paddingVertical: 8,
+              paddingVertical: 12,
               paddingHorizontal: 8,
               gap: 4,
               zIndex: 1,
+              minHeight: 44,
             }}
           >
             {option.icon && (

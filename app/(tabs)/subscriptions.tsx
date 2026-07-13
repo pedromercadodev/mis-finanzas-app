@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../../src/hooks/useThemeColors';
+import ThemedText from '../../src/components/ThemedText';
 import { formatUSD, formatBS, formatDate } from '../../src/utils/format';
 import {
   getSubscriptions,
@@ -28,6 +29,7 @@ import {
 } from '../../src/services/subscriptions';
 import { getCategories } from '../../src/services/categories';
 import { getAccounts } from '../../src/services/accounts';
+import { shadows } from '../../src/theme/shadows';
 import type { Subscription, Category, Account, FrequencyType, CurrencyType } from '../../src/utils/types';
 
 const FREQUENCIES: { key: FrequencyType; label: string }[] = [
@@ -310,13 +312,14 @@ export default function SubscriptionsScreen() {
         <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
           {/* Header */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-            <Text style={{ fontSize: 28, fontWeight: '700', color: themeColors.text }}>
+            <ThemedText type="h1" themeColor="text">
               Suscripciones
-            </Text>
+            </ThemedText>
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <TouchableOpacity
                 onPress={handleProcessNow}
                 disabled={processing}
+                accessibilityLabel={processing ? 'Procesando suscripciones' : 'Procesar suscripciones vencidas'}
                 style={{
                   width: 44,
                   height: 44,
@@ -333,6 +336,7 @@ export default function SubscriptionsScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={openNewModal}
+                accessibilityLabel="Crear nueva suscripción"
                 style={{
                   width: 44,
                   height: 44,
@@ -353,12 +357,12 @@ export default function SubscriptionsScreen() {
           ) : subscriptions.length === 0 ? (
             <View style={{ alignItems: 'center', paddingVertical: 60 }}>
               <Ionicons name="repeat-outline" size={64} color={themeColors.textSecondary} />
-              <Text style={{ fontSize: 16, color: themeColors.textSecondary, marginTop: 16, textAlign: 'center' }}>
+              <ThemedText type="body" themeColor="textSecondary" style={{ marginTop: 16, textAlign: 'center' }}>
                 No tienes suscripciones registradas
-              </Text>
-              <Text style={{ fontSize: 13, color: themeColors.textSecondary, marginTop: 8, textAlign: 'center' }}>
+              </ThemedText>
+              <ThemedText type="small" themeColor="textSecondary" style={{ marginTop: 8, textAlign: 'center' }}>
                 Agrega Netflix, internet, alquiler y otros pagos recurrentes
-              </Text>
+              </ThemedText>
             </View>
           ) : (
             subscriptions.map((sub) => {
@@ -370,39 +374,36 @@ export default function SubscriptionsScreen() {
                   key={sub.id}
                   onPress={() => openEditModal(sub.id)}
                   onLongPress={() => handleDelete(sub)}
+                  accessibilityLabel={`Suscripción: ${sub.name}`}
                   style={{
                     backgroundColor: themeColors.surface,
                     borderRadius: 16,
                     padding: 16,
                     marginBottom: 12,
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.05,
-                    shadowRadius: 8,
-                    elevation: 2,
+                    ...shadows.sm,
                     opacity: sub.isActive ? 1 : 0.5,
                   }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <View style={{ flex: 1 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <Text style={{ fontSize: 16, fontWeight: '600', color: themeColors.text }}>
+                        <ThemedText type="body" themeColor="text" style={{ fontWeight: '600' }}>
                           {sub.name}
-                        </Text>
+                        </ThemedText>
                         {due && (
                           <View style={{ backgroundColor: themeColors.dangerLight, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 }}>
-                            <Text style={{ fontSize: 10, color: themeColors.danger, fontWeight: '600' }}>VENCIDA</Text>
+                            <ThemedText type="badge" themeColor="danger">VENCIDA</ThemedText>
                           </View>
                         )}
                         {soon && !due && (
                           <View style={{ backgroundColor: themeColors.warningLight, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 }}>
-                            <Text style={{ fontSize: 10, color: themeColors.warning, fontWeight: '600' }}>PRONTO</Text>
+                            <ThemedText type="badge" themeColor="warning">PRONTO</ThemedText>
                           </View>
                         )}
                       </View>
                       {sub.description && (
-                        <Text style={{ fontSize: 13, color: themeColors.textSecondary, marginTop: 2 }}>
+                        <ThemedText type="caption" themeColor="textSecondary" style={{ marginTop: 2 }}>
                           {sub.description}
-                        </Text>
+                        </ThemedText>
                       )}
                     </View>
                     <Switch
@@ -415,40 +416,40 @@ export default function SubscriptionsScreen() {
 
                   <View style={{ flexDirection: 'row', marginTop: 12, gap: 16 }}>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 11, color: themeColors.textSecondary }}>Monto</Text>
-                      <Text style={{ fontSize: 15, fontWeight: '700', color: themeColors.text }}>
+                      <ThemedText type="badge" themeColor="textSecondary">Monto</ThemedText>
+                      <ThemedText type="amountSmall" themeColor="text">
                         {sub.amountUSD ? formatUSD(sub.amountUSD) : ''}
                         {sub.amountUSD && sub.amountBS ? ' / ' : ''}
                         {sub.amountBS ? formatBS(sub.amountBS) : ''}
-                      </Text>
+                      </ThemedText>
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 11, color: themeColors.textSecondary }}>Frecuencia</Text>
-                      <Text style={{ fontSize: 13, fontWeight: '500', color: themeColors.text }}>
+                      <ThemedText type="badge" themeColor="textSecondary">Frecuencia</ThemedText>
+                      <ThemedText type="caption" themeColor="text" style={{ fontWeight: '500' }}>
                         {getFrequencyLabel(sub.frequency)}
-                      </Text>
+                      </ThemedText>
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 11, color: themeColors.textSecondary }}>Próximo cobro</Text>
-                      <Text style={{
-                        fontSize: 13,
-                        fontWeight: '500',
-                        color: due ? themeColors.danger : (soon ? themeColors.warning : themeColors.text),
-                      }}>
+                      <ThemedText type="badge" themeColor="textSecondary">Próximo cobro</ThemedText>
+                      <ThemedText
+                        type="caption"
+                        color={due ? themeColors.danger : (soon ? themeColors.warning : themeColors.text)}
+                        style={{ fontWeight: '500' }}
+                      >
                         {formatDate(sub.nextBillingDate)}
-                      </Text>
+                      </ThemedText>
                     </View>
                   </View>
 
                   <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
-                    <Text style={{ fontSize: 11, color: themeColors.textSecondary }}>
-                      📁 {getCategoryName(sub.categoryId)}
-                    </Text>
-                    <Text style={{ fontSize: 11, color: themeColors.textSecondary }}>
-                      💳 {getAccountName(sub.accountId)}
-                    </Text>
+                    <ThemedText type="badge" themeColor="textSecondary">
+                      {getCategoryName(sub.categoryId)}
+                    </ThemedText>
+                    <ThemedText type="badge" themeColor="textSecondary">
+                      {getAccountName(sub.accountId)}
+                    </ThemedText>
                     {sub.autoGenerate === 1 && (
-                      <Text style={{ fontSize: 11, color: themeColors.success }}>🤖 Auto</Text>
+                      <ThemedText type="badge" themeColor="success">Auto</ThemedText>
                     )}
                   </View>
                 </TouchableOpacity>
@@ -466,18 +467,18 @@ export default function SubscriptionsScreen() {
               <ScrollView contentContainerStyle={{ padding: 20 }}>
                 {/* Header del modal */}
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                  <Text style={{ fontSize: 22, fontWeight: '700', color: themeColors.text }}>
+                  <ThemedText type="h2" themeColor="text">
                     {editingId ? 'Editar suscripción' : 'Nueva suscripción'}
-                  </Text>
-                  <TouchableOpacity onPress={() => setShowModal(false)}>
+                  </ThemedText>
+                  <TouchableOpacity onPress={() => setShowModal(false)} accessibilityLabel="Cerrar modal">
                     <Ionicons name="close" size={28} color={themeColors.textSecondary} />
                   </TouchableOpacity>
                 </View>
 
                 {/* Nombre */}
-                <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 6 }}>
+                <ThemedText type="small" themeColor="textSecondary" style={{ fontWeight: '600', marginBottom: 6 }}>
                   Nombre *
-                </Text>
+                </ThemedText>
                 <TextInput
                   value={formName}
                   onChangeText={setFormName}
@@ -490,15 +491,14 @@ export default function SubscriptionsScreen() {
                     fontSize: 16,
                     color: themeColors.text,
                     marginBottom: 16,
-                    borderWidth: 1,
-                    borderColor: themeColors.border,
+                    ...shadows.sm,
                   }}
                 />
 
                 {/* Descripción */}
-                <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 6 }}>
+                <ThemedText type="small" themeColor="textSecondary" style={{ fontWeight: '600', marginBottom: 6 }}>
                   Descripción
-                </Text>
+                </ThemedText>
                 <TextInput
                   value={formDescription}
                   onChangeText={setFormDescription}
@@ -511,17 +511,16 @@ export default function SubscriptionsScreen() {
                     fontSize: 16,
                     color: themeColors.text,
                     marginBottom: 16,
-                    borderWidth: 1,
-                    borderColor: themeColors.border,
+                    ...shadows.sm,
                   }}
                 />
 
                 {/* Montos */}
                 <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 6 }}>
+                    <ThemedText type="small" themeColor="textSecondary" style={{ fontWeight: '600', marginBottom: 6 }}>
                       Monto USD
-                    </Text>
+                    </ThemedText>
                     <TextInput
                       value={formAmountUSD}
                       onChangeText={setFormAmountUSD}
@@ -534,15 +533,14 @@ export default function SubscriptionsScreen() {
                         padding: 14,
                         fontSize: 16,
                         color: themeColors.text,
-                        borderWidth: 1,
-                        borderColor: themeColors.border,
+                        ...shadows.sm,
                       }}
                     />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 6 }}>
+                    <ThemedText type="small" themeColor="textSecondary" style={{ fontWeight: '600', marginBottom: 6 }}>
                       Monto BS
-                    </Text>
+                    </ThemedText>
                     <TextInput
                       value={formAmountBS}
                       onChangeText={setFormAmountBS}
@@ -555,22 +553,22 @@ export default function SubscriptionsScreen() {
                         padding: 14,
                         fontSize: 16,
                         color: themeColors.text,
-                        borderWidth: 1,
-                        borderColor: themeColors.border,
+                        ...shadows.sm,
                       }}
                     />
                   </View>
                 </View>
 
                 {/* Moneda */}
-                <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 6 }}>
+                <ThemedText type="small" themeColor="textSecondary" style={{ fontWeight: '600', marginBottom: 6 }}>
                   Moneda
-                </Text>
+                </ThemedText>
                 <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
                   {(['USD', 'BS', 'BOTH'] as CurrencyType[]).map((cur) => (
                     <TouchableOpacity
                       key={cur}
                       onPress={() => setFormCurrency(cur)}
+                      accessibilityLabel={`Seleccionar moneda ${cur === 'USD' ? 'USD' : cur === 'BS' ? 'Bolívares' : 'Ambas'}`}
                       style={{
                         flex: 1,
                         paddingVertical: 10,
@@ -580,27 +578,24 @@ export default function SubscriptionsScreen() {
                         borderWidth: 1,
                         borderColor: formCurrency === cur ? themeColors.primary : themeColors.border,
                       }}>
-                      <Text style={{
-                        fontSize: 12,
-                        fontWeight: '600',
-                        color: formCurrency === cur ? '#FFFFFF' : themeColors.textSecondary,
-                      }}>
-                        {cur === 'USD' ? '💲 USD' : cur === 'BS' ? '💵 BS' : '🌎 Ambas'}
-                      </Text>
+                      <ThemedText type="buttonSmall" color={formCurrency === cur ? '#FFFFFF' : themeColors.textSecondary}>
+                        {cur === 'USD' ? 'USD' : cur === 'BS' ? 'BS' : 'Ambas'}
+                      </ThemedText>
                     </TouchableOpacity>
                   ))}
                 </View>
 
                 {/* Categoría */}
-                <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 6 }}>
+                <ThemedText type="small" themeColor="textSecondary" style={{ fontWeight: '600', marginBottom: 6 }}>
                   Categoría *
-                </Text>
+                </ThemedText>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
                   <View style={{ flexDirection: 'row', gap: 8 }}>
                     {categories.map((cat) => (
                       <TouchableOpacity
                         key={cat.id}
                         onPress={() => setFormCategoryId(cat.id)}
+                        accessibilityLabel={`Seleccionar categoría ${cat.name}`}
                         style={{
                           paddingHorizontal: 16,
                           paddingVertical: 10,
@@ -609,24 +604,28 @@ export default function SubscriptionsScreen() {
                           borderWidth: 1,
                           borderColor: formCategoryId === cat.id ? cat.color : themeColors.border,
                         }}>
-                        <Text style={{ fontSize: 14, color: formCategoryId === cat.id ? cat.color : themeColors.text }}>
-                          {cat.icon} {cat.name}
-                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <Ionicons name={(cat.icon as any) || 'cube-outline'} size={16} color={formCategoryId === cat.id ? cat.color : themeColors.text} />
+                          <ThemedText type="body" color={formCategoryId === cat.id ? cat.color : themeColors.text}>
+                            {cat.name}
+                          </ThemedText>
+                        </View>
                       </TouchableOpacity>
                     ))}
                   </View>
                 </ScrollView>
 
                 {/* Cuenta */}
-                <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 6 }}>
+                <ThemedText type="small" themeColor="textSecondary" style={{ fontWeight: '600', marginBottom: 6 }}>
                   Cuenta *
-                </Text>
+                </ThemedText>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
                   <View style={{ flexDirection: 'row', gap: 8 }}>
                     {accounts.filter((a) => a.isActive).map((acc) => (
                       <TouchableOpacity
                         key={acc.id}
                         onPress={() => setFormAccountId(acc.id)}
+                        accessibilityLabel={`Seleccionar cuenta ${acc.name}`}
                         style={{
                           paddingHorizontal: 16,
                           paddingVertical: 10,
@@ -635,23 +634,24 @@ export default function SubscriptionsScreen() {
                           borderWidth: 1,
                           borderColor: formAccountId === acc.id ? acc.color : themeColors.border,
                         }}>
-                        <Text style={{ fontSize: 14, color: formAccountId === acc.id ? acc.color : themeColors.text }}>
-                          {acc.icon} {acc.name}
-                        </Text>
+                        <ThemedText type="body" color={formAccountId === acc.id ? acc.color : themeColors.text}>
+                          {acc.name}
+                        </ThemedText>
                       </TouchableOpacity>
                     ))}
                   </View>
                 </ScrollView>
 
                 {/* Frecuencia */}
-                <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 6 }}>
+                <ThemedText type="small" themeColor="textSecondary" style={{ fontWeight: '600', marginBottom: 6 }}>
                   Frecuencia
-                </Text>
+                </ThemedText>
                 <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
                   {FREQUENCIES.map((f) => (
                     <TouchableOpacity
                       key={f.key}
                       onPress={() => setFormFrequency(f.key)}
+                      accessibilityLabel={`Frecuencia: ${f.label}`}
                       style={{
                         flex: 1,
                         paddingVertical: 10,
@@ -661,21 +661,17 @@ export default function SubscriptionsScreen() {
                         borderWidth: 1,
                         borderColor: formFrequency === f.key ? themeColors.primary : themeColors.border,
                       }}>
-                      <Text style={{
-                        fontSize: 12,
-                        fontWeight: '600',
-                        color: formFrequency === f.key ? '#FFFFFF' : themeColors.textSecondary,
-                      }}>
+                      <ThemedText type="buttonSmall" color={formFrequency === f.key ? '#FFFFFF' : themeColors.textSecondary}>
                         {f.label}
-                      </Text>
+                      </ThemedText>
                     </TouchableOpacity>
                   ))}
                 </View>
 
                 {/* Día de cobro */}
-                <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 6 }}>
+                <ThemedText type="small" themeColor="textSecondary" style={{ fontWeight: '600', marginBottom: 6 }}>
                   Día de cobro
-                </Text>
+                </ThemedText>
                 <TextInput
                   value={formBillingDay}
                   onChangeText={setFormBillingDay}
@@ -697,9 +693,9 @@ export default function SubscriptionsScreen() {
                 {/* Intervalo personalizado (solo si frecuencia = custom) */}
                 {formFrequency === 'custom' && (
                   <>
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 6 }}>
+                    <ThemedText type="small" themeColor="textSecondary" style={{ fontWeight: '600', marginBottom: 6 }}>
                       Intervalo (días)
-                    </Text>
+                    </ThemedText>
                     <TextInput
                       value={formIntervalDays}
                       onChangeText={setFormIntervalDays}
@@ -733,12 +729,12 @@ export default function SubscriptionsScreen() {
                   borderColor: themeColors.border,
                 }}>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 15, fontWeight: '500', color: themeColors.text }}>
+                    <ThemedText type="body" themeColor="text" style={{ fontWeight: '500' }}>
                       Generar transacción automáticamente
-                    </Text>
-                    <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginTop: 2 }}>
+                    </ThemedText>
+                    <ThemedText type="small" themeColor="textSecondary" style={{ marginTop: 2 }}>
                       Si está activo, se creará un gasto automático en la fecha de cobro
-                    </Text>
+                    </ThemedText>
                   </View>
                   <Switch
                     value={formAutoGenerate}
@@ -749,9 +745,9 @@ export default function SubscriptionsScreen() {
                 </View>
 
                 {/* Notas */}
-                <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 6 }}>
+                <ThemedText type="small" themeColor="textSecondary" style={{ fontWeight: '600', marginBottom: 6 }}>
                   Notas
-                </Text>
+                </ThemedText>
                 <TextInput
                   value={formNotes}
                   onChangeText={setFormNotes}
@@ -777,6 +773,7 @@ export default function SubscriptionsScreen() {
                 <TouchableOpacity
                   onPress={handleSave}
                   disabled={saving}
+                  accessibilityLabel={editingId ? 'Actualizar suscripción' : 'Crear suscripción'}
                   style={{
                     backgroundColor: themeColors.primary,
                     borderRadius: 16,
@@ -787,9 +784,9 @@ export default function SubscriptionsScreen() {
                   {saving ? (
                     <ActivityIndicator color="#FFFFFF" />
                   ) : (
-                    <Text style={{ fontSize: 16, fontWeight: '700', color: '#FFFFFF' }}>
+                    <ThemedText type="body" color="#FFFFFF" style={{ fontWeight: '700' }}>
                       {editingId ? 'Actualizar suscripción' : 'Crear suscripción'}
-                    </Text>
+                    </ThemedText>
                   )}
                 </TouchableOpacity>
               </ScrollView>

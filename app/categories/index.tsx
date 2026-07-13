@@ -14,10 +14,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { colors } from '../../src/theme/colors';
 import { useThemeColors } from '../../src/hooks/useThemeColors';
+import ThemedText from '../../src/components/ThemedText';
 import { getCategories, createCategory, updateCategory, deleteCategory } from '../../src/services/categories';
 import { getGroups, createGroup, updateGroup, deleteGroup } from '../../src/services/categoryGroups';
+import { shadows } from '../../src/theme/shadows';
 import type { Category, CategoryGroup, CategoryWithGroup } from '../../src/utils/types';
 
 const CATEGORY_ICONS = [
@@ -277,12 +278,12 @@ export default function CategoriesScreen() {
         {/* Header */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <TouchableOpacity onPress={() => router.back()}>
+            <TouchableOpacity onPress={() => router.back()} accessibilityLabel="Volver">
               <Ionicons name="arrow-back" size={24} color={themeColors.text} />
             </TouchableOpacity>
-            <Text style={{ fontSize: 28, fontWeight: '700', color: themeColors.text }}>
+            <ThemedText type="h1" themeColor="text">
               Categorías
-            </Text>
+            </ThemedText>
           </View>
           <TouchableOpacity
             onPress={openNewCategory}
@@ -295,16 +296,17 @@ export default function CategoriesScreen() {
               alignItems: 'center',
               gap: 6,
             }}
+            accessibilityLabel="Crear nueva categoría"
           >
             <Ionicons name="add" size={18} color="#FFF" />
-            <Text style={{ color: '#FFF', fontWeight: '600', fontSize: 14 }}>Nueva</Text>
+            <ThemedText type="button" color="#FFF">Nueva</ThemedText>
           </TouchableOpacity>
         </View>
 
         {/* Sección de Grupos con Categorías Expandibles */}
-        <Text style={{ fontSize: 14, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1 }}>
+        <ThemedText type="small" themeColor="textSecondary" style={{ marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1 }}>
           Grupos ({groups.length})
-        </Text>
+        </ThemedText>
         <View style={{ gap: 8, marginBottom: 24 }}>
           {groups.map((g) => {
             const isExpanded = expandedGroups.has(g.id);
@@ -320,6 +322,7 @@ export default function CategoriesScreen() {
                     alignItems: 'center',
                     justifyContent: 'space-between',
                   }}
+                  accessibilityLabel={`${isExpanded ? 'Colapsar' : 'Expandir'} grupo ${g.name}`}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
                     <View style={{
@@ -327,15 +330,15 @@ export default function CategoriesScreen() {
                       backgroundColor: g.color + '20',
                       justifyContent: 'center', alignItems: 'center',
                     }}>
-                      <Text style={{ fontSize: 20 }}>{g.icon}</Text>
+                      <ThemedText type="h4" themeColor="text">{g.icon}</ThemedText>
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 15, fontWeight: '600', color: themeColors.text }}>
+                      <ThemedText type="body" themeColor="text" style={{ fontWeight: '600' }}>
                         {g.name}
-                      </Text>
-                      <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>
+                      </ThemedText>
+                      <ThemedText type="small" themeColor="textSecondary">
                         {groupCategories.length} categorías · {g.type === 'expense' ? 'Gasto' : 'Ingreso'}
-                      </Text>
+                      </ThemedText>
                     </View>
                     <Ionicons
                       name={isExpanded ? 'chevron-up' : 'chevron-down'}
@@ -346,15 +349,17 @@ export default function CategoriesScreen() {
                   <View style={{ flexDirection: 'row', gap: 4, marginLeft: 8 }}>
                     <TouchableOpacity
                       onPress={() => openEditGroup(g)}
-                      style={{ padding: 6 }}
+                      style={{ padding: 12, justifyContent: 'center', alignItems: 'center' }}
+                      accessibilityLabel={`Editar grupo ${g.name}`}
                     >
                       <Ionicons name="pencil-outline" size={18} color={themeColors.textSecondary} />
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={() => handleDeleteGroup(g)}
-                      style={{ padding: 6 }}
+                      style={{ padding: 12, justifyContent: 'center', alignItems: 'center' }}
+                      accessibilityLabel={`Eliminar grupo ${g.name}`}
                     >
-                      <Ionicons name="trash-outline" size={18} color={themeColors.danger || '#EF4444'} />
+                      <Ionicons name="trash-outline" size={18} color={themeColors.danger} />
                     </TouchableOpacity>
                   </View>
                 </TouchableOpacity>
@@ -362,9 +367,9 @@ export default function CategoriesScreen() {
                 {isExpanded && (
                   <View style={{ backgroundColor: themeColors.background, paddingLeft: 14, paddingRight: 14, paddingBottom: 8, gap: 4 }}>
                     {groupCategories.length === 0 ? (
-                      <Text style={{ fontSize: 13, color: themeColors.textSecondary, textAlign: 'center', paddingVertical: 12 }}>
+                      <ThemedText type="caption" themeColor="textSecondary" style={{ textAlign: 'center', paddingVertical: 12 }}>
                         Sin categorías en este grupo
-                      </Text>
+                      </ThemedText>
                     ) : (
                       groupCategories.map((cat) => (
                         <TouchableOpacity
@@ -379,20 +384,22 @@ export default function CategoriesScreen() {
                             justifyContent: 'space-between',
                             marginTop: 4,
                           }}
+                          accessibilityLabel={`Editar categoría ${cat.name}`}
                         >
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                            <Text style={{ fontSize: 18 }}>{cat.icon}</Text>
+                            <Ionicons name={(cat.icon as any) || 'cube-outline'} size={20} color={themeColors.primary} />
                             <View>
-                              <Text style={{ fontSize: 14, fontWeight: '500', color: themeColors.text }}>
+                              <ThemedText type="body" themeColor="text" style={{ fontWeight: '500' }}>
                                 {cat.name}
-                              </Text>
+                              </ThemedText>
                             </View>
                           </View>
                           <TouchableOpacity
                             onPress={() => handleDeleteCategory(cat)}
-                            style={{ padding: 4 }}
+                            style={{ padding: 12, justifyContent: 'center', alignItems: 'center' }}
+                            accessibilityLabel={`Eliminar categoría ${cat.name}`}
                           >
-                            <Ionicons name="trash-outline" size={16} color={themeColors.danger || '#EF4444'} />
+                            <Ionicons name="trash-outline" size={16} color={themeColors.danger} />
                           </TouchableOpacity>
                         </TouchableOpacity>
                       ))
@@ -415,11 +422,12 @@ export default function CategoriesScreen() {
                         borderColor: themeColors.border,
                         borderStyle: 'dashed',
                       }}
+                      accessibilityLabel="Agregar categoría a este grupo"
                     >
                       <Ionicons name="add-circle-outline" size={16} color={themeColors.primary} />
-                      <Text style={{ color: themeColors.primary, fontWeight: '500', fontSize: 13 }}>
+                      <ThemedText type="caption" color={themeColors.primary} style={{ fontWeight: '500' }}>
                         Nueva categoría
-                      </Text>
+                      </ThemedText>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -440,11 +448,12 @@ export default function CategoriesScreen() {
               borderColor: themeColors.border,
               borderStyle: 'dashed',
             }}
+            accessibilityLabel="Crear nuevo grupo"
           >
             <Ionicons name="add-circle-outline" size={20} color={themeColors.primary} />
-            <Text style={{ color: themeColors.primary, fontWeight: '600', fontSize: 14 }}>
+            <ThemedText type="button" color={themeColors.primary}>
               Nuevo Grupo
-            </Text>
+            </ThemedText>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -455,10 +464,9 @@ export default function CategoriesScreen() {
           position: 'absolute', bottom: 40, left: 20, right: 20,
           backgroundColor: themeColors.success || '#10B981',
           borderRadius: 12, padding: 14, alignItems: 'center',
-          shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.15, shadowRadius: 8, elevation: 6,
+          ...shadows.lg,
         }}>
-          <Text style={{ color: '#FFF', fontWeight: '600', fontSize: 14 }}>{toastMsg}</Text>
+          <ThemedText type="button" color="#FFF">{toastMsg}</ThemedText>
         </View>
       )}
 
@@ -471,18 +479,18 @@ export default function CategoriesScreen() {
           >
             <ScrollView contentContainerStyle={{ padding: 20 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                <Text style={{ fontSize: 22, fontWeight: '700', color: themeColors.text }}>
+                <ThemedText type="h2" themeColor="text">
                   {editingCategory ? 'Editar categoría' : 'Nueva categoría'}
-                </Text>
-                <TouchableOpacity onPress={() => setShowCatModal(false)}>
+                </ThemedText>
+                <TouchableOpacity onPress={() => setShowCatModal(false)} accessibilityLabel="Cerrar modal de categoría">
                   <Ionicons name="close" size={24} color={themeColors.text} />
                 </TouchableOpacity>
               </View>
 
               {/* Nombre */}
-              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 6 }}>
+              <ThemedText type="small" themeColor="textSecondary" style={{ fontWeight: '600', marginBottom: 6 }}>
                 Nombre
-              </Text>
+              </ThemedText>
               <TextInput
                 value={catName}
                 onChangeText={setCatName}
@@ -501,9 +509,9 @@ export default function CategoriesScreen() {
               />
 
               {/* Tipo */}
-              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 6 }}>
+              <ThemedText type="small" themeColor="textSecondary" style={{ fontWeight: '600', marginBottom: 6 }}>
                 Tipo
-              </Text>
+              </ThemedText>
               <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
                 {(['expense', 'income'] as const).map((t) => (
                   <TouchableOpacity
@@ -518,22 +526,19 @@ export default function CategoriesScreen() {
                       borderWidth: 1,
                       borderColor: catType === t ? themeColors.primary : themeColors.border,
                     }}
+                    accessibilityLabel={`Tipo ${t === 'expense' ? 'gasto' : 'ingreso'}`}
                   >
-                    <Text style={{
-                      fontSize: 14,
-                      fontWeight: '600',
-                      color: catType === t ? '#FFF' : themeColors.text,
-                    }}>
+                    <ThemedText type="button" color={catType === t ? '#FFF' : themeColors.text}>
                       {t === 'expense' ? 'Gasto' : 'Ingreso'}
-                    </Text>
+                    </ThemedText>
                   </TouchableOpacity>
                 ))}
               </View>
 
               {/* Grupo */}
-              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 6 }}>
+              <ThemedText type="small" themeColor="textSecondary" style={{ fontWeight: '600', marginBottom: 6 }}>
                 Grupo
-              </Text>
+              </ThemedText>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
                 <TouchableOpacity
                   onPress={() => setCatGroupId(null)}
@@ -545,14 +550,11 @@ export default function CategoriesScreen() {
                     borderWidth: 1,
                     borderColor: catGroupId === null ? themeColors.primary : themeColors.border,
                   }}
+                  accessibilityLabel="Sin grupo"
                 >
-                  <Text style={{
-                    fontSize: 13,
-                    fontWeight: '600',
-                    color: catGroupId === null ? '#FFF' : themeColors.text,
-                  }}>
+                  <ThemedText type="buttonSmall" color={catGroupId === null ? '#FFF' : themeColors.text}>
                     Sin grupo
-                  </Text>
+                  </ThemedText>
                 </TouchableOpacity>
                 {(catType === 'expense' ? expenseGroups : incomeGroups).map((g) => (
                   <TouchableOpacity
@@ -569,23 +571,20 @@ export default function CategoriesScreen() {
                       alignItems: 'center',
                       gap: 6,
                     }}
+                    accessibilityLabel={`Seleccionar grupo ${g.name}`}
                   >
-                    <Text style={{ fontSize: 14 }}>{g.icon}</Text>
-                    <Text style={{
-                      fontSize: 13,
-                      fontWeight: '600',
-                      color: catGroupId === g.id ? '#FFF' : themeColors.text,
-                    }}>
+                    <ThemedText type="body" themeColor="text">{g.icon}</ThemedText>
+                    <ThemedText type="buttonSmall" color={catGroupId === g.id ? '#FFF' : themeColors.text}>
                       {g.name}
-                    </Text>
+                    </ThemedText>
                   </TouchableOpacity>
                 ))}
               </View>
 
               {/* Icono */}
-              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 6 }}>
+              <ThemedText type="small" themeColor="textSecondary" style={{ fontWeight: '600', marginBottom: 6 }}>
                 Icono
-              </Text>
+              </ThemedText>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
                 {CATEGORY_ICONS.map((ic, index) => (
                   <TouchableOpacity
@@ -598,23 +597,24 @@ export default function CategoriesScreen() {
                       borderWidth: 2,
                       borderColor: catIcon === ic ? themeColors.primary : 'transparent',
                     }}
+                    accessibilityLabel={`Seleccionar icono ${ic}`}
                   >
-                    <Text style={{ fontSize: 22 }}>{ic}</Text>
+                    <ThemedText type="h3" themeColor="text">{ic}</ThemedText>
                   </TouchableOpacity>
                 ))}
               </View>
 
               {/* Color */}
-              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 6 }}>
+              <ThemedText type="small" themeColor="textSecondary" style={{ fontWeight: '600', marginBottom: 6 }}>
                 Color
-              </Text>
+              </ThemedText>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 32 }}>
                 {CATEGORY_COLORS.map((c, index) => (
                   <TouchableOpacity
                     key={`cat-color-${index}`}
                     onPress={() => setCatColor(c)}
                     style={{
-                      width: 36, height: 36, borderRadius: 10,
+                      width: 44, height: 44, borderRadius: 10,
                       backgroundColor: c,
                       justifyContent: 'center', alignItems: 'center',
                       borderWidth: 3,
@@ -625,9 +625,10 @@ export default function CategoriesScreen() {
                       shadowRadius: 4,
                       elevation: catColor === c ? 4 : 0,
                     }}
+                    accessibilityLabel={`Seleccionar color`}
                   >
                     {catColor === c && (
-                      <Ionicons name="checkmark" size={18} color="#FFF" />
+                      <Ionicons name="checkmark" size={20} color="#FFF" />
                     )}
                   </TouchableOpacity>
                 ))}
@@ -641,10 +642,11 @@ export default function CategoriesScreen() {
                   padding: 16,
                   alignItems: 'center',
                 }}
+                accessibilityLabel={editingCategory ? 'Guardar cambios de categoría' : 'Crear categoría'}
               >
-                <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 16 }}>
+                <ThemedText type="body" color="#FFF" style={{ fontWeight: '700' }}>
                   {editingCategory ? 'Guardar cambios' : 'Crear categoría'}
-                </Text>
+                </ThemedText>
               </TouchableOpacity>
             </ScrollView>
           </KeyboardAvoidingView>
@@ -660,18 +662,18 @@ export default function CategoriesScreen() {
           >
             <ScrollView contentContainerStyle={{ padding: 20 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                <Text style={{ fontSize: 22, fontWeight: '700', color: themeColors.text }}>
+                <ThemedText type="h2" themeColor="text">
                   {editingGroup ? 'Editar grupo' : 'Nuevo grupo'}
-                </Text>
-                <TouchableOpacity onPress={() => setShowGroupModal(false)}>
+                </ThemedText>
+                <TouchableOpacity onPress={() => setShowGroupModal(false)} accessibilityLabel="Cerrar modal de grupo">
                   <Ionicons name="close" size={24} color={themeColors.text} />
                 </TouchableOpacity>
               </View>
 
               {/* Nombre */}
-              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 6 }}>
+              <ThemedText type="small" themeColor="textSecondary" style={{ fontWeight: '600', marginBottom: 6 }}>
                 Nombre del grupo
-              </Text>
+              </ThemedText>
               <TextInput
                 value={groupName}
                 onChangeText={setGroupName}
@@ -690,9 +692,9 @@ export default function CategoriesScreen() {
               />
 
               {/* Tipo */}
-              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 6 }}>
+              <ThemedText type="small" themeColor="textSecondary" style={{ fontWeight: '600', marginBottom: 6 }}>
                 Tipo
-              </Text>
+              </ThemedText>
               <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
                 {(['expense', 'income'] as const).map((t) => (
                   <TouchableOpacity
@@ -707,22 +709,19 @@ export default function CategoriesScreen() {
                       borderWidth: 1,
                       borderColor: groupType === t ? themeColors.primary : themeColors.border,
                     }}
+                    accessibilityLabel={`Tipo de grupo ${t === 'expense' ? 'gasto' : 'ingreso'}`}
                   >
-                    <Text style={{
-                      fontSize: 14,
-                      fontWeight: '600',
-                      color: groupType === t ? '#FFF' : themeColors.text,
-                    }}>
+                    <ThemedText type="button" color={groupType === t ? '#FFF' : themeColors.text}>
                       {t === 'expense' ? 'Gasto' : 'Ingreso'}
-                    </Text>
+                    </ThemedText>
                   </TouchableOpacity>
                 ))}
               </View>
 
               {/* Icono */}
-              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 6 }}>
+              <ThemedText type="small" themeColor="textSecondary" style={{ fontWeight: '600', marginBottom: 6 }}>
                 Icono
-              </Text>
+              </ThemedText>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
                 {GROUP_ICONS.map((ic, index) => (
                   <TouchableOpacity
@@ -735,16 +734,17 @@ export default function CategoriesScreen() {
                       borderWidth: 2,
                       borderColor: groupIcon === ic ? themeColors.primary : 'transparent',
                     }}
+                    accessibilityLabel={`Seleccionar icono de grupo ${ic}`}
                   >
-                    <Text style={{ fontSize: 22 }}>{ic}</Text>
+                    <ThemedText type="h3" themeColor="text">{ic}</ThemedText>
                   </TouchableOpacity>
                 ))}
               </View>
 
               {/* Color */}
-              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 6 }}>
+              <ThemedText type="small" themeColor="textSecondary" style={{ fontWeight: '600', marginBottom: 6 }}>
                 Color
-              </Text>
+              </ThemedText>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 32 }}>
                 {CATEGORY_COLORS.map((c, index) => (
                   <TouchableOpacity
@@ -762,6 +762,7 @@ export default function CategoriesScreen() {
                       shadowRadius: 4,
                       elevation: groupColor === c ? 4 : 0,
                     }}
+                    accessibilityLabel={`Seleccionar color de grupo`}
                   >
                     {groupColor === c && (
                       <Ionicons name="checkmark" size={18} color="#FFF" />
@@ -778,10 +779,11 @@ export default function CategoriesScreen() {
                   padding: 16,
                   alignItems: 'center',
                 }}
+                accessibilityLabel={editingGroup ? 'Guardar cambios de grupo' : 'Crear grupo'}
               >
-                <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 16 }}>
+                <ThemedText type="body" color="#FFF" style={{ fontWeight: '700' }}>
                   {editingGroup ? 'Guardar cambios' : 'Crear grupo'}
-                </Text>
+                </ThemedText>
               </TouchableOpacity>
             </ScrollView>
           </KeyboardAvoidingView>

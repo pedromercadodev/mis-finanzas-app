@@ -2,7 +2,6 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { getLocalDateString } from '../src/utils/date';
 import {
   View,
-  Text,
   TextInput,
   TouchableOpacity,
   FlatList,
@@ -37,6 +36,8 @@ import {
   type ChatHistoryMessage,
 } from '../src/services/chatHistory';
 import AnimatedScreen from '../src/components/AnimatedScreen';
+import ThemedText from '../src/components/ThemedText';
+import { shadows } from '../src/theme/shadows';
 import type { DeepSeekMessage, DeepSeekAction, TransactionAction, CreateAccountAction, UpdateAccountAction, TransferAction, CreateGoalAction, UpdateGoalProgressAction, DeleteGoalAction, CreateSubscriptionAction, UpdateSubscriptionAction, DeleteSubscriptionAction, SetBudgetAction, CreateDebtAction, PayDebtAction, DeleteDebtAction, UpdateTransactionAction, DeleteTransactionAction, DeleteAccountAction } from '../src/services/deepseek';
 import type { Category } from '../src/utils/types';
 
@@ -1110,7 +1111,7 @@ export default function AIChatScreen() {
           }}
         >
           {isUser ? (
-            <Text
+            <ThemedText
               style={{
                 fontSize: 15,
                 color: '#FFF',
@@ -1118,7 +1119,7 @@ export default function AIChatScreen() {
               }}
             >
               {item.content}
-            </Text>
+            </ThemedText>
           ) : (
             <Markdown style={mdStyle}>
               {item.content}
@@ -1134,19 +1135,19 @@ export default function AIChatScreen() {
                 borderRadius: 10,
                 padding: 12,
                 borderLeftWidth: 3,
-                borderLeftColor: item.action.type === 'expense' ? '#EF4444' : '#10B981',
+                borderLeftColor: item.action.type === 'expense' ? themeColors.danger : themeColors.success,
               }}
             >
-              <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
+              <ThemedText type="caption" themeColor="textSecondary" style={{ marginBottom: 4 }}>
                 {item.action.type === 'expense' ? '💸 GASTO' : '💰 INGRESO'}
-              </Text>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: themeColors.text }}>
+              </ThemedText>
+              <ThemedText type="h3" themeColor="text">
                 {item.action.currency === 'USD' ? '$' : 'Bs.'}
                 {item.action.amount}
-              </Text>
-              <Text style={{ fontSize: 13, color: themeColors.textSecondary, marginTop: 2 }}>
+              </ThemedText>
+              <ThemedText type="body" themeColor="textSecondary" style={{ marginTop: 2 }}>
                 {item.action.description}
-              </Text>
+              </ThemedText>
               <View
                 style={{
                   backgroundColor: themeColors.primaryLight + '40',
@@ -1157,9 +1158,9 @@ export default function AIChatScreen() {
                   marginTop: 6,
                 }}
               >
-                <Text style={{ fontSize: 11, color: themeColors.primary, fontWeight: '600' }}>
+                <ThemedText type="badge" themeColor="primary">
                   {item.action.category}
-                </Text>
+                </ThemedText>
               </View>
             </View>
           )}
@@ -1173,25 +1174,25 @@ export default function AIChatScreen() {
                 borderRadius: 10,
                 padding: 12,
                 borderLeftWidth: 3,
-                borderLeftColor: '#6366F1',
+                borderLeftColor: themeColors.primary,
               }}
             >
-              <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
+              <ThemedText type="caption" themeColor="textSecondary" style={{ marginBottom: 4 }}>
                 🏦 NUEVA CUENTA
-              </Text>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: themeColors.text }}>
+              </ThemedText>
+              <ThemedText type="h3" themeColor="text">
                 {item.action.name}
-              </Text>
-              <Text style={{ fontSize: 13, color: themeColors.textSecondary, marginTop: 2 }}>
+              </ThemedText>
+              <ThemedText type="body" themeColor="textSecondary" style={{ marginTop: 2 }}>
                 Tipo: {item.action.type === 'cash' ? 'Efectivo' : item.action.type === 'bank' ? 'Banco' : item.action.type === 'virtual_card' ? 'Tarjeta Virtual' : item.action.type === 'exchange' ? 'Exchange/Pago Móvil' : 'Otro'}
-              </Text>
-              <Text style={{ fontSize: 13, color: themeColors.textSecondary }}>
+              </ThemedText>
+              <ThemedText type="body" themeColor="textSecondary">
                 Moneda: {item.action.currency === 'BOTH' ? 'USD y BS' : item.action.currency}
-              </Text>
+              </ThemedText>
               {(item.action.initialBalanceUSD > 0 || item.action.initialBalanceBS > 0) && (
-                <Text style={{ fontSize: 13, color: themeColors.textSecondary }}>
+                <ThemedText type="body" themeColor="textSecondary">
                   Saldo inicial: {item.action.initialBalanceUSD > 0 ? `$${item.action.initialBalanceUSD} USD` : ''}{item.action.initialBalanceUSD > 0 && item.action.initialBalanceBS > 0 ? ' + ' : ''}{item.action.initialBalanceBS > 0 ? `Bs.${item.action.initialBalanceBS}` : ''}
-                </Text>
+                </ThemedText>
               )}
             </View>
           )}
@@ -1205,20 +1206,20 @@ export default function AIChatScreen() {
                 borderRadius: 10,
                 padding: 12,
                 borderLeftWidth: 3,
-                borderLeftColor: '#F59E0B',
+                borderLeftColor: themeColors.warning,
               }}
             >
-              <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
+              <ThemedText type="caption" themeColor="textSecondary" style={{ marginBottom: 4 }}>
                 ✏️ ACTUALIZAR CUENTA
-              </Text>
+              </ThemedText>
               {item.action.name && (
-                <Text style={{ fontSize: 14, color: themeColors.text }}>
-                  Nuevo nombre: <Text style={{ fontWeight: '700' }}>{item.action.name}</Text>
-                </Text>
+                <ThemedText type="body" themeColor="text">
+                  Nuevo nombre: <ThemedText style={{ fontWeight: '700' }}>{item.action.name}</ThemedText>
+                </ThemedText>
               )}
-              <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginTop: 4 }}>
+              <ThemedText type="caption" themeColor="textSecondary" style={{ marginTop: 4 }}>
                 Account ID: {item.action.accountId}
-              </Text>
+              </ThemedText>
             </View>
           )}
 
@@ -1231,24 +1232,24 @@ export default function AIChatScreen() {
                 borderRadius: 10,
                 padding: 12,
                 borderLeftWidth: 3,
-                borderLeftColor: '#F59E0B',
+                borderLeftColor: themeColors.warning,
               }}
             >
-              <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
+              <ThemedText type="caption" themeColor="textSecondary" style={{ marginBottom: 4 }}>
                 ✏️ ACTUALIZAR TRANSACCIÓN
-              </Text>
-              <Text style={{ fontSize: 13, color: themeColors.text }}>
-                ID: <Text style={{ fontWeight: '700' }}>{(item.action as any).transactionId}</Text>
-              </Text>
+              </ThemedText>
+              <ThemedText type="body" themeColor="text">
+                ID: <ThemedText style={{ fontWeight: '700' }}>{(item.action as any).transactionId}</ThemedText>
+              </ThemedText>
               {(item.action as any).description && (
-                <Text style={{ fontSize: 13, color: themeColors.textSecondary, marginTop: 2 }}>
+                <ThemedText type="body" themeColor="textSecondary" style={{ marginTop: 2 }}>
                   Nueva descripción: {(item.action as any).description}
-                </Text>
+                </ThemedText>
               )}
               {(item.action as any).amount !== undefined && (
-                <Text style={{ fontSize: 13, color: themeColors.textSecondary, marginTop: 2 }}>
+                <ThemedText type="body" themeColor="textSecondary" style={{ marginTop: 2 }}>
                   Nuevo monto: {(item.action as any).currency === 'USD' ? '$' : 'Bs.'}{(item.action as any).amount}
-                </Text>
+                </ThemedText>
               )}
             </View>
           )}
@@ -1262,15 +1263,15 @@ export default function AIChatScreen() {
                 borderRadius: 10,
                 padding: 12,
                 borderLeftWidth: 3,
-                borderLeftColor: '#EF4444',
+                borderLeftColor: themeColors.danger,
               }}
             >
-              <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
+              <ThemedText type="caption" themeColor="textSecondary" style={{ marginBottom: 4 }}>
                 🗑️ ELIMINAR TRANSACCIÓN
-              </Text>
-              <Text style={{ fontSize: 13, color: themeColors.text }}>
-                ID de transacción: <Text style={{ fontWeight: '700' }}>{(item.action as any).transactionId}</Text>
-              </Text>
+              </ThemedText>
+              <ThemedText type="body" themeColor="text">
+                ID de transacción: <ThemedText style={{ fontWeight: '700' }}>{(item.action as any).transactionId}</ThemedText>
+              </ThemedText>
             </View>
           )}
 
@@ -1283,15 +1284,15 @@ export default function AIChatScreen() {
                 borderRadius: 10,
                 padding: 12,
                 borderLeftWidth: 3,
-                borderLeftColor: '#EF4444',
+                borderLeftColor: themeColors.danger,
               }}
             >
-              <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
+              <ThemedText type="caption" themeColor="textSecondary" style={{ marginBottom: 4 }}>
                 🗑️ ELIMINAR CUENTA
-              </Text>
-              <Text style={{ fontSize: 13, color: themeColors.text }}>
-                Cuenta: <Text style={{ fontWeight: '700' }}>{(item.action as any).accountId}</Text>
-              </Text>
+              </ThemedText>
+              <ThemedText type="body" themeColor="text">
+                Cuenta: <ThemedText style={{ fontWeight: '700' }}>{(item.action as any).accountId}</ThemedText>
+              </ThemedText>
             </View>
           )}
 
@@ -1307,22 +1308,22 @@ export default function AIChatScreen() {
                 borderLeftColor: '#8B5CF6',
               }}
             >
-              <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
-                🔄 TRANSFERENCIA
-              </Text>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: themeColors.text }}>
+              <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
+                TRANSFERENCIA
+              </ThemedText>
+              <ThemedText style={{ fontSize: 16, fontWeight: '700', color: themeColors.text }}>
                 {(item.action as any).currency === 'USD' ? '$' : 'Bs.'}{(item.action as any).amount}
-              </Text>
-              <Text style={{ fontSize: 13, color: themeColors.textSecondary, marginTop: 2 }}>
-                De: <Text style={{ fontWeight: '600' }}>{(item.action as any).fromAccountId}</Text>
-              </Text>
-              <Text style={{ fontSize: 13, color: themeColors.textSecondary }}>
-                A: <Text style={{ fontWeight: '600' }}>{(item.action as any).toAccountId}</Text>
-              </Text>
+              </ThemedText>
+              <ThemedText style={{ fontSize: 13, color: themeColors.textSecondary, marginTop: 2 }}>
+                De: <ThemedText style={{ fontWeight: '600' }}>{(item.action as any).fromAccountId}</ThemedText>
+              </ThemedText>
+              <ThemedText style={{ fontSize: 13, color: themeColors.textSecondary }}>
+                A: <ThemedText style={{ fontWeight: '600' }}>{(item.action as any).toAccountId}</ThemedText>
+              </ThemedText>
               {(item.action as any).description && (
-                <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginTop: 2 }}>
+                <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary, marginTop: 2 }}>
                   {(item.action as any).description}
-                </Text>
+                </ThemedText>
               )}
             </View>
           )}
@@ -1336,22 +1337,22 @@ export default function AIChatScreen() {
                 borderRadius: 10,
                 padding: 12,
                 borderLeftWidth: 3,
-                borderLeftColor: '#10B981',
+                borderLeftColor: themeColors.success,
               }}
             >
-              <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
-                🎯 NUEVA META
-              </Text>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: themeColors.text }}>
+              <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
+                NUEVA META
+              </ThemedText>
+              <ThemedText style={{ fontSize: 16, fontWeight: '700', color: themeColors.text }}>
                 {(item.action as any).name}
-              </Text>
-              <Text style={{ fontSize: 14, color: themeColors.text, marginTop: 2 }}>
+              </ThemedText>
+              <ThemedText style={{ fontSize: 14, color: themeColors.text, marginTop: 2 }}>
                 Objetivo: {(item.action as any).currency === 'USD' ? '$' : 'Bs.'}{(item.action as any).targetAmount}
-              </Text>
+              </ThemedText>
               {(item.action as any).deadline && (
-                <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginTop: 2 }}>
+                <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary, marginTop: 2 }}>
                   Fecha límite: {(item.action as any).deadline}
-                </Text>
+                </ThemedText>
               )}
             </View>
           )}
@@ -1365,18 +1366,18 @@ export default function AIChatScreen() {
                 borderRadius: 10,
                 padding: 12,
                 borderLeftWidth: 3,
-                borderLeftColor: '#10B981',
+                borderLeftColor: themeColors.success,
               }}
             >
-              <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
-                📈 PROGRESO DE META
-              </Text>
-              <Text style={{ fontSize: 13, color: themeColors.text }}>
-                Meta ID: <Text style={{ fontWeight: '700' }}>{(item.action as any).goalId}</Text>
-              </Text>
-              <Text style={{ fontSize: 14, color: themeColors.text, marginTop: 2 }}>
-                Agregar: <Text style={{ fontWeight: '700' }}>{(item.action as any).amount}</Text>
-              </Text>
+              <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
+                PROGRESO DE META
+              </ThemedText>
+              <ThemedText style={{ fontSize: 13, color: themeColors.text }}>
+                Meta ID: <ThemedText style={{ fontWeight: '700' }}>{(item.action as any).goalId}</ThemedText>
+              </ThemedText>
+              <ThemedText style={{ fontSize: 14, color: themeColors.text, marginTop: 2 }}>
+                Agregar: <ThemedText style={{ fontWeight: '700' }}>{(item.action as any).amount}</ThemedText>
+              </ThemedText>
             </View>
           )}
 
@@ -1389,15 +1390,15 @@ export default function AIChatScreen() {
                 borderRadius: 10,
                 padding: 12,
                 borderLeftWidth: 3,
-                borderLeftColor: '#EF4444',
+                borderLeftColor: themeColors.danger,
               }}
             >
-              <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
-                🗑️ ELIMINAR META
-              </Text>
-              <Text style={{ fontSize: 13, color: themeColors.text }}>
-                Meta ID: <Text style={{ fontWeight: '700' }}>{(item.action as any).goalId}</Text>
-              </Text>
+              <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
+                ELIMINAR META
+              </ThemedText>
+              <ThemedText style={{ fontSize: 13, color: themeColors.text }}>
+                Meta ID: <ThemedText style={{ fontWeight: '700' }}>{(item.action as any).goalId}</ThemedText>
+              </ThemedText>
             </View>
           )}
 
@@ -1410,21 +1411,21 @@ export default function AIChatScreen() {
                 borderRadius: 10,
                 padding: 12,
                 borderLeftWidth: 3,
-                borderLeftColor: '#F59E0B',
+                borderLeftColor: themeColors.warning,
               }}
             >
-              <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
-                📅 NUEVA SUSCRIPCIÓN
-              </Text>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: themeColors.text }}>
+              <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
+                NUEVA SUSCRIPCIÓN
+              </ThemedText>
+              <ThemedText style={{ fontSize: 16, fontWeight: '700', color: themeColors.text }}>
                 {(item.action as any).name}
-              </Text>
-              <Text style={{ fontSize: 14, color: themeColors.text, marginTop: 2 }}>
+              </ThemedText>
+              <ThemedText style={{ fontSize: 14, color: themeColors.text, marginTop: 2 }}>
                 {(item.action as any).currency === 'USD' ? '$' : 'Bs.'}{(item.action as any).amount}
-              </Text>
-              <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginTop: 2 }}>
+              </ThemedText>
+              <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary, marginTop: 2 }}>
                 Frecuencia: {(item.action as any).frequency} · Categoría: {(item.action as any).category}
-              </Text>
+              </ThemedText>
             </View>
           )}
 
@@ -1437,24 +1438,24 @@ export default function AIChatScreen() {
                 borderRadius: 10,
                 padding: 12,
                 borderLeftWidth: 3,
-                borderLeftColor: '#F59E0B',
+                borderLeftColor: themeColors.warning,
               }}
             >
-              <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
-                ✏️ ACTUALIZAR SUSCRIPCIÓN
-              </Text>
-              <Text style={{ fontSize: 13, color: themeColors.text }}>
-                ID: <Text style={{ fontWeight: '700' }}>{(item.action as any).subscriptionId}</Text>
-              </Text>
+              <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
+                ACTUALIZAR SUSCRIPCIÓN
+              </ThemedText>
+              <ThemedText style={{ fontSize: 13, color: themeColors.text }}>
+                ID: <ThemedText style={{ fontWeight: '700' }}>{(item.action as any).subscriptionId}</ThemedText>
+              </ThemedText>
               {(item.action as any).name && (
-                <Text style={{ fontSize: 13, color: themeColors.textSecondary, marginTop: 2 }}>
+                <ThemedText style={{ fontSize: 13, color: themeColors.textSecondary, marginTop: 2 }}>
                   Nuevo nombre: {(item.action as any).name}
-                </Text>
+                </ThemedText>
               )}
               {(item.action as any).amount !== undefined && (
-                <Text style={{ fontSize: 13, color: themeColors.textSecondary, marginTop: 2 }}>
+                <ThemedText style={{ fontSize: 13, color: themeColors.textSecondary, marginTop: 2 }}>
                   Nuevo monto: {(item.action as any).currency === 'USD' ? '$' : 'Bs.'}{(item.action as any).amount}
-                </Text>
+                </ThemedText>
               )}
             </View>
           )}
@@ -1468,15 +1469,15 @@ export default function AIChatScreen() {
                 borderRadius: 10,
                 padding: 12,
                 borderLeftWidth: 3,
-                borderLeftColor: '#EF4444',
+                borderLeftColor: themeColors.danger,
               }}
             >
-              <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
-                🗑️ ELIMINAR SUSCRIPCIÓN
-              </Text>
-              <Text style={{ fontSize: 13, color: themeColors.text }}>
-                Suscripción ID: <Text style={{ fontWeight: '700' }}>{(item.action as any).subscriptionId}</Text>
-              </Text>
+              <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
+                ELIMINAR SUSCRIPCIÓN
+              </ThemedText>
+              <ThemedText style={{ fontSize: 13, color: themeColors.text }}>
+                Suscripción ID: <ThemedText style={{ fontWeight: '700' }}>{(item.action as any).subscriptionId}</ThemedText>
+              </ThemedText>
             </View>
           )}
 
@@ -1492,23 +1493,23 @@ export default function AIChatScreen() {
                 borderLeftColor: '#3B82F6',
               }}
             >
-              <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
-                📊 ASIGNAR PRESUPUESTO
-              </Text>
-              <Text style={{ fontSize: 14, color: themeColors.text }}>
-                Categoría: <Text style={{ fontWeight: '700' }}>{(item.action as any).category}</Text>
-              </Text>
-              <Text style={{ fontSize: 14, color: themeColors.text, marginTop: 2 }}>
+              <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
+                ASIGNAR PRESUPUESTO
+              </ThemedText>
+              <ThemedText style={{ fontSize: 14, color: themeColors.text }}>
+                Categoría: <ThemedText style={{ fontWeight: '700' }}>{(item.action as any).category}</ThemedText>
+              </ThemedText>
+              <ThemedText style={{ fontSize: 14, color: themeColors.text, marginTop: 2 }}>
                 ${(item.action as any).amountUSD} USD
-              </Text>
+              </ThemedText>
               {(item.action as any).amountBS > 0 && (
-                <Text style={{ fontSize: 14, color: themeColors.text }}>
+                <ThemedText style={{ fontSize: 14, color: themeColors.text }}>
                   Bs.{(item.action as any).amountBS}
-                </Text>
+                </ThemedText>
               )}
-              <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginTop: 2 }}>
+              <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary, marginTop: 2 }}>
                 Mes: {(item.action as any).month}
-              </Text>
+              </ThemedText>
             </View>
           )}
 
@@ -1521,27 +1522,27 @@ export default function AIChatScreen() {
                 borderRadius: 10,
                 padding: 12,
                 borderLeftWidth: 3,
-                borderLeftColor: '#EF4444',
+                borderLeftColor: themeColors.danger,
               }}
             >
-              <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
-                {(item.action as any).type === 'lent' ? '💸 PRÉSTAMO (TÚ PRESTASTE)' : '💳 DEUDA (TÚ DEBES)'}
-              </Text>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: themeColors.text }}>
+              <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
+                {(item.action as any).type === 'lent' ? 'PRÉSTAMO (TÚ PRESTASTE)' : 'DEUDA (TÚ DEBES)'}
+              </ThemedText>
+              <ThemedText style={{ fontSize: 16, fontWeight: '700', color: themeColors.text }}>
                 {(item.action as any).currency === 'USD' ? '$' : 'Bs.'}{(item.action as any).amount}
-              </Text>
-              <Text style={{ fontSize: 14, color: themeColors.text, marginTop: 2 }}>
-                Con: <Text style={{ fontWeight: '600' }}>{(item.action as any).personName}</Text>
-              </Text>
+              </ThemedText>
+              <ThemedText style={{ fontSize: 14, color: themeColors.text, marginTop: 2 }}>
+                Con: <ThemedText style={{ fontWeight: '600' }}>{(item.action as any).personName}</ThemedText>
+              </ThemedText>
               {(item.action as any).description && (
-                <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginTop: 2 }}>
+                <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary, marginTop: 2 }}>
                   {(item.action as any).description}
-                </Text>
+                </ThemedText>
               )}
               {(item.action as any).dueDate && (
-                <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginTop: 2 }}>
+                <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary, marginTop: 2 }}>
                   Vence: {(item.action as any).dueDate}
-                </Text>
+                </ThemedText>
               )}
             </View>
           )}
@@ -1555,18 +1556,18 @@ export default function AIChatScreen() {
                 borderRadius: 10,
                 padding: 12,
                 borderLeftWidth: 3,
-                borderLeftColor: '#10B981',
+                borderLeftColor: themeColors.success,
               }}
             >
-              <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
-                💰 PAGAR DEUDA
-              </Text>
-              <Text style={{ fontSize: 13, color: themeColors.text }}>
-                Deuda ID: <Text style={{ fontWeight: '700' }}>{(item.action as any).debtId}</Text>
-              </Text>
-              <Text style={{ fontSize: 14, color: themeColors.text, marginTop: 2 }}>
+              <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
+                PAGAR DEUDA
+              </ThemedText>
+              <ThemedText style={{ fontSize: 13, color: themeColors.text }}>
+                Deuda ID: <ThemedText style={{ fontWeight: '700' }}>{(item.action as any).debtId}</ThemedText>
+              </ThemedText>
+              <ThemedText style={{ fontSize: 14, color: themeColors.text, marginTop: 2 }}>
                 Monto: {(item.action as any).currency === 'USD' ? '$' : 'Bs.'}{(item.action as any).amount}
-              </Text>
+              </ThemedText>
             </View>
           )}
 
@@ -1579,15 +1580,15 @@ export default function AIChatScreen() {
                 borderRadius: 10,
                 padding: 12,
                 borderLeftWidth: 3,
-                borderLeftColor: '#EF4444',
+                borderLeftColor: themeColors.danger,
               }}
             >
-              <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
-                🗑️ ELIMINAR DEUDA
-              </Text>
-              <Text style={{ fontSize: 13, color: themeColors.text }}>
-                Deuda ID: <Text style={{ fontWeight: '700' }}>{(item.action as any).debtId}</Text>
-              </Text>
+              <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
+                ELIMINAR DEUDA
+              </ThemedText>
+              <ThemedText style={{ fontSize: 13, color: themeColors.text }}>
+                Deuda ID: <ThemedText style={{ fontWeight: '700' }}>{(item.action as any).debtId}</ThemedText>
+              </ThemedText>
             </View>
           )}
         </View>
@@ -1604,6 +1605,7 @@ export default function AIChatScreen() {
             <TouchableOpacity
               onPress={() => confirmAction(item)}
               disabled={isLoading}
+              accessibilityLabel="Confirmar acción"
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -1616,18 +1618,19 @@ export default function AIChatScreen() {
               }}
             >
               <Ionicons name="checkmark-circle" size={18} color="#FFF" />
-              <Text style={{ color: '#FFF', fontWeight: '600', fontSize: 14 }}>
+              <ThemedText style={{ color: '#FFF', fontWeight: '600', fontSize: 14 }}>
                 Confirmar
-              </Text>
+              </ThemedText>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => cancelAction(item)}
               disabled={isLoading}
+              accessibilityLabel="Cancelar acción"
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: 4,
-                backgroundColor: '#EF4444',
+                backgroundColor: themeColors.danger,
                 borderRadius: 10,
                 paddingHorizontal: 16,
                 paddingVertical: 8,
@@ -1635,9 +1638,9 @@ export default function AIChatScreen() {
               }}
             >
               <Ionicons name="close-circle" size={18} color="#FFF" />
-              <Text style={{ color: '#FFF', fontWeight: '600', fontSize: 14 }}>
+              <ThemedText style={{ color: '#FFF', fontWeight: '600', fontSize: 14 }}>
                 Cancelar
-              </Text>
+              </ThemedText>
             </TouchableOpacity>
           </View>
         )}
@@ -1653,9 +1656,9 @@ export default function AIChatScreen() {
             }}
           >
             <Ionicons name="checkmark-circle" size={14} color={themeColors.success} />
-            <Text style={{ fontSize: 12, color: themeColors.success }}>
-              Operación completada ✅
-            </Text>
+            <ThemedText style={{ fontSize: 12, color: themeColors.success }}>
+              Operación completada
+            </ThemedText>
           </View>
         )}
 
@@ -1669,10 +1672,10 @@ export default function AIChatScreen() {
               marginTop: 4,
             }}
           >
-            <Ionicons name="close-circle" size={14} color="#EF4444" />
-            <Text style={{ fontSize: 12, color: '#EF4444' }}>
+            <Ionicons name="close-circle" size={14} color={themeColors.danger} />
+            <ThemedText style={{ fontSize: 12, color: themeColors.danger }}>
               Cancelado
-            </Text>
+            </ThemedText>
           </View>
         )}
       </View>
@@ -1699,20 +1702,20 @@ export default function AIChatScreen() {
             borderBottomColor: themeColors.border,
           }}
         >
-          <TouchableOpacity onPress={() => router.back()}>
+          <TouchableOpacity onPress={() => router.back()} accessibilityLabel="Cerrar asistente">
             <Ionicons name="close" size={24} color={themeColors.text} />
           </TouchableOpacity>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Ionicons name="sparkles" size={20} color={themeColors.primary} />
-            <Text style={{ fontSize: 17, fontWeight: '600', color: themeColors.text }}>
+            <ThemedText style={{ fontSize: 17, fontWeight: '600', color: themeColors.text }}>
               Asistente IA
-            </Text>
+            </ThemedText>
           </View>
           <View style={{ flexDirection: 'row', gap: 12 }}>
-            <TouchableOpacity onPress={openHistory}>
+            <TouchableOpacity onPress={openHistory} accessibilityLabel="Ver historial">
               <Ionicons name="time-outline" size={22} color={themeColors.textSecondary} />
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/settings')}>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/settings')} accessibilityLabel="Ir a ajustes">
               <Ionicons name="settings-outline" size={22} color={themeColors.textSecondary} />
             </TouchableOpacity>
           </View>
@@ -1744,9 +1747,9 @@ export default function AIChatScreen() {
             }}
           >
             <ActivityIndicator size="small" color={themeColors.primary} />
-            <Text style={{ fontSize: 13, color: themeColors.textSecondary }}>
+            <ThemedText style={{ fontSize: 13, color: themeColors.textSecondary }}>
               {thinkingStep || 'Pensando...'}
-            </Text>
+            </ThemedText>
           </View>
         )}
 
@@ -1763,9 +1766,9 @@ export default function AIChatScreen() {
             }}
           >
             <ActivityIndicator size="small" color={themeColors.primary} />
-            <Text style={{ fontSize: 13, color: themeColors.primary, fontWeight: '600' }}>
+            <ThemedText style={{ fontSize: 13, color: themeColors.primary, fontWeight: '600' }}>
               Escuchando...
-            </Text>
+            </ThemedText>
           </View>
         )}
 
@@ -1786,11 +1789,12 @@ export default function AIChatScreen() {
           <TouchableOpacity
             onPress={startListening}
             disabled={isListening}
+            accessibilityLabel={isListening ? 'Detener grabación' : 'Iniciar grabación de voz'}
             style={{
               width: 40,
               height: 40,
               borderRadius: 20,
-              backgroundColor: isListening ? '#EF4444' : themeColors.surface,
+              backgroundColor: isListening ? themeColors.danger : themeColors.surface,
               justifyContent: 'center',
               alignItems: 'center',
             }}
@@ -1830,6 +1834,7 @@ export default function AIChatScreen() {
           <TouchableOpacity
             onPress={() => sendMessage(inputText)}
             disabled={!inputText.trim() || isLoading}
+            accessibilityLabel="Enviar mensaje"
             style={{
               width: 40,
               height: 40,
@@ -1885,14 +1890,14 @@ export default function AIChatScreen() {
                 borderBottomColor: themeColors.border,
               }}
             >
-              <Text style={{ fontSize: 17, fontWeight: '600', color: themeColors.text }}>
-                📋 Historial
-              </Text>
+              <ThemedText style={{ fontSize: 17, fontWeight: '600', color: themeColors.text }}>
+                Historial
+              </ThemedText>
               <View style={{ flexDirection: 'row', gap: 12 }}>
-                <TouchableOpacity onPress={handleClearHistory}>
-                  <Ionicons name="trash-outline" size={20} color="#EF4444" />
+                <TouchableOpacity onPress={handleClearHistory} accessibilityLabel="Limpiar historial">
+                  <Ionicons name="trash-outline" size={20} color={themeColors.danger} />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => setShowHistory(false)}>
+                <TouchableOpacity onPress={() => setShowHistory(false)} accessibilityLabel="Cerrar historial">
                   <Ionicons name="close" size={22} color={themeColors.text} />
                 </TouchableOpacity>
               </View>
@@ -1902,9 +1907,9 @@ export default function AIChatScreen() {
             {chatSessions.length === 0 ? (
               <View style={{ padding: 40, alignItems: 'center' }}>
                 <Ionicons name="chatbubbles-outline" size={40} color={themeColors.textSecondary} />
-                <Text style={{ fontSize: 15, color: themeColors.textSecondary, marginTop: 12, textAlign: 'center' }}>
+                <ThemedText style={{ fontSize: 15, color: themeColors.textSecondary, marginTop: 12, textAlign: 'center' }}>
                   No hay conversaciones guardadas aún.
-                </Text>
+                </ThemedText>
               </View>
             ) : (
               <ScrollView style={{ paddingHorizontal: 16, paddingTop: 8 }}>
@@ -1912,6 +1917,7 @@ export default function AIChatScreen() {
                   <TouchableOpacity
                     key={session.id}
                     onPress={() => loadSession(session.id)}
+                    accessibilityLabel={`Cargar conversación: ${session.preview}`}
                     style={{
                       flexDirection: 'row',
                       alignItems: 'center',
@@ -1934,7 +1940,7 @@ export default function AIChatScreen() {
                       <Ionicons name="chatbubble-ellipses" size={20} color={themeColors.primary} />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text
+                      <ThemedText
                         style={{
                           fontSize: 14,
                           fontWeight: '500',
@@ -1943,10 +1949,10 @@ export default function AIChatScreen() {
                         numberOfLines={1}
                       >
                         {session.preview}
-                      </Text>
-                      <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginTop: 2 }}>
+                      </ThemedText>
+                      <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary, marginTop: 2 }}>
                         {session.date} · {session.count} mensajes
-                      </Text>
+                      </ThemedText>
                     </View>
                     <Ionicons name="chevron-forward" size={18} color={themeColors.textSecondary} />
                   </TouchableOpacity>
@@ -1975,14 +1981,10 @@ export default function AIChatScreen() {
               width: '100%',
               maxWidth: 380,
               padding: 24,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.15,
-              shadowRadius: 12,
-              elevation: 8,
+              ...shadows.lg,
             }}
           >
-            <Text
+            <ThemedText
               style={{
                 fontSize: 20,
                 fontWeight: '700',
@@ -1991,9 +1993,9 @@ export default function AIChatScreen() {
                 textAlign: 'center',
               }}
             >
-              💳 Seleccionar cuenta
-            </Text>
-            <Text
+              Seleccionar cuenta
+            </ThemedText>
+            <ThemedText
               style={{
                 fontSize: 14,
                 color: themeColors.textSecondary,
@@ -2002,7 +2004,7 @@ export default function AIChatScreen() {
               }}
             >
               ¿En qué cuenta deseas registrar esta transacción?
-            </Text>
+            </ThemedText>
 
             <ScrollView style={{ maxHeight: 300 }}>
               {accounts.map((account) => (
@@ -2014,6 +2016,7 @@ export default function AIChatScreen() {
                     setPendingAction(null);
                     setPendingAccountCallback(null);
                   }}
+                  accessibilityLabel={`Seleccionar cuenta: ${account.name}`}
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
@@ -2035,12 +2038,14 @@ export default function AIChatScreen() {
                       marginRight: 12,
                     }}
                   >
-                    <Text style={{ fontSize: 18 }}>
-                      {account.type === 'cash' ? '💵' : account.type === 'bank' ? '🏦' : '💳'}
-                    </Text>
+                    <Ionicons
+                      name={account.type === 'cash' ? 'cash-outline' : account.type === 'bank' ? 'business-outline' : 'card-outline'}
+                      size={20}
+                      color={themeColors.primary}
+                    />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text
+                    <ThemedText
                       style={{
                         fontSize: 16,
                         fontWeight: '600',
@@ -2048,21 +2053,21 @@ export default function AIChatScreen() {
                       }}
                     >
                       {account.name}
-                    </Text>
-                    <Text style={{ fontSize: 13, color: themeColors.textSecondary, marginTop: 2 }}>
+                    </ThemedText>
+                    <ThemedText style={{ fontSize: 13, color: themeColors.textSecondary, marginTop: 2 }}>
                       {account.type === 'cash' ? 'Efectivo' : account.type === 'bank' ? 'Banco' : 'Crédito'}
-                    </Text>
+                    </ThemedText>
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
                     {account.initialBalanceUSD != null && (
-                      <Text style={{ fontSize: 14, fontWeight: '600', color: themeColors.text }}>
+                      <ThemedText style={{ fontSize: 14, fontWeight: '600', color: themeColors.text }}>
                         ${account.initialBalanceUSD.toFixed(2)}
-                      </Text>
+                      </ThemedText>
                     )}
                     {account.initialBalanceBS != null && (
-                      <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>
+                      <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary }}>
                         Bs. {account.initialBalanceBS.toFixed(2)}
-                      </Text>
+                      </ThemedText>
                     )}
                   </View>
                 </TouchableOpacity>
@@ -2078,6 +2083,7 @@ export default function AIChatScreen() {
                 setPendingAction(null);
                 setPendingAccountCallback(null);
               }}
+              accessibilityLabel="Cancelar selección de cuenta"
               style={{
                 marginTop: 12,
                 paddingVertical: 14,
@@ -2086,9 +2092,9 @@ export default function AIChatScreen() {
                 alignItems: 'center',
               }}
             >
-              <Text style={{ fontSize: 16, fontWeight: '500', color: '#EF4444' }}>
+              <ThemedText style={{ fontSize: 16, fontWeight: '500', color: themeColors.danger }}>
                 Cancelar
-              </Text>
+              </ThemedText>
             </TouchableOpacity>
           </View>
         </View>

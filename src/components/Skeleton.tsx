@@ -8,6 +8,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { useThemeColors } from '../hooks/useThemeColors';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 
 interface SkeletonProps {
   width?: number | string;
@@ -17,6 +18,14 @@ interface SkeletonProps {
   style?: any;
 }
 
+/**
+ * Skeleton — shimmer de carga con animación optimizada.
+ *
+ * Principios aplicados:
+ * - Emil §4: timing reducido (800ms vs 1000ms) para sensación más rápida
+ * - Apple §5: easing inOut personalizado para shimmer fluido
+ * - Apple §16: reduced motion — opacidad estática sin parpadeo
+ */
 export default function Skeleton({
   width = '100%',
   height = 20,
@@ -25,18 +34,21 @@ export default function Skeleton({
   style,
 }: SkeletonProps) {
   const themeColors = useThemeColors();
-  const opacity = useSharedValue(0.3);
+  const reducedMotion = useReducedMotion();
+  const opacity = useSharedValue(reducedMotion ? 0.4 : 0.3);
 
   useEffect(() => {
+    if (reducedMotion) return;
+
     opacity.value = withRepeat(
-      withTiming(0.7, {
-        duration: 1000,
+      withTiming(0.6, {
+        duration: 800,
         easing: Easing.inOut(Easing.ease),
       }),
       -1,
       true
     );
-  }, []);
+  }, [reducedMotion]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,

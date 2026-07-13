@@ -14,8 +14,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
-import { colors } from '../../src/theme/colors';
 import { useThemeColors } from '../../src/hooks/useThemeColors';
+import ThemedText from '../../src/components/ThemedText';
+import { shadows } from '../../src/theme/shadows';
 import { getGoals, createGoal, deleteGoal, markGoalCelebrated, updateGoalProgress } from '../../src/services/goals';
 import { getItemsByGoalId, createItem, deleteItem, toggleItemCompleted, recalculateGoalProgress } from '../../src/services/goalItems';
 import { formatUSD, formatBS } from '../../src/utils/format';
@@ -75,9 +76,9 @@ export default function GoalsScreen() {
 
   const getToastBgColor = () => {
     switch (toastType) {
-      case 'success': return '#10B981';
-      case 'info': return '#6366F1';
-      case 'error': return '#EF4444';
+      case 'success': return themeColors.success;
+      case 'info': return themeColors.primary;
+      case 'error': return themeColors.danger;
       default: return themeColors.text;
     }
   };
@@ -308,11 +309,12 @@ export default function GoalsScreen() {
         contentContainerStyle={{ padding: 20, paddingBottom: 100 }}
       >
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <Text style={{ fontSize: 28, fontWeight: '700', color: themeColors.text }}>
+          <ThemedText type="h1" themeColor="text">
             Metas
-          </Text>
+          </ThemedText>
           <TouchableOpacity
             onPress={() => setShowModal(true)}
+            accessibilityLabel="Crear nueva meta"
             style={{
               backgroundColor: themeColors.primary,
               borderRadius: 12,
@@ -324,7 +326,7 @@ export default function GoalsScreen() {
             }}
           >
             <Ionicons name="add" size={18} color="#FFF" />
-            <Text style={{ color: '#FFF', fontWeight: '600', fontSize: 14 }}>Nueva</Text>
+            <ThemedText style={{ color: '#FFF' }} type="button">Nueva</ThemedText>
           </TouchableOpacity>
         </View>
 
@@ -344,17 +346,14 @@ export default function GoalsScreen() {
               <TouchableOpacity
                 onPress={() => toggleExpand(goal.id)}
                 onLongPress={() => handleDelete(goal.id, goal.name)}
+                accessibilityLabel={`Meta: ${goal.name}, ${Math.round(progress)}% completada`}
                 style={{
                   backgroundColor: themeColors.surface,
                   borderRadius: 20,
                   padding: 20,
                   flexDirection: 'row',
                   alignItems: 'center',
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.06,
-                  shadowRadius: 8,
-                  elevation: 3,
+                  ...shadows.md,
                 }}
               >
                 <View style={{ width: 90, height: 90, justifyContent: 'center', alignItems: 'center', marginRight: 16 }}>
@@ -403,54 +402,59 @@ export default function GoalsScreen() {
                       borderColor: themeColors.primary, position: 'absolute',
                     }} />
                   )}
-                  <Text style={{ fontSize: 18, fontWeight: '700', color: themeColors.primary }}>
+                  <ThemedText type="h3" themeColor="primary">
                     {Math.round(progress)}%
-                  </Text>
+                  </ThemedText>
                 </View>
                 <View style={{ flex: 1, flexShrink: 1 }}>
-                  <Text
-                    style={{ fontSize: 16, fontWeight: '600', color: themeColors.text, marginBottom: 4 }}
+                  <ThemedText
+                    type="body"
+                    themeColor="text"
+                    style={{ marginBottom: 4 }}
                     numberOfLines={1}
                     ellipsizeMode="tail"
                   >
                     {goal.name}
-                  </Text>
-                  <Text style={{ fontSize: 14, color: themeColors.textSecondary }}>
+                  </ThemedText>
+                  <ThemedText type="body" themeColor="textSecondary">
                     {goal.currency === 'USD' ? formatUSD(goal.currentAmount) : formatBS(goal.currentAmount)}
                     {' / '}
                     {goal.currency === 'USD' ? formatUSD(goal.targetAmount) : formatBS(goal.targetAmount)}
-                  </Text>
+                  </ThemedText>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
                     {periodLabel && (
-                      <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>
+                      <ThemedText type="caption" themeColor="textSecondary">
                         {periodLabel}
-                      </Text>
+                      </ThemedText>
                     )}
                     {goal.deadline && (
-                      <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>
-                        🗓️ {goal.deadline}
-                      </Text>
+                      <ThemedText type="caption" themeColor="textSecondary">
+                        {goal.deadline}
+                      </ThemedText>
                     )}
                   </View>
                   {goal.items.length > 0 && (
-                    <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginTop: 4 }}>
-                      📋 {completedItems}/{goal.items.length} ítems
-                    </Text>
+                    <ThemedText type="caption" themeColor="textSecondary" style={{ marginTop: 4 }}>
+                      {completedItems}/{goal.items.length} ítems
+                    </ThemedText>
                   )}
                 </View>
                 <View style={{ alignItems: 'flex-end', gap: 6 }}>
                   <TouchableOpacity
                     onPress={(e) => { e.stopPropagation?.(); openDepositModal(goal.id); }}
+                    accessibilityLabel={`Abonar a meta ${goal.name}`}
                     style={{
                       backgroundColor: '#10B981',
                       borderRadius: 8,
-                      paddingHorizontal: 10,
-                      paddingVertical: 4,
+                      paddingHorizontal: 12,
+                      paddingVertical: 10,
+                      minHeight: 44,
+                      justifyContent: 'center',
                     }}
                   >
-                    <Text style={{ color: '#FFF', fontSize: 11, fontWeight: '600' }}>
+                    <ThemedText style={{ color: '#FFF' }} type="badge">
                       Abonar
-                    </Text>
+                    </ThemedText>
                   </TouchableOpacity>
                   <Ionicons
                     name={isExpanded ? 'chevron-up' : 'chevron-down'}
@@ -473,9 +477,9 @@ export default function GoalsScreen() {
                   borderTopRightRadius: 0,
                 }}>
                   {goal.items.length === 0 && (
-                    <Text style={{ fontSize: 13, color: themeColors.textSecondary, textAlign: 'center', marginBottom: 12 }}>
+                    <ThemedText type="body" themeColor="textSecondary" style={{ textAlign: 'center', marginBottom: 12 }}>
                       Sin sub-ítems aún. ¡Agrega los componentes de tu meta!
-                    </Text>
+                    </ThemedText>
                   )}
                   {goal.items.map((item) => {
                     const itemProgress = item.targetAmount > 0
@@ -486,6 +490,7 @@ export default function GoalsScreen() {
                         key={item.id}
                         onPress={() => handleToggleItem(item)}
                         onLongPress={() => handleDeleteItem(item)}
+                        accessibilityLabel={`Ítem: ${item.name}, ${itemProgress}% completado. Presiona para marcar como ${item.isCompleted ? 'pendiente' : 'completado'}`}
                         style={{
                           flexDirection: 'row',
                           alignItems: 'center',
@@ -505,24 +510,26 @@ export default function GoalsScreen() {
                           )}
                         </View>
                         <View style={{ flex: 1 }}>
-                          <Text style={{
-                            fontSize: 14, fontWeight: '500', color: themeColors.text,
-                            textDecorationLine: item.isCompleted === 1 ? 'line-through' : 'none',
-                          }}>
+                          <ThemedText
+                            type="body"
+                            themeColor="text"
+                            style={{ textDecorationLine: item.isCompleted === 1 ? 'line-through' : 'none' }}
+                          >
                             {item.name}
-                          </Text>
-                          <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>
+                          </ThemedText>
+                          <ThemedText type="caption" themeColor="textSecondary">
                             {goal.currency === 'USD' ? formatUSD(item.currentAmount) : formatBS(item.currentAmount)}
                             {' / '}
                             {goal.currency === 'USD' ? formatUSD(item.targetAmount) : formatBS(item.targetAmount)}
                             {'  ·  '}{itemProgress}%
-                          </Text>
+                          </ThemedText>
                         </View>
                       </TouchableOpacity>
                     );
                   })}
                   <TouchableOpacity
                     onPress={() => openNewItemModal(goal.id)}
+                    accessibilityLabel={`Agregar ítem a meta ${goal.name}`}
                     style={{
                       flexDirection: 'row',
                       alignItems: 'center',
@@ -533,9 +540,9 @@ export default function GoalsScreen() {
                     }}
                   >
                     <Ionicons name="add-circle-outline" size={18} color={themeColors.primary} />
-                    <Text style={{ fontSize: 14, color: themeColors.primary, fontWeight: '500' }}>
+                    <ThemedText type="body" themeColor="primary">
                       Agregar ítem
-                    </Text>
+                    </ThemedText>
                   </TouchableOpacity>
                 </View>
               )}
@@ -546,9 +553,9 @@ export default function GoalsScreen() {
         {goals.length === 0 && (
           <View style={{ alignItems: 'center', marginTop: 60 }}>
             <Text style={{ fontSize: 48, marginBottom: 16 }}>🎯</Text>
-            <Text style={{ fontSize: 16, color: themeColors.textSecondary, textAlign: 'center' }}>
+            <ThemedText type="body" themeColor="textSecondary" style={{ textAlign: 'center' }}>
               No tienes metas aún.{'\n'}¡Crea tu primera meta de ahorro!
-            </Text>
+            </ThemedText>
           </View>
         )}
       </ScrollView>
@@ -564,15 +571,11 @@ export default function GoalsScreen() {
           borderRadius: 14,
           padding: 16,
           alignItems: 'center',
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.2,
-          shadowRadius: 8,
-          elevation: 8,
+          ...shadows.lg,
         }}>
-          <Text style={{ color: '#FFF', fontSize: 15, fontWeight: '600', textAlign: 'center' }}>
+          <ThemedText style={{ color: '#FFF' }} type="button">
             {toastMessage}
-          </Text>
+          </ThemedText>
         </View>
       )}
 
@@ -587,30 +590,31 @@ export default function GoalsScreen() {
             padding: 32, alignItems: 'center', width: '100%', maxWidth: 320,
           }}>
             <Text style={{ fontSize: 56, marginBottom: 16 }}>🎉🎊🎉</Text>
-            <Text style={{ fontSize: 22, fontWeight: '700', color: themeColors.text, marginBottom: 8 }}>
+            <ThemedText type="h2" themeColor="text" style={{ marginBottom: 8 }}>
               ¡Meta Completada!
-            </Text>
-            <Text style={{ fontSize: 18, fontWeight: '600', color: themeColors.primary, marginBottom: 12 }}>
+            </ThemedText>
+            <ThemedText type="h3" themeColor="primary" style={{ marginBottom: 12 }}>
               "{celebrationGoal?.name}"
-            </Text>
-            <Text style={{ fontSize: 14, color: themeColors.textSecondary, textAlign: 'center', marginBottom: 24 }}>
+            </ThemedText>
+            <ThemedText type="body" themeColor="textSecondary" style={{ textAlign: 'center', marginBottom: 24 }}>
               Has alcanzado tu meta de {'\n'}
               {celebrationGoal?.currency === 'USD'
                 ? formatUSD(celebrationGoal?.targetAmount ?? 0)
                 : formatBS(celebrationGoal?.targetAmount ?? 0)}
               {' '}en ahorros.
               {'\n'}¡Eres increíble, nunca dejes de soñar!
-            </Text>
+            </ThemedText>
             <TouchableOpacity
               onPress={handleCelebrate}
+              accessibilityLabel="Celebrar meta completada"
               style={{
                 backgroundColor: '#F59E0B',
                 borderRadius: 14, paddingHorizontal: 32, paddingVertical: 14,
               }}
             >
-              <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '700' }}>
-                🎉 Celebrar!
-              </Text>
+              <ThemedText style={{ color: '#FFF' }} type="button">
+                Celebrar!
+              </ThemedText>
             </TouchableOpacity>
           </View>
         </View>
@@ -625,17 +629,17 @@ export default function GoalsScreen() {
           >
             <ScrollView contentContainerStyle={{ padding: 20 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                <Text style={{ fontSize: 24, fontWeight: '700', color: themeColors.text }}>
+                <ThemedText type="h2" themeColor="text">
                   Nueva Meta
-                </Text>
-                <TouchableOpacity onPress={() => setShowModal(false)}>
+                </ThemedText>
+                <TouchableOpacity onPress={() => setShowModal(false)} accessibilityLabel="Cerrar modal de nueva meta">
                   <Ionicons name="close" size={24} color={themeColors.textSecondary} />
                 </TouchableOpacity>
               </View>
 
-              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+              <ThemedText type="caption" themeColor="textSecondary" style={{ marginBottom: 8 }}>
                 Nombre de la meta
-              </Text>
+              </ThemedText>
               <TextInput
                 value={name}
                 onChangeText={setName}
@@ -644,70 +648,75 @@ export default function GoalsScreen() {
                 style={{
                   backgroundColor: themeColors.surface, borderRadius: 12, padding: 14,
                   fontSize: 15, color: themeColors.text, marginBottom: 16,
-                  borderWidth: 1, borderColor: themeColors.border,
+                  ...shadows.sm,
                 }}
               />
 
-              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+              <ThemedText type="caption" themeColor="textSecondary" style={{ marginBottom: 8 }}>
                 Moneda
-              </Text>
+              </ThemedText>
               <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
                 {(['USD', 'BS'] as const).map((cur) => (
                   <TouchableOpacity
                     key={cur}
                     onPress={() => setCurrency(cur)}
+                    accessibilityLabel={`Seleccionar moneda ${cur === 'USD' ? 'USD' : 'Bolívares'}`}
                     style={{
                       flex: 1, paddingVertical: 12, borderRadius: 10,
                       backgroundColor: currency === cur ? themeColors.primary : themeColors.surface,
                       alignItems: 'center',
+                      ...(currency === cur ? shadows.primary : shadows.sm),
                     }}
                   >
-                    <Text style={{
-                      color: currency === cur ? '#FFF' : themeColors.text, fontWeight: '600',
-                    }}>
+                    <ThemedText
+                      type="button"
+                      color={currency === cur ? '#FFF' : themeColors.text}
+                    >
                       {cur === 'USD' ? '$ USD' : 'Bs'}
-                    </Text>
+                    </ThemedText>
                   </TouchableOpacity>
                 ))}
               </View>
 
-              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+              <ThemedText type="caption" themeColor="textSecondary" style={{ marginBottom: 8 }}>
                 Tipo de plazo
-              </Text>
+              </ThemedText>
               <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
                 {(['none', 'weekly', 'monthly'] as const).map((pt) => (
                   <TouchableOpacity
                     key={pt}
                     onPress={() => setPeriodType(pt)}
+                    accessibilityLabel={`Seleccionar plazo ${pt === 'none' ? 'sin fecha' : pt === 'weekly' ? 'semanal' : 'mensual'}`}
                     style={{
                       flex: 1, paddingVertical: 10, borderRadius: 10,
                       backgroundColor: periodType === pt ? themeColors.primary : themeColors.surface,
                       alignItems: 'center',
+                      ...(periodType === pt ? shadows.primary : shadows.sm),
                     }}
                   >
-                    <Text style={{
-                      fontSize: 12,
-                      color: periodType === pt ? '#FFF' : themeColors.text, fontWeight: '600',
-                    }}>
+                    <ThemedText
+                      type="buttonSmall"
+                      color={periodType === pt ? '#FFF' : themeColors.text}
+                    >
                       {pt === 'none' ? 'Sin fecha' : pt === 'weekly' ? 'Semanal' : 'Mensual'}
-                    </Text>
+                    </ThemedText>
                   </TouchableOpacity>
                 ))}
               </View>
 
-              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+              <ThemedText type="caption" themeColor="textSecondary" style={{ marginBottom: 8 }}>
                 Monto objetivo
-              </Text>
+              </ThemedText>
               <TextInput
                 value={targetAmount}
                 onChangeText={setTargetAmount}
-                placeholder="0.00"
+                placeholder="Ej: 5000.00"
                 placeholderTextColor={themeColors.textSecondary}
                 keyboardType="decimal-pad"
                 style={{
                   backgroundColor: themeColors.surface, borderRadius: 12, padding: 14,
                   fontSize: 18, fontWeight: '600', color: themeColors.text, marginBottom: 16,
-                  borderWidth: 1, borderColor: themeColors.border,
+                  ...shadows.sm,
                 }}
               />
 
@@ -716,6 +725,7 @@ export default function GoalsScreen() {
                 <>
                   <TouchableOpacity
                     onPress={() => setHasDeadline(!hasDeadline)}
+                    accessibilityLabel={hasDeadline ? 'Quitar fecha límite' : 'Establecer fecha límite'}
                     style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}
                   >
                     <View style={{
@@ -726,16 +736,16 @@ export default function GoalsScreen() {
                     }}>
                       {hasDeadline && <Ionicons name="checkmark" size={16} color="#FFF" />}
                     </View>
-                    <Text style={{ fontSize: 14, color: themeColors.text, fontWeight: '500' }}>
+                    <ThemedText type="body" themeColor="text">
                       Establecer fecha límite
-                    </Text>
+                    </ThemedText>
                   </TouchableOpacity>
 
                   {hasDeadline && (
                     <>
-                      <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+                      <ThemedText type="caption" themeColor="textSecondary" style={{ marginBottom: 8 }}>
                         Fecha límite (YYYY-MM-DD)
-                      </Text>
+                      </ThemedText>
                       <TextInput
                         value={deadlineDate}
                         onChangeText={setDeadlineDate}
@@ -757,14 +767,15 @@ export default function GoalsScreen() {
 
               <TouchableOpacity
                 onPress={handleCreate}
+                accessibilityLabel="Crear nueva meta"
                 style={{
                   backgroundColor: themeColors.primary, borderRadius: 14,
                   padding: 16, alignItems: 'center',
                 }}
               >
-                <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '600' }}>
+                <ThemedText style={{ color: '#FFF' }} type="button">
                   Crear Meta
-                </Text>
+                </ThemedText>
               </TouchableOpacity>
             </ScrollView>
           </KeyboardAvoidingView>
@@ -780,17 +791,17 @@ export default function GoalsScreen() {
           >
             <ScrollView contentContainerStyle={{ padding: 20 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                <Text style={{ fontSize: 24, fontWeight: '700', color: themeColors.text }}>
+                <ThemedText type="h2" themeColor="text">
                   Nuevo Ítem
-                </Text>
-                <TouchableOpacity onPress={() => setShowItemModal(false)}>
+                </ThemedText>
+                <TouchableOpacity onPress={() => setShowItemModal(false)} accessibilityLabel="Cerrar modal de nuevo ítem">
                   <Ionicons name="close" size={24} color={themeColors.textSecondary} />
                 </TouchableOpacity>
               </View>
 
-              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+              <ThemedText type="caption" themeColor="textSecondary" style={{ marginBottom: 8 }}>
                 Nombre del ítem
-              </Text>
+              </ThemedText>
               <TextInput
                 value={itemName}
                 onChangeText={setItemName}
@@ -803,13 +814,13 @@ export default function GoalsScreen() {
                 }}
               />
 
-              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+              <ThemedText type="caption" themeColor="textSecondary" style={{ marginBottom: 8 }}>
                 Monto objetivo
-              </Text>
+              </ThemedText>
               <TextInput
                 value={itemTarget}
                 onChangeText={setItemTarget}
-                placeholder="0.00"
+                placeholder="Ej: 250.00"
                 placeholderTextColor={themeColors.textSecondary}
                 keyboardType="decimal-pad"
                 style={{
@@ -821,14 +832,15 @@ export default function GoalsScreen() {
 
               <TouchableOpacity
                 onPress={handleCreateItem}
+                accessibilityLabel="Agregar nuevo ítem a la meta"
                 style={{
                   backgroundColor: themeColors.primary, borderRadius: 14,
                   padding: 16, alignItems: 'center',
                 }}
               >
-                <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '600' }}>
+                <ThemedText style={{ color: '#FFF' }} type="button">
                   Agregar Ítem
-                </Text>
+                </ThemedText>
               </TouchableOpacity>
             </ScrollView>
           </KeyboardAvoidingView>
@@ -844,21 +856,21 @@ export default function GoalsScreen() {
           >
             <ScrollView contentContainerStyle={{ padding: 20 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                <Text style={{ fontSize: 24, fontWeight: '700', color: themeColors.text }}>
+                <ThemedText type="h2" themeColor="text">
                   Abonar a Meta
-                </Text>
-                <TouchableOpacity onPress={() => setShowDepositModal(false)}>
+                </ThemedText>
+                <TouchableOpacity onPress={() => setShowDepositModal(false)} accessibilityLabel="Cerrar modal de abono">
                   <Ionicons name="close" size={24} color={themeColors.textSecondary} />
                 </TouchableOpacity>
               </View>
 
-              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+              <ThemedText type="caption" themeColor="textSecondary" style={{ marginBottom: 8 }}>
                 Monto a abonar
-              </Text>
+              </ThemedText>
               <TextInput
                 value={depositAmount}
                 onChangeText={setDepositAmount}
-                placeholder="0.00"
+                placeholder="Ej: 100.00"
                 placeholderTextColor={themeColors.textSecondary}
                 keyboardType="decimal-pad"
                 style={{
@@ -870,19 +882,20 @@ export default function GoalsScreen() {
 
               <TouchableOpacity
                 onPress={handleDeposit}
+                accessibilityLabel="Confirmar abono a meta"
                 style={{
                   backgroundColor: '#10B981', borderRadius: 14,
                   padding: 16, alignItems: 'center',
                 }}
               >
-                <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '600' }}>
-                  💰 Abonar
-                </Text>
+                <ThemedText style={{ color: '#FFF' }} type="button">
+                  Abonar
+                </ThemedText>
               </TouchableOpacity>
             </ScrollView>
           </KeyboardAvoidingView>
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
-  );
-}
+      );
+    }

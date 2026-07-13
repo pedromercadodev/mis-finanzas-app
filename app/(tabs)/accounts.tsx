@@ -1,10 +1,10 @@
 import { useCallback, useState } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   TouchableOpacity,
   RefreshControl,
+  Text,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +15,8 @@ import { useExchangeRates } from '../../src/hooks/useExchangeRates';
 import { getAccountBalance, getAccounts as getAccountsFromDB } from '../../src/services/accounts';
 import { formatUSD, formatBS } from '../../src/utils/format';
 import { useSettings } from '../../src/store/useSettings';
+import ThemedText from '../../src/components/ThemedText';
+import { shadows } from '../../src/theme/shadows';
 
 export default function AccountsScreen() {
   const router = useRouter();
@@ -65,9 +67,9 @@ export default function AccountsScreen() {
         contentContainerStyle={{ padding: 20, paddingBottom: 100 }}
       >
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <Text style={{ fontSize: 28, fontWeight: '700', color: themeColors.text }}>
+          <ThemedText type="h1">
             Mis Cuentas
-          </Text>
+          </ThemedText>
           <TouchableOpacity
             onPress={() => router.push('/account/new')}
             style={{
@@ -78,10 +80,12 @@ export default function AccountsScreen() {
               flexDirection: 'row',
               alignItems: 'center',
               gap: 6,
+              ...shadows.primary,
             }}
+            accessibilityLabel="Crear nueva cuenta"
           >
             <Ionicons name="add" size={18} color="#FFF" />
-            <Text style={{ color: '#FFF', fontWeight: '600', fontSize: 14 }}>Nueva</Text>
+            <ThemedText style={{ color: '#FFF', fontWeight: '600', fontSize: 14 }}>Nueva</ThemedText>
           </TouchableOpacity>
         </View>
 
@@ -116,41 +120,38 @@ export default function AccountsScreen() {
                   width: '47%',
                   borderLeftWidth: 4,
                   borderLeftColor: account.color,
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.06,
-                  shadowRadius: 8,
-                  elevation: 3,
+                  ...shadows.md,
                 }}
+                accessibilityLabel={`Ir a cuenta ${account.name}`}
               >
                 <Text style={{ fontSize: 32, marginBottom: 12 }}>{account.icon}</Text>
-                <Text style={{ fontSize: 16, fontWeight: '600', color: themeColors.text, marginBottom: 8 }}>
+                <ThemedText type="h3" themeColor="text" style={{ marginBottom: 8 }}>
                   {account.name}
-                </Text>
+                </ThemedText>
                 {hasBalance ? (
                   isUSDPrimary ? (
                     <>
-                      <Text style={{ fontSize: 20, fontWeight: '700', color: themeColors.text }}>
+                      <ThemedText type="amountMedium" themeColor="text">
                         {formatUSD(balance.balanceUSD)}
-                      </Text>
-                      <Text style={{ fontSize: 13, color: themeColors.textSecondary, marginTop: 2 }}>
+                      </ThemedText>
+                      <ThemedText type="caption" themeColor="textSecondary" style={{ marginTop: 2 }}>
                         {hasBS ? formatBS(balance.balanceBS) : `≈ ${formatBS(estimatedBS!)}`}
-                      </Text>
+                      </ThemedText>
                     </>
                   ) : (
                     <>
-                      <Text style={{ fontSize: 20, fontWeight: '700', color: themeColors.text }}>
+                      <ThemedText type="amountMedium" themeColor="text">
                         {formatBS(balance.balanceBS)}
-                      </Text>
-                      <Text style={{ fontSize: 13, color: themeColors.textSecondary, marginTop: 2 }}>
+                      </ThemedText>
+                      <ThemedText type="caption" themeColor="textSecondary" style={{ marginTop: 2 }}>
                         ≈ {formatUSD(estimatedUSD!)}
-                      </Text>
+                      </ThemedText>
                     </>
                   )
                 ) : (
-                  <Text style={{ fontSize: 14, color: themeColors.textSecondary, fontStyle: 'italic' }}>
+                  <ThemedText type="body" themeColor="textSecondary" style={{ fontStyle: 'italic' }}>
                     Sin saldo
-                  </Text>
+                  </ThemedText>
                 )}
                 <View style={{
                   marginTop: 8,
@@ -160,12 +161,12 @@ export default function AccountsScreen() {
                   paddingHorizontal: 8,
                   paddingVertical: 2,
                 }}>
-                  <Text style={{ fontSize: 11, color: account.color, fontWeight: '500' }}>
+                  <ThemedText type="badge" color={account.color}>
                     {account.type === 'exchange' ? 'Exchange' :
                      account.type === 'bank' ? 'Banco' :
                      account.type === 'virtual_card' ? 'Tarjeta Virtual' :
                      account.type === 'cash' ? 'Efectivo' : 'Otra'}
-                  </Text>
+                  </ThemedText>
                 </View>
               </TouchableOpacity>
             );

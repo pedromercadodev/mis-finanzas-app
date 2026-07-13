@@ -4,12 +4,14 @@ import Animated, {
   withRepeat,
   withTiming,
   useAnimatedStyle,
-  Easing,
   withSequence,
+  withSpring,
 } from 'react-native-reanimated';
 import { useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../hooks/useThemeColors';
+import { useReducedMotion } from '../hooks/useReducedMotion';
+import { typography } from '../theme/typography';
 
 type EmptyStateVariant = 'transactions' | 'search' | 'accounts' | 'goals' | 'subscriptions' | 'debts' | 'budgets' | 'reports';
 
@@ -63,6 +65,15 @@ const DEFAULT_CONFIG: Record<EmptyStateVariant, { icon: keyof typeof Ionicons.gl
   },
 };
 
+/**
+ * EmptyState — estado vacío con icono flotante y glow sutil.
+ *
+ * Principios aplicados:
+ * - Emil §3: espaciado generoso (paddingVertical: 64), sin bordes
+ * - Apple §12: jerarquía visual con glow en icono
+ * - Apple §5: spring-based floating animation (vs timing linear)
+ * - Apple §16: reduced motion respetado
+ */
 export default function EmptyState({
   variant = 'transactions',
   title,
@@ -70,25 +81,30 @@ export default function EmptyState({
   icon,
 }: EmptyStateProps) {
   const themeColors = useThemeColors();
+  const reducedMotion = useReducedMotion();
   const config = DEFAULT_CONFIG[variant];
 
   const floatAnim = useSharedValue(0);
-  const scaleAnim = useSharedValue(0.8);
-  const opacityAnim = useSharedValue(0);
+  const scaleAnim = useSharedValue(reducedMotion ? 1 : 0.85);
+  const opacityAnim = useSharedValue(reducedMotion ? 1 : 0);
 
   useEffect(() => {
+    if (reducedMotion) return;
+
+    // Floating animation con spring — más natural que timing linear
     floatAnim.value = withRepeat(
       withSequence(
-        withTiming(-8, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
-        withTiming(0, { duration: 2000, easing: Easing.inOut(Easing.ease) })
+        withTiming(-10, { duration: 2500 }),
+        withTiming(0, { duration: 2500 })
       ),
       -1,
       true
     );
 
-    scaleAnim.value = withTiming(1, { duration: 400, easing: Easing.out(Easing.back(1.5)) });
-    opacityAnim.value = withTiming(1, { duration: 400 });
-  }, []);
+    // Entrada con spring — efecto "pop" sutil
+    scaleAnim.value = withSpring(1, { damping: 14, stiffness: 180, mass: 0.6 });
+    opacityAnim.value = withTiming(1, { duration: 300 });
+  }, [reducedMotion]);
 
   const floatStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: floatAnim.value }],
@@ -105,7 +121,7 @@ export default function EmptyState({
         {
           alignItems: 'center',
           justifyContent: 'center',
-          paddingVertical: 48,
+          paddingVertical: 64,
           paddingHorizontal: 32,
         },
         containerStyle,
@@ -114,26 +130,31 @@ export default function EmptyState({
       <Animated.View style={floatStyle}>
         <View
           style={{
-            width: 80,
-            height: 80,
-            borderRadius: 40,
+            width: 88,
+            height: 88,
+            borderRadius: 44,
             backgroundColor: themeColors.primaryLight,
             justifyContent: 'center',
             alignItems: 'center',
-            marginBottom: 20,
+            marginBottom: 24,
+            // Glow sutil con sombra tintada
+            shadowColor: themeColors.primary,
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.3,
+            shadowRadius: 16,
+            elevation: 4,
           }}
         >
           <Ionicons
             name={icon || config.icon}
-            size={36}
+            size={38}
             color={themeColors.primary}
           />
         </View>
       </Animated.View>
       <Text
         style={{
-          fontSize: 18,
-          fontWeight: '700',
+          ...typography.h3,
           color: themeColors.text,
           textAlign: 'center',
           marginBottom: 8,
@@ -143,10 +164,10 @@ export default function EmptyState({
       </Text>
       <Text
         style={{
-          fontSize: 14,
+          ...typography.body,
           color: themeColors.textSecondary,
           textAlign: 'center',
-          lineHeight: 20,
+          maxWidth: 260,
         }}
       >
         {subtitle || config.subtitle}

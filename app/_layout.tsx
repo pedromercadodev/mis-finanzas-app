@@ -2,11 +2,13 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { View, ActivityIndicator, Text } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 import { useAccounts } from '../src/store/useAccounts';
 import { useSettings } from '../src/store/useSettings';
 import { colors } from '../src/theme/colors';
 import { ensureDatabaseInitialized } from '../src/services/database';
+import ThemedText from '../src/components/ThemedText';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function RootLayout() {
   const loadAccounts = useAccounts((state) => state.loadAccounts);
@@ -18,12 +20,9 @@ export default function RootLayout() {
   useEffect(() => {
     async function init() {
       try {
-        // Inicializar BD antes que cualquier componente la necesite
         await ensureDatabaseInitialized();
         setDbReady(true);
-        // Cargar cuentas después de que la BD esté lista
         await loadAccounts();
-        // Cargar API Key desde SecureStore (cifrado)
         await loadDeepseekKey();
       } catch (e: any) {
         console.error('Error inicializando la aplicación:', e);
@@ -35,26 +34,41 @@ export default function RootLayout() {
 
   const themeColors = useDarkMode ? colors.dark : colors.light;
 
-  // Pantalla de carga mientras se inicializa la BD
+  // Pantalla de carga moderna — minimalista, sin bordes
   if (!dbReady) {
     return (
-      <View style={{ flex: 1, backgroundColor: themeColors.background, justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{
+        flex: 1,
+        backgroundColor: themeColors.background,
+        justifyContent: 'center',
+        alignItems: 'center',
+      }}>
         {dbError ? (
-          <>
-            <Text style={{ color: '#EF4444', fontSize: 16, fontWeight: '600', marginBottom: 8 }}>
+          <View style={{ alignItems: 'center', paddingHorizontal: 40, gap: 12 }}>
+            <View style={{
+              width: 64,
+              height: 64,
+              borderRadius: 32,
+              backgroundColor: themeColors.dangerLight,
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}>
+              <Ionicons name="alert-circle" size={32} color={themeColors.danger} />
+            </View>
+            <ThemedText type="h4" themeColor="danger" style={{ textAlign: 'center' }}>
               Error de inicialización
-            </Text>
-            <Text style={{ color: themeColors.textSecondary, fontSize: 14, textAlign: 'center', marginHorizontal: 40 }}>
+            </ThemedText>
+            <ThemedText type="body" themeColor="textSecondary" style={{ textAlign: 'center', lineHeight: 22 }}>
               {dbError}
-            </Text>
-          </>
+            </ThemedText>
+          </View>
         ) : (
-          <>
+          <View style={{ alignItems: 'center', gap: 16 }}>
             <ActivityIndicator size="large" color={themeColors.primary} />
-            <Text style={{ color: themeColors.textSecondary, fontSize: 14, marginTop: 12 }}>
+            <ThemedText type="body" themeColor="textTertiary">
               Inicializando...
-            </Text>
-          </>
+            </ThemedText>
+          </View>
         )}
       </View>
     );
@@ -64,11 +78,38 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <View style={{ flex: 1, backgroundColor: themeColors.background }}>
         <StatusBar style={useDarkMode ? 'light' : 'dark'} />
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: themeColors.background } }}>
+        <Stack screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: themeColors.background },
+          animation: 'slide_from_right',
+        }}>
           <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="account/new" options={{ presentation: 'modal', headerShown: true, title: 'Nueva Cuenta', contentStyle: { backgroundColor: themeColors.background } }} />
-          <Stack.Screen name="account/[id]" options={{ presentation: 'modal', headerShown: true, title: 'Detalle de Cuenta', contentStyle: { backgroundColor: themeColors.background } }} />
-          <Stack.Screen name="ai-chat" options={{ presentation: 'modal', headerShown: false }} />
+          <Stack.Screen
+            name="account/new"
+            options={{
+              presentation: 'modal',
+              headerShown: true,
+              title: 'Nueva Cuenta',
+              headerStyle: { backgroundColor: themeColors.surface },
+              headerTintColor: themeColors.text,
+              contentStyle: { backgroundColor: themeColors.background },
+            }}
+          />
+          <Stack.Screen
+            name="account/[id]"
+            options={{
+              presentation: 'modal',
+              headerShown: true,
+              title: 'Detalle de Cuenta',
+              headerStyle: { backgroundColor: themeColors.surface },
+              headerTintColor: themeColors.text,
+              contentStyle: { backgroundColor: themeColors.background },
+            }}
+          />
+          <Stack.Screen
+            name="ai-chat"
+            options={{ presentation: 'modal', headerShown: false }}
+          />
         </Stack>
       </View>
     </GestureHandlerRootView>

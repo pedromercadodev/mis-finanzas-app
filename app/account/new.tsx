@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   TouchableOpacity,
   TextInput,
@@ -12,11 +11,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../src/theme/colors';
 import { accountColors } from '../../src/theme/colors';
 import { useThemeColors } from '../../src/hooks/useThemeColors';
 import { useAccounts } from '../../src/store/useAccounts';
 import AnimatedScreen from '../../src/components/AnimatedScreen';
+import ThemedText from '../../src/components/ThemedText';
+import { shadows } from '../../src/theme/shadows';
 import type { AccountType, CurrencyType } from '../../src/utils/types';
 
 const accountTypes: { key: AccountType; label: string; icon: string }[] = [
@@ -89,9 +89,9 @@ export default function NewAccountScreen() {
           keyboardShouldPersistTaps="handled"
         >
           {/* Nombre */}
-          <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+          <ThemedText type="small" themeColor="textSecondary" style={{ marginBottom: 8 }}>
             Nombre de la cuenta
-          </Text>
+          </ThemedText>
           <TextInput
             value={name}
             onChangeText={setName}
@@ -110,14 +110,15 @@ export default function NewAccountScreen() {
           />
 
           {/* Tipo */}
-          <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+          <ThemedText type="small" themeColor="textSecondary" style={{ marginBottom: 8 }}>
             Tipo de cuenta
-          </Text>
+          </ThemedText>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
             {accountTypes.map((t) => (
               <TouchableOpacity
                 key={t.key}
                 onPress={() => setType(t.key)}
+                accessibilityLabel={`Tipo de cuenta: ${t.label}`}
                 style={{
                   paddingHorizontal: 16,
                   paddingVertical: 10,
@@ -130,27 +131,24 @@ export default function NewAccountScreen() {
                   borderColor: type === t.key ? themeColors.primary : themeColors.border,
                 }}
               >
-                <Text style={{ fontSize: 16 }}>{t.icon}</Text>
-                <Text style={{
-                  fontSize: 14,
-                  fontWeight: '500',
-                  color: type === t.key ? '#FFF' : themeColors.text,
-                }}>
+                <ThemedText style={{ fontSize: 16 }}>{t.icon}</ThemedText>
+                <ThemedText type="body" color={type === t.key ? '#FFF' : themeColors.text}>
                   {t.label}
-                </Text>
+                </ThemedText>
               </TouchableOpacity>
             ))}
           </View>
 
           {/* Moneda */}
-          <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+          <ThemedText type="small" themeColor="textSecondary" style={{ marginBottom: 8 }}>
             Moneda
-          </Text>
+          </ThemedText>
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
             {(['USD', 'BS', 'BOTH'] as CurrencyType[]).map((cur) => (
               <TouchableOpacity
                 key={cur}
                 onPress={() => setCurrency(cur)}
+                accessibilityLabel={`Moneda: ${cur === 'USD' ? 'USD' : cur === 'BS' ? 'Bolívares' : 'Ambas monedas'}`}
                 style={{
                   flex: 1,
                   paddingVertical: 12,
@@ -161,21 +159,17 @@ export default function NewAccountScreen() {
                   borderColor: currency === cur ? themeColors.primary : themeColors.border,
                 }}
               >
-                <Text style={{
-                  fontSize: 15,
-                  fontWeight: '600',
-                  color: currency === cur ? '#FFF' : themeColors.text,
-                }}>
-                  {cur === 'USD' ? '💰 USD' : cur === 'BS' ? '💵 BS' : '🔀 Ambas'}
-                </Text>
+                <ThemedText type="bodyMedium" color={currency === cur ? '#FFF' : themeColors.text}>
+                  {cur === 'USD' ? 'USD' : cur === 'BS' ? 'BS' : 'Ambas'}
+                </ThemedText>
               </TouchableOpacity>
             ))}
           </View>
 
           {/* Plataforma (para billeteras digitales/cripto) */}
-          <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+          <ThemedText type="small" themeColor="textSecondary" style={{ marginBottom: 8 }}>
             Plataforma (opcional)
-          </Text>
+          </ThemedText>
           <TextInput
             value={platform}
             onChangeText={setPlatform}
@@ -194,14 +188,15 @@ export default function NewAccountScreen() {
           />
 
           {/* Icono */}
-          <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+          <ThemedText type="small" themeColor="textSecondary" style={{ marginBottom: 8 }}>
             Icono
-          </Text>
+          </ThemedText>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
             {accountIcons.map((ic) => (
               <TouchableOpacity
                 key={ic}
                 onPress={() => setIcon(ic)}
+                accessibilityLabel={`Seleccionar icono ${ic}`}
                 style={{
                   width: 44,
                   height: 44,
@@ -213,23 +208,24 @@ export default function NewAccountScreen() {
                   borderColor: icon === ic ? themeColors.primary : themeColors.border,
                 }}
               >
-                <Text style={{ fontSize: 22 }}>{ic}</Text>
+                <ThemedText style={{ fontSize: 22 }}>{ic}</ThemedText>
               </TouchableOpacity>
             ))}
           </View>
 
           {/* Color */}
-          <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+          <ThemedText type="small" themeColor="textSecondary" style={{ marginBottom: 8 }}>
             Color
-          </Text>
+          </ThemedText>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
             {accountColors.map((c) => (
               <TouchableOpacity
                 key={c.hex}
                 onPress={() => setColor(c.hex)}
+                accessibilityLabel={`Seleccionar color ${c.hex}`}
                 style={{
-                  width: 40,
-                  height: 40,
+                  width: 44,
+                  height: 44,
                   borderRadius: 12,
                   backgroundColor: c.hex,
                   justifyContent: 'center',
@@ -239,19 +235,19 @@ export default function NewAccountScreen() {
                 }}
               >
                 {color === c.hex && (
-                  <Ionicons name="checkmark" size={20} color="#FFF" />
+                  <Ionicons name="checkmark" size={22} color="#FFF" />
                 )}
               </TouchableOpacity>
             ))}
           </View>
 
           {/* Saldo Inicial */}
-          <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+          <ThemedText type="small" themeColor="textSecondary" style={{ marginBottom: 8 }}>
             Saldo inicial (opcional)
-          </Text>
+          </ThemedText>
           <View style={{ flexDirection: 'row', gap: 12, marginBottom: 32 }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 12, color: themeColors.usd, marginBottom: 4 }}>USD</Text>
+              <ThemedText type="badge" themeColor="usd" style={{ marginBottom: 4 }}>USD</ThemedText>
               <TextInput
                 value={initialUSD}
                 onChangeText={setInitialUSD}
@@ -271,7 +267,7 @@ export default function NewAccountScreen() {
               />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 12, color: themeColors.bs, marginBottom: 4 }}>Bs</Text>
+              <ThemedText type="badge" themeColor="bs" style={{ marginBottom: 4 }}>Bs</ThemedText>
               <TextInput
                 value={initialBS}
                 onChangeText={setInitialBS}
@@ -295,6 +291,7 @@ export default function NewAccountScreen() {
           {/* Guardar */}
           <TouchableOpacity
             onPress={handleCreate}
+            accessibilityLabel="Crear cuenta"
             style={{
               backgroundColor: themeColors.primary,
               borderRadius: 14,
@@ -302,9 +299,9 @@ export default function NewAccountScreen() {
               alignItems: 'center',
             }}
           >
-            <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '600' }}>
+            <ThemedText type="button" style={{ color: '#FFF' }}>
               Crear Cuenta
-            </Text>
+            </ThemedText>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -320,15 +317,11 @@ export default function NewAccountScreen() {
           borderRadius: 14,
           padding: 16,
           alignItems: 'center',
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.2,
-          shadowRadius: 8,
-          elevation: 8,
+          ...shadows.lg,
         }}>
-          <Text style={{ color: '#FFF', fontSize: 15, fontWeight: '600' }}>
+          <ThemedText type="button" style={{ color: '#FFF' }}>
             {toastMessage}
-          </Text>
+          </ThemedText>
         </View>
       )}
     </SafeAreaView>

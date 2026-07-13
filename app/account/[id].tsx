@@ -2,7 +2,6 @@ import { useCallback, useState } from 'react';
 import { updateAccount } from '../../src/services/accounts';
 import {
   View,
-  Text,
   ScrollView,
   TouchableOpacity,
   RefreshControl,
@@ -15,7 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { colors, accountColors } from '../../src/theme/colors';
+import { accountColors } from '../../src/theme/colors';
 import { useThemeColors } from '../../src/hooks/useThemeColors';
 import { useExchangeRates } from '../../src/hooks/useExchangeRates';
 import { useAccounts } from '../../src/store/useAccounts';
@@ -24,6 +23,8 @@ import { useSettings } from '../../src/store/useSettings';
 import { getAccountBalance } from '../../src/services/accounts';
 import { formatUSD, formatBS, formatDate } from '../../src/utils/format';
 import AnimatedScreen from '../../src/components/AnimatedScreen';
+import ThemedText from '../../src/components/ThemedText';
+import { shadows } from '../../src/theme/shadows';
 import type { Transaction, AccountType, CurrencyType } from '../../src/utils/types';
 
 const typeLabels: Record<string, string> = {
@@ -139,9 +140,9 @@ export default function AccountDetailScreen() {
       <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
           <Ionicons name="sad-outline" size={48} color={themeColors.textSecondary} />
-          <Text style={{ fontSize: 16, color: themeColors.textSecondary, marginTop: 12 }}>
+          <ThemedText type="body" themeColor="textSecondary" style={{ marginTop: 12 }}>
             Cuenta no encontrada
-          </Text>
+          </ThemedText>
           <TouchableOpacity
             onPress={() => router.back()}
             style={{
@@ -151,8 +152,9 @@ export default function AccountDetailScreen() {
               paddingHorizontal: 20,
               paddingVertical: 10,
             }}
+            accessibilityLabel="Volver"
           >
-            <Text style={{ color: '#FFF', fontWeight: '600' }}>Volver</Text>
+            <ThemedText type="button" style={{ color: '#FFF' }}>Volver</ThemedText>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -188,6 +190,7 @@ export default function AccountDetailScreen() {
                 justifyContent: 'center',
                 alignItems: 'center',
               }}
+              accessibilityLabel="Volver"
             >
               <Ionicons name="chevron-back" size={24} color="#FFF" />
             </TouchableOpacity>
@@ -203,26 +206,28 @@ export default function AccountDetailScreen() {
                   setShowEditModal(true);
                 }}
                 style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 20,
+                  width: 44,
+                  height: 44,
+                  borderRadius: 22,
                   backgroundColor: 'rgba(255,255,255,0.2)',
                   justifyContent: 'center',
                   alignItems: 'center',
                 }}
+                accessibilityLabel="Editar cuenta"
               >
                 <Ionicons name="pencil" size={20} color="#FFF" />
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleDelete}
                 style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 20,
+                  width: 44,
+                  height: 44,
+                  borderRadius: 22,
                   backgroundColor: 'rgba(255,255,255,0.2)',
                   justifyContent: 'center',
                   alignItems: 'center',
                 }}
+                accessibilityLabel="Eliminar cuenta"
               >
                 <Ionicons name="trash-outline" size={20} color="#FFF" />
               </TouchableOpacity>
@@ -231,19 +236,19 @@ export default function AccountDetailScreen() {
 
           {/* Icon + Name */}
           <View style={{ alignItems: 'center' }}>
-            <Text style={{ fontSize: 48, marginBottom: 12 }}>{account.icon}</Text>
-            <Text style={{ fontSize: 24, fontWeight: '700', color: '#FFF', marginBottom: 4 }}>
+            <ThemedText style={{ fontSize: 48, marginBottom: 12 }}>{account.icon}</ThemedText>
+            <ThemedText style={{ fontSize: 24, fontWeight: '700', color: '#FFF', marginBottom: 4 }}>
               {account.name}
-            </Text>
+            </ThemedText>
             <View style={{
               backgroundColor: 'rgba(255,255,255,0.2)',
               borderRadius: 8,
               paddingHorizontal: 12,
               paddingVertical: 4,
             }}>
-              <Text style={{ fontSize: 13, color: '#FFF', fontWeight: '500' }}>
+              <ThemedText style={{ fontSize: 13, color: '#FFF', fontWeight: '500' }}>
                 {typeLabels[account.type] || account.type}
-              </Text>
+              </ThemedText>
             </View>
           </View>
         </View>
@@ -258,79 +263,63 @@ export default function AccountDetailScreen() {
                 backgroundColor: themeColors.surface,
                 borderRadius: 20,
                 padding: 20,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.06,
-                shadowRadius: 8,
-                elevation: 3,
+                ...shadows.md,
               }}>
-                <Text style={{ fontSize: 13, color: themeColors.usd, fontWeight: '600', marginBottom: 4 }}>
+                <ThemedText type="caption" themeColor="usd" style={{ fontWeight: '600', marginBottom: 4 }}>
                   Saldo USD
-                </Text>
-                <Text style={{ fontSize: 24, fontWeight: '700', color: themeColors.text }}>
+                </ThemedText>
+                <ThemedText type="amountLarge" themeColor="text">
                   {formatUSD(balance.balanceUSD)}
-                </Text>
+                </ThemedText>
               </View>
               <View style={{
                 flex: 1,
                 backgroundColor: themeColors.surface,
                 borderRadius: 20,
                 padding: 20,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.06,
-                shadowRadius: 8,
-                elevation: 3,
+                ...shadows.md,
               }}>
-                <Text style={{ fontSize: 13, color: themeColors.bs, fontWeight: '600', marginBottom: 4 }}>
+                <ThemedText type="caption" themeColor="bs" style={{ fontWeight: '600', marginBottom: 4 }}>
                   {balance.balanceBS > 0 ? 'Saldo Bs' : 'Bs estimado'}
-                </Text>
-                <Text style={{ fontSize: 24, fontWeight: '700', color: themeColors.text }}>
+                </ThemedText>
+                <ThemedText type="amountLarge" themeColor="text">
                   {balance.balanceBS > 0
                     ? formatBS(balance.balanceBS)
                     : `≈ ${formatBS(balance.balanceUSD * (getActiveRate() ?? 1))}`}
-                </Text>
+                </ThemedText>
               </View>
             </>
           ) : (
             /* Primero BS, segundo USD (estimado) */
             <>
               <View style={{
-                flex: 1,
-                backgroundColor: themeColors.surface,
-                borderRadius: 20,
-                padding: 20,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.06,
-                shadowRadius: 8,
-                elevation: 3,
-              }}>
-                <Text style={{ fontSize: 13, color: themeColors.bs, fontWeight: '600', marginBottom: 4 }}>
-                  Saldo Bs
-                </Text>
-                <Text style={{ fontSize: 24, fontWeight: '700', color: themeColors.text }}>
-                  {formatBS(balance.balanceBS)}
-                </Text>
-              </View>
-              <View style={{
-                flex: 1,
-                backgroundColor: themeColors.surface,
-                borderRadius: 20,
-                padding: 20,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.06,
-                shadowRadius: 8,
-                elevation: 3,
-              }}>
-                <Text style={{ fontSize: 13, color: themeColors.usd, fontWeight: '600', marginBottom: 4 }}>
-                  USD estimado
-                </Text>
-                <Text style={{ fontSize: 24, fontWeight: '700', color: themeColors.text }}>
-                  {formatUSD(displayedUSD)}
-                </Text>
-              </View>
+                  flex: 1,
+                  backgroundColor: themeColors.surface,
+                  borderRadius: 20,
+                  padding: 20,
+                  ...shadows.md,
+                }}>
+                  <ThemedText type="caption" themeColor="bs" style={{ fontWeight: '600', marginBottom: 4 }}>
+                    Saldo Bs
+                  </ThemedText>
+                  <ThemedText type="amountLarge" themeColor="text">
+                    {formatBS(balance.balanceBS)}
+                  </ThemedText>
+                </View>
+                <View style={{
+                  flex: 1,
+                  backgroundColor: themeColors.surface,
+                  borderRadius: 20,
+                  padding: 20,
+                  ...shadows.md,
+                }}>
+                  <ThemedText type="caption" themeColor="usd" style={{ fontWeight: '600', marginBottom: 4 }}>
+                    USD estimado
+                  </ThemedText>
+                  <ThemedText type="amountLarge" themeColor="text">
+                    {formatUSD(displayedUSD)}
+                  </ThemedText>
+                </View>
             </>
           )}
         </View>
@@ -351,11 +340,12 @@ export default function AccountDetailScreen() {
               borderWidth: 1,
               borderColor: themeColors.border,
             }}
+            accessibilityLabel="Registrar gasto"
           >
             <Ionicons name="arrow-up-circle" size={28} color={themeColors.danger} />
-            <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.text, marginTop: 6 }}>
+            <ThemedText type="buttonSmall" themeColor="text" style={{ marginTop: 6 }}>
               Gastar
-            </Text>
+            </ThemedText>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => router.push({
@@ -371,11 +361,12 @@ export default function AccountDetailScreen() {
               borderWidth: 1,
               borderColor: themeColors.border,
             }}
+            accessibilityLabel="Registrar ingreso"
           >
             <Ionicons name="arrow-down-circle" size={28} color={themeColors.success} />
-            <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.text, marginTop: 6 }}>
+            <ThemedText type="buttonSmall" themeColor="text" style={{ marginTop: 6 }}>
               Ingresar
-            </Text>
+            </ThemedText>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => router.push({
@@ -391,25 +382,26 @@ export default function AccountDetailScreen() {
               borderWidth: 1,
               borderColor: themeColors.border,
             }}
+            accessibilityLabel="Registrar transferencia"
           >
             <Ionicons name="swap-horizontal" size={28} color={themeColors.warning} />
-            <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.text, marginTop: 6 }}>
+            <ThemedText type="buttonSmall" themeColor="text" style={{ marginTop: 6 }}>
               Transferir
-            </Text>
+            </ThemedText>
           </TouchableOpacity>
         </View>
 
         {/* Transacciones Recientes */}
         <View style={{ paddingHorizontal: 20, marginTop: 28 }}>
-          <Text style={{ fontSize: 18, fontWeight: '600', color: themeColors.text, marginBottom: 16 }}>
+          <ThemedText type="h3" themeColor="text" style={{ marginBottom: 16 }}>
             Movimientos
-          </Text>
+          </ThemedText>
           {transactions.length === 0 ? (
             <View style={{ alignItems: 'center', paddingVertical: 40 }}>
               <Ionicons name="receipt-outline" size={48} color={themeColors.textSecondary} />
-              <Text style={{ fontSize: 14, color: themeColors.textSecondary, marginTop: 12 }}>
+              <ThemedText type="body" themeColor="textSecondary" style={{ marginTop: 12 }}>
                 Sin movimientos aún
-              </Text>
+              </ThemedText>
             </View>
           ) : (
             transactions.map((tx) => (
@@ -435,23 +427,23 @@ export default function AccountDetailScreen() {
                   <Ionicons name={getTransactionIcon(tx)} size={20} color={getTransactionColor(tx)} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 14, fontWeight: '500', color: themeColors.text }}>
+                  <ThemedText type="body" themeColor="text">
                     {tx.description || 'Sin descripción'}
-                  </Text>
-                  <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginTop: 2 }}>
+                  </ThemedText>
+                  <ThemedText type="caption" themeColor="textSecondary" style={{ marginTop: 2 }}>
                     {formatDate(tx.createdAt)}
-                  </Text>
+                  </ThemedText>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
                   {(tx.amountUSD ?? 0) > 0 && (
-                    <Text style={{ fontSize: 14, fontWeight: '600', color: themeColors.text }}>
+                    <ThemedText type="bodyMedium" themeColor="text">
                       {tx.type === 'income' ? '+' : '-'}{formatUSD(tx.amountUSD)}
-                    </Text>
+                    </ThemedText>
                   )}
                   {(tx.amountBS ?? 0) > 0 && (
-                    <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>
+                    <ThemedText type="caption" themeColor="textSecondary">
                       {tx.type === 'income' ? '+' : '-'}{formatBS(tx.amountBS)}
-                    </Text>
+                    </ThemedText>
                   )}
                 </View>
               </View>
@@ -469,18 +461,18 @@ export default function AccountDetailScreen() {
           >
             <ScrollView contentContainerStyle={{ padding: 20 }} keyboardShouldPersistTaps="handled">
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                <Text style={{ fontSize: 22, fontWeight: '700', color: themeColors.text }}>
+                <ThemedText type="h2" themeColor="text">
                   Editar Cuenta
-                </Text>
-                <TouchableOpacity onPress={() => setShowEditModal(false)}>
+                </ThemedText>
+                <TouchableOpacity onPress={() => setShowEditModal(false)} accessibilityLabel="Cerrar modal de edición">
                   <Ionicons name="close" size={24} color={themeColors.textSecondary} />
                 </TouchableOpacity>
               </View>
 
               {/* Nombre */}
-              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+              <ThemedText type="small" themeColor="textSecondary" style={{ marginBottom: 8 }}>
                 Nombre
-              </Text>
+              </ThemedText>
               <TextInput
                 value={editName}
                 onChangeText={setEditName}
@@ -499,9 +491,9 @@ export default function AccountDetailScreen() {
               />
 
               {/* Tipo */}
-              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+              <ThemedText type="small" themeColor="textSecondary" style={{ marginBottom: 8 }}>
                 Tipo de cuenta
-              </Text>
+              </ThemedText>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
                 {accountTypes.map((t) => (
                   <TouchableOpacity
@@ -518,23 +510,20 @@ export default function AccountDetailScreen() {
                       borderWidth: 1,
                       borderColor: editType === t.key ? themeColors.primary : themeColors.border,
                     }}
+                    accessibilityLabel={`Tipo de cuenta ${t.label}`}
                   >
-                    <Text style={{ fontSize: 16 }}>{t.icon}</Text>
-                    <Text style={{
-                      fontSize: 14,
-                      fontWeight: '500',
-                      color: editType === t.key ? '#FFF' : themeColors.text,
-                    }}>
+                    <ThemedText style={{ fontSize: 16 }}>{t.icon}</ThemedText>
+                    <ThemedText type="body" color={editType === t.key ? '#FFF' : themeColors.text}>
                       {t.label}
-                    </Text>
+                    </ThemedText>
                   </TouchableOpacity>
                 ))}
               </View>
 
               {/* Moneda */}
-              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+              <ThemedText type="small" themeColor="textSecondary" style={{ marginBottom: 8 }}>
                 Moneda
-              </Text>
+              </ThemedText>
               <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
                 {(['USD', 'BS', 'BOTH'] as CurrencyType[]).map((cur) => (
                   <TouchableOpacity
@@ -549,22 +538,19 @@ export default function AccountDetailScreen() {
                       borderWidth: 1,
                       borderColor: editCurrency === cur ? themeColors.primary : themeColors.border,
                     }}
+                    accessibilityLabel={`Moneda ${cur === 'USD' ? 'USD' : cur === 'BS' ? 'Bolívares' : 'Ambas'}`}
                   >
-                    <Text style={{
-                      fontSize: 15,
-                      fontWeight: '600',
-                      color: editCurrency === cur ? '#FFF' : themeColors.text,
-                    }}>
-                      {cur === 'USD' ? '💰 USD' : cur === 'BS' ? '💵 BS' : '🔀 Ambas'}
-                    </Text>
+                    <ThemedText type="bodyMedium" color={editCurrency === cur ? '#FFF' : themeColors.text}>
+                      {cur === 'USD' ? 'USD' : cur === 'BS' ? 'BS' : 'Ambas'}
+                    </ThemedText>
                   </TouchableOpacity>
                 ))}
               </View>
 
               {/* Plataforma */}
-              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+              <ThemedText type="small" themeColor="textSecondary" style={{ marginBottom: 8 }}>
                 Plataforma (opcional)
-              </Text>
+              </ThemedText>
               <TextInput
                 value={editPlatform}
                 onChangeText={setEditPlatform}
@@ -583,9 +569,9 @@ export default function AccountDetailScreen() {
               />
 
               {/* Icono */}
-              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+              <ThemedText type="small" themeColor="textSecondary" style={{ marginBottom: 8 }}>
                 Icono
-              </Text>
+              </ThemedText>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
                 {accountIcons.map((ic, index) => (
                   <TouchableOpacity
@@ -601,24 +587,25 @@ export default function AccountDetailScreen() {
                       borderWidth: 2,
                       borderColor: editIcon === ic ? themeColors.primary : themeColors.border,
                     }}
+                    accessibilityLabel={`Seleccionar icono`}
                   >
-                    <Text style={{ fontSize: 22 }}>{ic}</Text>
+                    <ThemedText style={{ fontSize: 22 }}>{ic}</ThemedText>
                   </TouchableOpacity>
                 ))}
               </View>
 
               {/* Color */}
-              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+              <ThemedText type="small" themeColor="textSecondary" style={{ marginBottom: 8 }}>
                 Color
-              </Text>
+              </ThemedText>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 32 }}>
                 {accountColors.map((c) => (
                   <TouchableOpacity
                     key={c.hex}
                     onPress={() => setEditColor(c.hex)}
                     style={{
-                      width: 40,
-                      height: 40,
+                      width: 44,
+                      height: 44,
                       borderRadius: 12,
                       backgroundColor: c.hex,
                       justifyContent: 'center',
@@ -626,9 +613,10 @@ export default function AccountDetailScreen() {
                       borderWidth: editColor === c.hex ? 3 : 0,
                       borderColor: themeColors.surface,
                     }}
+                    accessibilityLabel={`Seleccionar color`}
                   >
                     {editColor === c.hex && (
-                      <Ionicons name="checkmark" size={20} color="#FFF" />
+                      <Ionicons name="checkmark" size={22} color="#FFF" />
                     )}
                   </TouchableOpacity>
                 ))}
@@ -663,10 +651,11 @@ export default function AccountDetailScreen() {
                   padding: 16,
                   alignItems: 'center',
                 }}
+                accessibilityLabel="Guardar cambios de cuenta"
               >
-                <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '600' }}>
+                <ThemedText type="button" style={{ color: '#FFF' }}>
                   Guardar Cambios
-                </Text>
+                </ThemedText>
               </TouchableOpacity>
             </ScrollView>
           </KeyboardAvoidingView>

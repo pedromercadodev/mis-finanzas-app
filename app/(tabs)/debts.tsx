@@ -15,6 +15,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../../src/hooks/useThemeColors';
+import { shadows } from '../../src/theme/shadows';
+import ThemedText from '../../src/components/ThemedText';
 import { formatUSD, formatBS, formatDate } from '../../src/utils/format';
 import {
   getDebts,
@@ -285,9 +287,9 @@ export default function DebtsScreen() {
     if (payments.length === 0) {
       return (
         <View style={{ alignItems: 'center', paddingVertical: 40 }}>
-          <Text style={{ fontSize: 14, color: themeColors.textSecondary }}>
+          <ThemedText type="body" themeColor="textSecondary">
             Sin abonos registrados
-          </Text>
+          </ThemedText>
         </View>
       );
     }
@@ -304,22 +306,22 @@ export default function DebtsScreen() {
             }}
           >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-              <Text style={{ fontSize: 14, fontWeight: '600', color: themeColors.text }}>
+              <ThemedText type="bodyMedium" themeColor="text">
                 {formatUSD(payment.amountUSD)}
-              </Text>
-              <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>
+              </ThemedText>
+              <ThemedText type="caption" themeColor="textSecondary">
                 {formatDate(payment.date)}
-              </Text>
+              </ThemedText>
             </View>
             {payment.amountBS > 0 && (
-              <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>
+              <ThemedText type="caption" themeColor="textSecondary">
                 {formatBS(payment.amountBS)}
-              </Text>
+              </ThemedText>
             )}
             {payment.notes && (
-              <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginTop: 4 }}>
+              <ThemedText type="caption" themeColor="textSecondary" style={{ marginTop: 4 }}>
                 {payment.notes}
-              </Text>
+              </ThemedText>
             )}
           </View>
         ))}
@@ -332,10 +334,11 @@ export default function DebtsScreen() {
         <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
           {/* Header */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-            <Text style={{ fontSize: 28, fontWeight: '700', color: themeColors.text }}>
+            <ThemedText type="h1" themeColor="text">
               Deudas
-            </Text>
+            </ThemedText>
             <TouchableOpacity
+              accessibilityLabel="Nueva deuda"
               onPress={openNewModal}
               style={{
                 backgroundColor: themeColors.primary,
@@ -344,6 +347,7 @@ export default function DebtsScreen() {
                 borderRadius: 22,
                 justifyContent: 'center',
                 alignItems: 'center',
+                ...shadows.primary,
               }}
             >
               <Ionicons name="add" size={24} color="#FFFFFF" />
@@ -358,22 +362,23 @@ export default function DebtsScreen() {
               borderRadius: 16,
               padding: 16,
               borderLeftWidth: 4,
-              borderLeftColor: '#10B981',
+              borderLeftColor: themeColors.success,
+              ...shadows.sm,
             }}>
-              <Text style={{ fontSize: 12, color: '#10B981', fontWeight: '600', marginBottom: 4 }}>
+              <ThemedText type="badge" themeColor="success" style={{ marginBottom: 4 }}>
                 ME DEBEN
-              </Text>
-              <Text style={{ fontSize: 18, fontWeight: '700', color: themeColors.text }}>
+              </ThemedText>
+              <ThemedText type="h3" themeColor="text">
                 {formatUSD(summary.totalLentUSD)}
-              </Text>
+              </ThemedText>
               {summary.totalLentBS > 0 && (
-                <Text style={{ fontSize: 13, color: themeColors.textSecondary }}>
+                <ThemedText type="caption" themeColor="textSecondary">
                   {formatBS(summary.totalLentBS)}
-                </Text>
+                </ThemedText>
               )}
-              <Text style={{ fontSize: 11, color: themeColors.textSecondary, marginTop: 2 }}>
+              <ThemedText type="small" themeColor="textSecondary" style={{ marginTop: 2 }}>
                 {summary.activeLentCount} activa(s)
-              </Text>
+              </ThemedText>
             </View>
             <View style={{
               flex: 1,
@@ -381,22 +386,23 @@ export default function DebtsScreen() {
               borderRadius: 16,
               padding: 16,
               borderLeftWidth: 4,
-              borderLeftColor: '#EF4444',
+              borderLeftColor: themeColors.danger,
+              ...shadows.sm,
             }}>
-              <Text style={{ fontSize: 12, color: '#EF4444', fontWeight: '600', marginBottom: 4 }}>
+              <ThemedText type="badge" themeColor="danger" style={{ marginBottom: 4 }}>
                 YO DEBO
-              </Text>
-              <Text style={{ fontSize: 18, fontWeight: '700', color: themeColors.text }}>
+              </ThemedText>
+              <ThemedText type="h3" themeColor="text">
                 {formatUSD(summary.totalBorrowedUSD)}
-              </Text>
+              </ThemedText>
               {summary.totalBorrowedBS > 0 && (
-                <Text style={{ fontSize: 13, color: themeColors.textSecondary }}>
+                <ThemedText type="caption" themeColor="textSecondary">
                   {formatBS(summary.totalBorrowedBS)}
-                </Text>
+                </ThemedText>
               )}
-              <Text style={{ fontSize: 11, color: themeColors.textSecondary, marginTop: 2 }}>
+              <ThemedText type="small" themeColor="textSecondary" style={{ marginTop: 2 }}>
                 {summary.activeBorrowedCount} activa(s)
-              </Text>
+              </ThemedText>
             </View>
           </View>
 
@@ -409,23 +415,17 @@ export default function DebtsScreen() {
             flexDirection: 'row',
             justifyContent: 'space-between',
             alignItems: 'center',
+            ...shadows.sm,
           }}>
-            <Text style={{ fontSize: 14, color: themeColors.textSecondary }}>Saldo Neto</Text>
+            <ThemedText type="body" themeColor="textSecondary">Saldo Neto</ThemedText>
             <View style={{ alignItems: 'flex-end' }}>
-              <Text style={{
-                fontSize: 20,
-                fontWeight: '700',
-                color: summary.netBalanceUSD >= 0 ? '#10B981' : '#EF4444',
-              }}>
+              <ThemedText type="amountLarge" color={summary.netBalanceUSD >= 0 ? themeColors.success : themeColors.danger}>
                 {summary.netBalanceUSD >= 0 ? '+' : ''}{formatUSD(summary.netBalanceUSD)}
-              </Text>
+              </ThemedText>
               {summary.netBalanceBS !== 0 && (
-                <Text style={{
-                  fontSize: 13,
-                  color: summary.netBalanceBS >= 0 ? '#10B981' : '#EF4444',
-                }}>
+                <ThemedText type="caption" color={summary.netBalanceBS >= 0 ? themeColors.success : themeColors.danger}>
                   {summary.netBalanceBS >= 0 ? '+' : ''}{formatBS(summary.netBalanceBS)}
-                </Text>
+                </ThemedText>
               )}
             </View>
           </View>
@@ -439,21 +439,21 @@ export default function DebtsScreen() {
             ]).map((tab) => (
               <TouchableOpacity
                 key={tab.key}
+                accessibilityLabel={`Filtrar: ${tab.label}`}
                 onPress={() => setFilterTab(tab.key)}
                 style={{
-                  paddingVertical: 8,
+                  paddingVertical: 10,
                   paddingHorizontal: 16,
                   borderRadius: 20,
                   backgroundColor: filterTab === tab.key ? themeColors.primary : themeColors.surface,
+                  minHeight: 44,
+                  justifyContent: 'center',
+                  ...(filterTab === tab.key ? shadows.primary : shadows.sm),
                 }}
               >
-                <Text style={{
-                  fontSize: 13,
-                  fontWeight: '600',
-                  color: filterTab === tab.key ? '#FFFFFF' : themeColors.textSecondary,
-                }}>
+                <ThemedText type="buttonSmall" color={filterTab === tab.key ? '#FFFFFF' : themeColors.textSecondary}>
                   {tab.label}
-                </Text>
+                </ThemedText>
               </TouchableOpacity>
             ))}
           </View>
@@ -469,10 +469,11 @@ export default function DebtsScreen() {
           {!loading && filteredDebts.length === 0 && (
             <View style={{ alignItems: 'center', paddingVertical: 60 }}>
               <Ionicons name="cash-outline" size={64} color={themeColors.textSecondary} />
-              <Text style={{ fontSize: 16, color: themeColors.textSecondary, marginTop: 16, textAlign: 'center' }}>
+              <ThemedText type="body" themeColor="textSecondary" style={{ marginTop: 16, textAlign: 'center' }}>
                 No hay deudas registradas
-              </Text>
+              </ThemedText>
               <TouchableOpacity
+                accessibilityLabel="Agregar deuda"
                 onPress={openNewModal}
                 style={{
                   marginTop: 16,
@@ -482,7 +483,7 @@ export default function DebtsScreen() {
                   borderRadius: 12,
                 }}
               >
-                <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Agregar deuda</Text>
+                <ThemedText type="button" color="#FFFFFF">Agregar deuda</ThemedText>
               </TouchableOpacity>
             </View>
           )}
@@ -492,11 +493,12 @@ export default function DebtsScreen() {
             const badge = getStatusBadge(debt);
             const progress = getProgress(debt);
             const isLent = debt.type === 'lent';
-            const accentColor = isLent ? '#10B981' : '#EF4444';
+            const accentColor = isLent ? themeColors.success : themeColors.danger;
 
             return (
               <TouchableOpacity
                 key={debt.id}
+                accessibilityLabel={`Deuda con ${debt.personName}, ${formatUSD(getRemainingUSD(debt))} restantes`}
                 onPress={() => openEditModal(debt)}
                 onLongPress={() => handleDelete(debt)}
                 style={{
@@ -517,14 +519,14 @@ export default function DebtsScreen() {
                         size={20}
                         color={accentColor}
                       />
-                      <Text style={{ fontSize: 16, fontWeight: '600', color: themeColors.text }}>
+                      <ThemedText type="bodyMedium" themeColor="text">
                         {debt.personName}
-                      </Text>
+                      </ThemedText>
                     </View>
                     {debt.description && (
-                      <Text style={{ fontSize: 13, color: themeColors.textSecondary, marginTop: 4, marginLeft: 28 }}>
+                      <ThemedText type="caption" themeColor="textSecondary" style={{ marginTop: 4, marginLeft: 28 }}>
                         {debt.description}
-                      </Text>
+                      </ThemedText>
                     )}
                   </View>
                   <View style={{
@@ -533,42 +535,42 @@ export default function DebtsScreen() {
                     paddingHorizontal: 8,
                     borderRadius: 8,
                   }}>
-                    <Text style={{ fontSize: 11, fontWeight: '700', color: badge.color }}>
+                    <ThemedText type="badge" color={badge.color}>
                       {badge.label}
-                    </Text>
+                    </ThemedText>
                   </View>
                 </View>
 
                 {/* Amounts */}
                 <View style={{ flexDirection: 'row', marginTop: 12, gap: 16 }}>
                   <View>
-                    <Text style={{ fontSize: 11, color: themeColors.textSecondary }}>Total</Text>
-                    <Text style={{ fontSize: 16, fontWeight: '700', color: themeColors.text }}>
+                    <ThemedText type="small" themeColor="textSecondary">Total</ThemedText>
+                    <ThemedText type="bodyMedium" themeColor="text">
                       {formatUSD(debt.totalAmountUSD || debt.amountUSD || 0)}
-                    </Text>
+                    </ThemedText>
                     {(debt.totalAmountBS || debt.amountBS) && (
-                      <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>
+                      <ThemedText type="caption" themeColor="textSecondary">
                         {formatBS(debt.totalAmountBS || debt.amountBS || 0)}
-                      </Text>
+                      </ThemedText>
                     )}
                   </View>
                   <View>
-                    <Text style={{ fontSize: 11, color: themeColors.textSecondary }}>Restante</Text>
-                    <Text style={{ fontSize: 16, fontWeight: '700', color: accentColor }}>
+                    <ThemedText type="small" themeColor="textSecondary">Restante</ThemedText>
+                    <ThemedText type="bodyMedium" color={accentColor}>
                       {formatUSD(getRemainingUSD(debt))}
-                    </Text>
+                    </ThemedText>
                     {(debt.totalAmountBS || debt.amountBS) && (
-                      <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>
+                      <ThemedText type="caption" themeColor="textSecondary">
                         {formatBS(getRemainingBS(debt))}
-                      </Text>
+                      </ThemedText>
                     )}
                   </View>
                   {debt.interestRate > 0 && (
                     <View>
-                      <Text style={{ fontSize: 11, color: themeColors.textSecondary }}>Interés</Text>
-                      <Text style={{ fontSize: 14, fontWeight: '600', color: '#F59E0B' }}>
+                      <ThemedText type="small" themeColor="textSecondary">Interés</ThemedText>
+                      <ThemedText type="body" color={themeColors.warning}>
                         {debt.interestRate}%
-                      </Text>
+                      </ThemedText>
                     </View>
                   )}
                 </View>
@@ -584,58 +586,62 @@ export default function DebtsScreen() {
                     <View style={{
                       width: `${progress}%`,
                       height: '100%',
-                      backgroundColor: progress >= 100 ? '#10B981' : accentColor,
+                      backgroundColor: progress >= 100 ? themeColors.success : accentColor,
                       borderRadius: 3,
                     }} />
                   </View>
-                  <Text style={{ fontSize: 11, color: themeColors.textSecondary, marginTop: 4 }}>
+                  <ThemedText type="small" themeColor="textSecondary" style={{ marginTop: 4 }}>
                     {progress.toFixed(0)}% pagado
-                  </Text>
+                  </ThemedText>
                 </View>
 
                 {/* Due date & actions */}
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                     <Ionicons name="calendar-outline" size={14} color={themeColors.textSecondary} />
-                    <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>
+                    <ThemedText type="caption" themeColor="textSecondary">
                       {debt.dueDate ? formatDate(debt.dueDate) : 'Sin vencimiento'}
-                    </Text>
+                    </ThemedText>
                   </View>
                   <View style={{ flexDirection: 'row', gap: 8 }}>
                     <TouchableOpacity
+                      accessibilityLabel={`Ver pagos de ${debt.personName}`}
                       onPress={() => viewPayments(debt.id)}
                       style={{
                         flexDirection: 'row',
                         alignItems: 'center',
                         gap: 4,
-                        paddingVertical: 6,
+                        paddingVertical: 10,
                         paddingHorizontal: 12,
                         borderRadius: 8,
                         backgroundColor: themeColors.primaryLight + '40',
+                        minHeight: 44,
                       }}
                     >
                       <Ionicons name="receipt-outline" size={14} color={themeColors.primary} />
-                      <Text style={{ fontSize: 12, fontWeight: '600', color: themeColors.primary }}>
+                      <ThemedText type="buttonSmall" themeColor="primary">
                         Pagos
-                      </Text>
+                      </ThemedText>
                     </TouchableOpacity>
                     {debt.status !== 'paid' && (
                       <TouchableOpacity
+                        accessibilityLabel={`Abonar a deuda de ${debt.personName}`}
                         onPress={() => openPaymentModal(debt.id)}
                         style={{
                           flexDirection: 'row',
                           alignItems: 'center',
                           gap: 4,
-                          paddingVertical: 6,
+                          paddingVertical: 10,
                           paddingHorizontal: 12,
                           borderRadius: 8,
                           backgroundColor: accentColor + '20',
+                          minHeight: 44,
                         }}
                       >
                         <Ionicons name="add-circle-outline" size={14} color={accentColor} />
-                        <Text style={{ fontSize: 12, fontWeight: '600', color: accentColor }}>
+                        <ThemedText type="buttonSmall" color={accentColor}>
                           Abonar
-                        </Text>
+                        </ThemedText>
                       </TouchableOpacity>
                     )}
                   </View>
@@ -654,18 +660,18 @@ export default function DebtsScreen() {
             >
               <ScrollView contentContainerStyle={{ padding: 20 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                  <Text style={{ fontSize: 22, fontWeight: '700', color: themeColors.text }}>
+                  <ThemedText type="h2" themeColor="text">
                     {editId ? 'Editar' : 'Nueva'} deuda
-                  </Text>
-                  <TouchableOpacity onPress={() => setShowModal(false)}>
+                  </ThemedText>
+                  <TouchableOpacity accessibilityLabel="Cerrar modal" onPress={() => setShowModal(false)}>
                     <Ionicons name="close" size={28} color={themeColors.textSecondary} />
                   </TouchableOpacity>
                 </View>
 
                 {/* Type selector */}
-                <Text style={{ fontSize: 14, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+                <ThemedText type="body" themeColor="textSecondary" style={{ marginBottom: 8 }}>
                   Tipo
-                </Text>
+                </ThemedText>
                 <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
                   {([
                     { key: 'lent' as DebtType, label: 'Me prestaron', icon: 'arrow-down-circle' as const },
@@ -673,6 +679,7 @@ export default function DebtsScreen() {
                   ]).map((t) => (
                     <TouchableOpacity
                       key={t.key}
+                      accessibilityLabel={`Tipo: ${t.label}`}
                       onPress={() => setFormType(t.key)}
                       style={{
                         flex: 1,
@@ -690,21 +697,17 @@ export default function DebtsScreen() {
                         size={18}
                         color={formType === t.key ? '#FFFFFF' : themeColors.textSecondary}
                       />
-                      <Text style={{
-                        fontSize: 13,
-                        fontWeight: '600',
-                        color: formType === t.key ? '#FFFFFF' : themeColors.textSecondary,
-                      }}>
+                      <ThemedText type="buttonSmall" color={formType === t.key ? '#FFFFFF' : themeColors.textSecondary}>
                         {t.label}
-                      </Text>
+                      </ThemedText>
                     </TouchableOpacity>
                   ))}
                 </View>
 
                 {/* Person name */}
-                <Text style={{ fontSize: 14, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+                <ThemedText type="body" themeColor="textSecondary" style={{ marginBottom: 8 }}>
                   Persona
-                </Text>
+                </ThemedText>
                 <TextInput
                   value={formPerson}
                   onChangeText={setFormPerson}
@@ -721,9 +724,9 @@ export default function DebtsScreen() {
                 />
 
                 {/* Description */}
-                <Text style={{ fontSize: 14, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+                <ThemedText type="body" themeColor="textSecondary" style={{ marginBottom: 8 }}>
                   Descripción
-                </Text>
+                </ThemedText>
                 <TextInput
                   value={formDescription}
                   onChangeText={setFormDescription}
@@ -740,13 +743,14 @@ export default function DebtsScreen() {
                 />
 
                 {/* Currency selector */}
-                <Text style={{ fontSize: 14, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+                <ThemedText type="body" themeColor="textSecondary" style={{ marginBottom: 8 }}>
                   Moneda
-                </Text>
+                </ThemedText>
                 <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
                   {(['USD', 'BS', 'BOTH'] as CurrencyType[]).map((cur) => (
                     <TouchableOpacity
                       key={cur}
+                      accessibilityLabel={`Moneda: ${cur === 'USD' ? 'USD' : cur === 'BS' ? 'Bolívares' : 'Ambas monedas'}`}
                       onPress={() => setFormCurrency(cur)}
                       style={{
                         paddingVertical: 8,
@@ -755,13 +759,9 @@ export default function DebtsScreen() {
                         backgroundColor: formCurrency === cur ? themeColors.primary : themeColors.surface,
                       }}
                     >
-                      <Text style={{
-                        fontSize: 13,
-                        fontWeight: '600',
-                        color: formCurrency === cur ? '#FFFFFF' : themeColors.textSecondary,
-                      }}>
-                        {cur === 'USD' ? '🇺🇸 USD' : cur === 'BS' ? '🇻🇪 BS' : 'Ambas'}
-                      </Text>
+                      <ThemedText type="buttonSmall" color={formCurrency === cur ? '#FFFFFF' : themeColors.textSecondary}>
+                        {cur === 'USD' ? 'USD' : cur === 'BS' ? 'BS' : 'Ambas'}
+                      </ThemedText>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -770,9 +770,9 @@ export default function DebtsScreen() {
                 <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
                   {(formCurrency === 'USD' || formCurrency === 'BOTH') && (
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 14, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+                      <ThemedText type="body" themeColor="textSecondary" style={{ marginBottom: 8 }}>
                         Monto USD
-                      </Text>
+                      </ThemedText>
                       <TextInput
                         value={formAmountUSD}
                         onChangeText={setFormAmountUSD}
@@ -791,9 +791,9 @@ export default function DebtsScreen() {
                   )}
                   {(formCurrency === 'BS' || formCurrency === 'BOTH') && (
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 14, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+                      <ThemedText type="body" themeColor="textSecondary" style={{ marginBottom: 8 }}>
                         Monto BS
-                      </Text>
+                      </ThemedText>
                       <TextInput
                         value={formAmountBS}
                         onChangeText={setFormAmountBS}
@@ -813,9 +813,9 @@ export default function DebtsScreen() {
                 </View>
 
                 {/* Interest rate */}
-                <Text style={{ fontSize: 14, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
-                  Tasa de interés (%) <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>(opcional)</Text>
-                </Text>
+                <ThemedText type="body" themeColor="textSecondary" style={{ marginBottom: 8 }}>
+                  Tasa de interés (%) <ThemedText type="caption" themeColor="textSecondary">(opcional)</ThemedText>
+                </ThemedText>
                 <TextInput
                   value={formInterest}
                   onChangeText={setFormInterest}
@@ -833,9 +833,9 @@ export default function DebtsScreen() {
                 />
 
                 {/* Due date */}
-                <Text style={{ fontSize: 14, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
-                  Fecha de vencimiento <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>(YYYY-MM-DD, opcional)</Text>
-                </Text>
+                <ThemedText type="body" themeColor="textSecondary" style={{ marginBottom: 8 }}>
+                  Fecha de vencimiento <ThemedText type="caption" themeColor="textSecondary">(YYYY-MM-DD, opcional)</ThemedText>
+                </ThemedText>
                 <TextInput
                   value={formDueDate}
                   onChangeText={setFormDueDate}
@@ -852,9 +852,9 @@ export default function DebtsScreen() {
                 />
 
                 {/* Notes */}
-                <Text style={{ fontSize: 14, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
-                  Notas <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>(opcional)</Text>
-                </Text>
+                <ThemedText type="body" themeColor="textSecondary" style={{ marginBottom: 8 }}>
+                  Notas <ThemedText type="caption" themeColor="textSecondary">(opcional)</ThemedText>
+                </ThemedText>
                 <TextInput
                   value={formNotes}
                   onChangeText={setFormNotes}
@@ -875,6 +875,7 @@ export default function DebtsScreen() {
                 />
 
                 <TouchableOpacity
+                  accessibilityLabel={editId ? 'Guardar cambios de deuda' : 'Crear nueva deuda'}
                   onPress={handleSave}
                   disabled={saving}
                   style={{
@@ -888,9 +889,9 @@ export default function DebtsScreen() {
                   {saving ? (
                     <ActivityIndicator color="#FFFFFF" />
                   ) : (
-                    <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '700' }}>
+                    <ThemedText type="button" color="#FFFFFF">
                       {editId ? 'Guardar cambios' : 'Crear deuda'}
-                    </Text>
+                    </ThemedText>
                   )}
                 </TouchableOpacity>
               </ScrollView>
@@ -907,17 +908,17 @@ export default function DebtsScreen() {
             >
               <ScrollView contentContainerStyle={{ padding: 20 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                  <Text style={{ fontSize: 22, fontWeight: '700', color: themeColors.text }}>
+                  <ThemedText type="h2" themeColor="text">
                     Registrar abono
-                  </Text>
-                  <TouchableOpacity onPress={() => setShowPaymentModal(false)}>
+                  </ThemedText>
+                  <TouchableOpacity accessibilityLabel="Cerrar modal de abono" onPress={() => setShowPaymentModal(false)}>
                     <Ionicons name="close" size={28} color={themeColors.textSecondary} />
                   </TouchableOpacity>
                 </View>
 
-                <Text style={{ fontSize: 14, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+                <ThemedText type="body" themeColor="textSecondary" style={{ marginBottom: 8 }}>
                   Monto USD
-                </Text>
+                </ThemedText>
                 <TextInput
                   value={paymentAmountUSD}
                   onChangeText={setPaymentAmountUSD}
@@ -934,9 +935,9 @@ export default function DebtsScreen() {
                   }}
                 />
 
-                <Text style={{ fontSize: 14, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+                <ThemedText type="body" themeColor="textSecondary" style={{ marginBottom: 8 }}>
                   Monto BS
-                </Text>
+                </ThemedText>
                 <TextInput
                   value={paymentAmountBS}
                   onChangeText={setPaymentAmountBS}
@@ -953,9 +954,9 @@ export default function DebtsScreen() {
                   }}
                 />
 
-                <Text style={{ fontSize: 14, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+                <ThemedText type="body" themeColor="textSecondary" style={{ marginBottom: 8 }}>
                   Fecha
-                </Text>
+                </ThemedText>
                 <TextInput
                   value={paymentDate}
                   onChangeText={setPaymentDate}
@@ -971,9 +972,9 @@ export default function DebtsScreen() {
                   }}
                 />
 
-                <Text style={{ fontSize: 14, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
-                  Notas <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>(opcional)</Text>
-                </Text>
+                <ThemedText type="body" themeColor="textSecondary" style={{ marginBottom: 8 }}>
+                  Notas <ThemedText type="caption" themeColor="textSecondary">(opcional)</ThemedText>
+                </ThemedText>
                 <TextInput
                   value={paymentNotes}
                   onChangeText={setPaymentNotes}
@@ -990,17 +991,18 @@ export default function DebtsScreen() {
                 />
 
                 <TouchableOpacity
+                  accessibilityLabel="Registrar abono"
                   onPress={handleRecordPayment}
                   style={{
-                    backgroundColor: '#10B981',
+                    backgroundColor: themeColors.success,
                     paddingVertical: 16,
                     borderRadius: 14,
                     alignItems: 'center',
                   }}
                 >
-                  <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '700' }}>
+                  <ThemedText type="button" color="#FFFFFF">
                     Registrar abono
-                  </Text>
+                  </ThemedText>
                 </TouchableOpacity>
               </ScrollView>
             </KeyboardAvoidingView>
@@ -1012,10 +1014,10 @@ export default function DebtsScreen() {
           <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
             <View style={{ padding: 20 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                <Text style={{ fontSize: 22, fontWeight: '700', color: themeColors.text }}>
+                <ThemedText type="h2" themeColor="text">
                   Historial de abonos
-                </Text>
-                <TouchableOpacity onPress={() => setShowPaymentsList(false)}>
+                </ThemedText>
+                <TouchableOpacity accessibilityLabel="Cerrar historial de abonos" onPress={() => setShowPaymentsList(false)}>
                   <Ionicons name="close" size={28} color={themeColors.textSecondary} />
                 </TouchableOpacity>
               </View>

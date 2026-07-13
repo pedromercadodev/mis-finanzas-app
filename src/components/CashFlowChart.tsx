@@ -10,6 +10,7 @@ import {
 } from '@shopify/react-native-skia';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import { useThemeColors } from '../hooks/useThemeColors';
+import { shadows } from '../theme/shadows';
 
 // Skia v2: Circle acepta {cx, cy, r} (ScalarCircleDef) o {c, r} (PointCircleDef)
 // Line acepta {p1: Vector, p2: Vector}
@@ -30,14 +31,14 @@ interface CashFlowChartProps {
 }
 
 const PADDING = { top: 20, right: 16, bottom: 40, left: 50 };
-const LINE_COLORS = {
-  balance: '#6366F1',
-  income: '#10B981',
-  expense: '#EF4444',
-};
 
 export default function CashFlowChart({ data, width, height }: CashFlowChartProps) {
   const themeColors = useThemeColors();
+  const LINE_COLORS = {
+    balance: themeColors.primary,
+    income: themeColors.success,
+    expense: themeColors.danger,
+  };
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
   const chartWidth = width - PADDING.left - PADDING.right;
@@ -249,11 +250,7 @@ export default function CashFlowChart({ data, width, height }: CashFlowChartProp
             backgroundColor: themeColors.surface,
             borderRadius: 10,
             padding: 8,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.15,
-            shadowRadius: 6,
-            elevation: 4,
+            ...shadows.md,
             borderWidth: 1,
             borderColor: themeColors.border,
             minWidth: 120,

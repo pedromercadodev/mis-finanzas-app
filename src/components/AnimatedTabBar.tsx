@@ -1,6 +1,8 @@
-import { View, Text, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, Dimensions, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../hooks/useThemeColors';
+import { shadows } from '../theme/shadows';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 import { usePathname, useRouter } from 'expo-router';
 import { useEffect, useCallback } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -26,14 +28,16 @@ const TABS = [
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const TAB_WIDTH = SCREEN_WIDTH / TABS.length;
 
-const SPRING_CONFIG = { damping: 15, stiffness: 200, mass: 0.8 };
-const SCALE_SPRING = { damping: 12, stiffness: 250, mass: 0.6 };
+// Custom easing curves — Emil Kowalski style
+const EASE_OUT_STRONG = { damping: 18, stiffness: 220, mass: 0.7 };
+const EASE_OUT_SPRING = { damping: 14, stiffness: 250, mass: 0.6 };
 
 export default function AnimatedTabBar() {
   const themeColors = useThemeColors();
   const pathname = usePathname();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const reducedMotion = useReducedMotion();
 
   const activeIndex = TABS.findIndex((t) => {
     const tabPath = t.name === 'index' ? '/(tabs)' : `/(tabs)/${t.name}`;
@@ -55,23 +59,36 @@ export default function AnimatedTabBar() {
   useEffect(() => {
     if (prevIndex.value === currentIndex) return;
 
-    // Animación del indicador deslizante
-    slideOffset.value = withSpring(currentIndex * TAB_WIDTH, SPRING_CONFIG);
+    if (reducedMotion) {
+      slideOffset.value = currentIndex * TAB_WIDTH;
+      const oldIdx = Math.round(prevIndex.value);
+      if (oldIdx >= 0 && oldIdx < TABS.length) {
+        morphProgress[oldIdx].value = 0;
+        iconScale[oldIdx].value = 1;
+        iconRotation[oldIdx].value = 0;
+      }
+      morphProgress[currentIndex].value = 1;
+      iconScale[currentIndex].value = 1;
+      prevIndex.value = currentIndex;
+      return;
+    }
+
+    // Animación del indicador deslizante — spring con damping crítico
+    slideOffset.value = withSpring(currentIndex * TAB_WIDTH, EASE_OUT_STRONG);
 
     // Resetear tab anterior
     const oldIdx = Math.round(prevIndex.value);
     if (oldIdx >= 0 && oldIdx < TABS.length) {
-      morphProgress[oldIdx].value = withSpring(0, SPRING_CONFIG);
-      iconScale[oldIdx].value = withSpring(1, SPRING_CONFIG);
-      // Reset rotación del tab anterior si es sparkles
+      morphProgress[oldIdx].value = withSpring(0, EASE_OUT_STRONG);
+      iconScale[oldIdx].value = withSpring(1, EASE_OUT_STRONG);
       if (TABS[oldIdx].name === 'ai-chat') {
         iconRotation[oldIdx].value = withTiming(0, { duration: 200 });
       }
     }
 
     // Activar nuevo tab
-    morphProgress[currentIndex].value = withSpring(1, SPRING_CONFIG);
-    iconScale[currentIndex].value = withSpring(1.12, SCALE_SPRING);
+    morphProgress[currentIndex].value = withSpring(1, EASE_OUT_STRONG);
+    iconScale[currentIndex].value = withSpring(1.1, EASE_OUT_SPRING);
 
     // Rotación especial para sparkles (Asistente)
     if (TABS[currentIndex].name === 'ai-chat') {
@@ -81,13 +98,10 @@ export default function AnimatedTabBar() {
       );
     }
 
-    // Haptic feedback sutil al cambiar de tab
     haptic('light');
-
     prevIndex.value = currentIndex;
-  }, [currentIndex]);
+  }, [currentIndex, reducedMotion]);
 
-  // Animación del indicador deslizante
   const indicatorStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: slideOffset.value }],
   }));
@@ -105,7 +119,9 @@ export default function AnimatedTabBar() {
     <View
       style={{
         flexDirection: 'row',
-        backgroundColor: themeColors.surface,
+        backgroundColor: Platform.OS === 'ios'
+          ? themeColors.surface + 'E8'
+          : themeColors.surface,
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
         paddingBottom: insets.bottom + 8,
@@ -113,14 +129,11 @@ export default function AnimatedTabBar() {
         height: 70 + insets.bottom,
         position: 'relative',
         overflow: 'hidden',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -4 },
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
-        elevation: 10,
+        // Sin border — solo sombra para profundidad
+        ...shadows.xl,
       }}
     >
-      {/* Indicador deslizante redondeado con Reanimated */}
+      {/* Indicador deslizante redondeado */}
       <Animated.View
         style={[
           {
@@ -139,7 +152,6 @@ export default function AnimatedTabBar() {
       {TABS.map((tab, index) => {
         const isActive = index === currentIndex;
 
-        // Estilo animado para el contenedor del icono
         const iconContainerStyle = useAnimatedStyle(() => {
           const scale = iconScale[index].value;
           return {
@@ -147,7 +159,6 @@ export default function AnimatedTabBar() {
           };
         });
 
-        // Estilo animado para el icono outline (se desvanece cuando está activo)
         const outlineIconStyle = useAnimatedStyle(() => ({
           opacity: 1 - morphProgress[index].value,
           transform: [
@@ -155,7 +166,6 @@ export default function AnimatedTabBar() {
           ],
         }));
 
-        // Estilo animado para el icono filled (aparece cuando está activo)
         const filledIconStyle = useAnimatedStyle(() => ({
           opacity: morphProgress[index].value,
           position: 'absolute',
@@ -172,6 +182,8 @@ export default function AnimatedTabBar() {
             key={tab.name}
             onPress={() => navigate(tab.name)}
             activeOpacity={0.7}
+            accessibilityLabel={tab.title}
+            accessibilityRole="tab"
             style={{
               flex: 1,
               alignItems: 'center',
@@ -185,7 +197,7 @@ export default function AnimatedTabBar() {
                   width: 46,
                   height: 46,
                   borderRadius: 23,
-                  backgroundColor: isActive ? themeColors.primary + '18' : 'transparent',
+                  backgroundColor: isActive ? themeColors.primary + '14' : 'transparent',
                   justifyContent: 'center',
                   alignItems: 'center',
                   marginBottom: 3,
@@ -193,16 +205,14 @@ export default function AnimatedTabBar() {
                 iconContainerStyle,
               ]}
             >
-              {/* Icono outline (se desvanece) */}
               <Animated.View style={outlineIconStyle}>
                 <Ionicons
                   name={tab.icon as any}
                   size={24}
-                  color={isActive ? themeColors.primary : themeColors.textSecondary}
+                  color={isActive ? themeColors.primary : themeColors.textTertiary}
                 />
               </Animated.View>
 
-              {/* Icono filled (aparece con morphing) */}
               <Animated.View style={filledIconStyle}>
                 <Ionicons
                   name={tab.iconActive as any}
@@ -215,7 +225,7 @@ export default function AnimatedTabBar() {
               style={{
                 fontSize: 10,
                 fontWeight: isActive ? '600' : '400',
-                color: isActive ? themeColors.primary : themeColors.textSecondary,
+                color: isActive ? themeColors.primary : themeColors.textTertiary,
                 marginTop: 1,
               }}
               numberOfLines={1}

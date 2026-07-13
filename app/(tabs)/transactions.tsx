@@ -19,6 +19,7 @@ import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Swipeable } from 'react-native-gesture-handler';
 import { useAccounts } from '../../src/store/useAccounts';
 import { useThemeColors } from '../../src/hooks/useThemeColors';
+import ThemedText from '../../src/components/ThemedText';
 import { useExchangeRates } from '../../src/hooks/useExchangeRates';
 import { useSettings } from '../../src/store/useSettings';
 import Toast from '../../src/components/Toast';
@@ -33,6 +34,7 @@ import { getLocalDateString, getLocalDate } from '../../src/utils/date';
 import { suggestCategory } from '../../src/services/deepseek';
 import type { Category, TransactionType } from '../../src/utils/types';
 import { haptic } from '../../src/utils/haptics';
+import { shadows } from '../../src/theme/shadows';
 
 type PeriodFilter = 'today' | 'week' | 'month' | 'year';
 
@@ -319,10 +321,11 @@ export default function TransactionsScreen() {
       >
         {/* Header con botón de filtros */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <Text style={{ fontSize: 28, fontWeight: '700', color: themeColors.text }}>
+          <ThemedText type="amountLarge" themeColor="text">
             Movimientos
-          </Text>
+          </ThemedText>
           <TouchableOpacity
+            accessibilityLabel={showFilters ? 'Ocultar filtros' : 'Mostrar filtros'}
             onPress={() => setShowFilters(!showFilters)}
             style={{
               flexDirection: 'row',
@@ -338,13 +341,9 @@ export default function TransactionsScreen() {
               size={18}
               color={showFilters ? '#FFF' : themeColors.textSecondary}
             />
-            <Text style={{
-              fontSize: 13,
-              fontWeight: '600',
-              color: showFilters ? '#FFF' : themeColors.textSecondary,
-            }}>
+            <ThemedText type="buttonSmall" color={showFilters ? '#FFF' : themeColors.textSecondary}>
               Filtros
-            </Text>
+            </ThemedText>
           </TouchableOpacity>
         </View>
 
@@ -356,8 +355,9 @@ export default function TransactionsScreen() {
           borderRadius: 12,
           paddingHorizontal: 14,
           marginBottom: showFilters ? 12 : 16,
-          borderWidth: 1,
-          borderColor: searchQuery.trim() ? themeColors.primary : themeColors.border,
+          ...shadows.sm,
+          borderWidth: searchQuery.trim() ? 1 : 0,
+          borderColor: searchQuery.trim() ? themeColors.primary : 'transparent',
         }}>
           <Ionicons name="search" size={20} color={themeColors.textSecondary} style={{ marginRight: 8 }} />
           <TextInput
@@ -373,7 +373,7 @@ export default function TransactionsScreen() {
             onChangeText={setSearchQuery}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <TouchableOpacity accessibilityLabel="Limpiar búsqueda" onPress={() => setSearchQuery('')}>
               <Ionicons name="close-circle" size={20} color={themeColors.textSecondary} />
             </TouchableOpacity>
           )}
@@ -387,22 +387,20 @@ export default function TransactionsScreen() {
               {uniqueTypes.map((type) => (
                 <TouchableOpacity
                   key={type}
+                  accessibilityLabel={`Filtrar por tipo ${typeLabels[type]}`}
                   onPress={() => setTypeFilter(type)}
                   style={{
-                    paddingVertical: 6,
+                    paddingVertical: 10,
                     paddingHorizontal: 12,
                     borderRadius: 8,
                     backgroundColor: typeFilter === type ? themeColors.primary : themeColors.surface,
-                    borderWidth: 1,
-                    borderColor: typeFilter === type ? themeColors.primary : themeColors.border,
+                    minHeight: 44,
+                    justifyContent: 'center',
+                    ...(typeFilter !== type ? shadows.sm : {}),
                   }}>
-                  <Text style={{
-                    fontSize: 12,
-                    fontWeight: '600',
-                    color: typeFilter === type ? '#FFF' : themeColors.text,
-                  }}>
+                  <ThemedText type="buttonSmall" color={typeFilter === type ? '#FFF' : themeColors.text}>
                     {typeLabels[type]}
-                  </Text>
+                  </ThemedText>
                 </TouchableOpacity>
               ))}
             </View>
@@ -411,42 +409,38 @@ export default function TransactionsScreen() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 0 }}>
               <View style={{ flexDirection: 'row', gap: 6 }}>
                 <TouchableOpacity
+                  accessibilityLabel="Mostrar todas las cuentas"
                   onPress={() => setAccountFilter(null)}
                   style={{
-                    paddingVertical: 6,
+                    paddingVertical: 10,
                     paddingHorizontal: 12,
                     borderRadius: 8,
                     backgroundColor: accountFilter === null ? themeColors.primary : themeColors.surface,
-                    borderWidth: 1,
-                    borderColor: accountFilter === null ? themeColors.primary : themeColors.border,
+                    minHeight: 44,
+                    justifyContent: 'center',
+                    ...(accountFilter !== null ? shadows.sm : {}),
                   }}>
-                  <Text style={{
-                    fontSize: 12,
-                    fontWeight: '600',
-                    color: accountFilter === null ? '#FFF' : themeColors.text,
-                  }}>
+                  <ThemedText type="buttonSmall" color={accountFilter === null ? '#FFF' : themeColors.text}>
                     Todas las cuentas
-                  </Text>
+                  </ThemedText>
                 </TouchableOpacity>
                 {accounts.map((acc) => (
                   <TouchableOpacity
                     key={acc.id}
+                    accessibilityLabel={`Filtrar por cuenta ${acc.name}`}
                     onPress={() => setAccountFilter(acc.id)}
                     style={{
-                      paddingVertical: 6,
+                      paddingVertical: 10,
                       paddingHorizontal: 12,
                       borderRadius: 8,
                       backgroundColor: accountFilter === acc.id ? themeColors.primary : themeColors.surface,
-                      borderWidth: 1,
-                      borderColor: accountFilter === acc.id ? themeColors.primary : themeColors.border,
+                      minHeight: 44,
+                      justifyContent: 'center',
+                      ...(accountFilter !== acc.id ? shadows.sm : {}),
                     }}>
-                    <Text style={{
-                      fontSize: 12,
-                      fontWeight: '600',
-                      color: accountFilter === acc.id ? '#FFF' : themeColors.text,
-                    }}>
+                    <ThemedText type="buttonSmall" color={accountFilter === acc.id ? '#FFF' : themeColors.text}>
                       {acc.icon} {acc.name}
-                    </Text>
+                    </ThemedText>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -456,42 +450,41 @@ export default function TransactionsScreen() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               <View style={{ flexDirection: 'row', gap: 6 }}>
                 <TouchableOpacity
+                  accessibilityLabel="Mostrar todas las categorías"
                   onPress={() => setCategoryFilter(null)}
                   style={{
-                    paddingVertical: 6,
+                    paddingVertical: 10,
                     paddingHorizontal: 12,
                     borderRadius: 8,
                     backgroundColor: categoryFilter === null ? themeColors.primary : themeColors.surface,
-                    borderWidth: 1,
-                    borderColor: categoryFilter === null ? themeColors.primary : themeColors.border,
+                    minHeight: 44,
+                    justifyContent: 'center',
+                    ...(categoryFilter !== null ? shadows.sm : {}),
                   }}>
-                  <Text style={{
-                    fontSize: 12,
-                    fontWeight: '600',
-                    color: categoryFilter === null ? '#FFF' : themeColors.text,
-                  }}>
+                  <ThemedText type="buttonSmall" color={categoryFilter === null ? '#FFF' : themeColors.text}>
                     Todas las categorías
-                  </Text>
+                  </ThemedText>
                 </TouchableOpacity>
                 {categories.map((cat) => (
                   <TouchableOpacity
                     key={cat.id}
+                    accessibilityLabel={`Filtrar por categoría ${cat.name}`}
                     onPress={() => setCategoryFilter(cat.id)}
                     style={{
-                      paddingVertical: 6,
+                      paddingVertical: 10,
                       paddingHorizontal: 12,
                       borderRadius: 8,
                       backgroundColor: categoryFilter === cat.id ? themeColors.primary : themeColors.surface,
-                      borderWidth: 1,
-                      borderColor: categoryFilter === cat.id ? themeColors.primary : themeColors.border,
+                      minHeight: 44,
+                      justifyContent: 'center',
+                      ...(categoryFilter !== cat.id ? shadows.sm : {}),
                     }}>
-                    <Text style={{
-                      fontSize: 12,
-                      fontWeight: '600',
-                      color: categoryFilter === cat.id ? '#FFF' : themeColors.text,
-                    }}>
-                      {cat.icon} {cat.name}
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Ionicons name={(cat.icon as any) || 'cube-outline'} size={14} color={categoryFilter === cat.id ? '#FFF' : themeColors.text} />
+                      <ThemedText type="buttonSmall" color={categoryFilter === cat.id ? '#FFF' : themeColors.text}>
+                        {cat.name}
+                      </ThemedText>
+                    </View>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -525,15 +518,15 @@ export default function TransactionsScreen() {
               borderRadius: 14,
               padding: 14,
             }}>
-              <Text style={{ fontSize: 11, color: themeColors.success, fontWeight: '500', marginBottom: 4 }}>
+              <ThemedText type="badge" color={themeColors.success} style={{ marginBottom: 4 }}>
                 Ingresos
-              </Text>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: themeColors.success }}>
+              </ThemedText>
+              <ThemedText type="amountMedium" color={themeColors.success}>
                 {formatUSD(totalIncomeUSD)}
-              </Text>
-              <Text style={{ fontSize: 11, color: themeColors.textSecondary }}>
+              </ThemedText>
+              <ThemedText type="badge" themeColor="textSecondary">
                 {formatBS(totalIncomeBS)}
-              </Text>
+              </ThemedText>
             </View>
             <View style={{
               flex: 1,
@@ -541,15 +534,15 @@ export default function TransactionsScreen() {
               borderRadius: 14,
               padding: 14,
             }}>
-              <Text style={{ fontSize: 11, color: themeColors.danger, fontWeight: '500', marginBottom: 4 }}>
+              <ThemedText type="badge" color={themeColors.danger} style={{ marginBottom: 4 }}>
                 Gastos
-              </Text>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: themeColors.danger }}>
+              </ThemedText>
+              <ThemedText type="amountMedium" color={themeColors.danger}>
                 {formatUSD(totalExpenseUSD)}
-              </Text>
-              <Text style={{ fontSize: 11, color: themeColors.textSecondary }}>
+              </ThemedText>
+              <ThemedText type="badge" themeColor="textSecondary">
                 {formatBS(totalExpenseBS)}
-              </Text>
+              </ThemedText>
             </View>
             {/* Balance Neto */}
             <View style={{
@@ -557,22 +550,17 @@ export default function TransactionsScreen() {
               backgroundColor: themeColors.surface,
               borderRadius: 14,
               padding: 14,
-              borderWidth: 1,
-              borderColor: themeColors.border,
+              ...shadows.sm,
             }}>
-              <Text style={{ fontSize: 11, color: themeColors.textSecondary, fontWeight: '500', marginBottom: 4 }}>
+              <ThemedText type="badge" themeColor="textSecondary" style={{ marginBottom: 4 }}>
                 Balance
-              </Text>
-              <Text style={{
-                fontSize: 16,
-                fontWeight: '700',
-                color: netUSD >= 0 ? themeColors.success : themeColors.danger,
-              }}>
+              </ThemedText>
+              <ThemedText type="amountMedium" color={netUSD >= 0 ? themeColors.success : themeColors.danger}>
                 {formatUSD(netUSD)}
-              </Text>
-              <Text style={{ fontSize: 11, color: themeColors.textSecondary }}>
+              </ThemedText>
+              <ThemedText type="badge" themeColor="textSecondary">
                 {formatBS(netBS)}
-              </Text>
+              </ThemedText>
             </View>
           </View>
           );
@@ -580,20 +568,21 @@ export default function TransactionsScreen() {
 
         {/* Contador de resultados */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-          <Text style={{ fontSize: 13, color: themeColors.textSecondary }}>
+          <ThemedText type="caption" themeColor="textSecondary">
             {filteredTransactions.length} {filteredTransactions.length === 1 ? 'movimiento' : 'movimientos'}
-          </Text>
+          </ThemedText>
           {(searchQuery || typeFilter !== 'all' || accountFilter !== null || categoryFilter !== null) && (
             <TouchableOpacity
+              accessibilityLabel="Limpiar todos los filtros"
               onPress={() => {
                 setSearchQuery('');
                 setTypeFilter('all');
                 setAccountFilter(null);
                 setCategoryFilter(null);
               }}>
-              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.primary }}>
+              <ThemedText type="buttonSmall" themeColor="primary">
                 Limpiar filtros
-              </Text>
+              </ThemedText>
             </TouchableOpacity>
           )}
         </View>
@@ -615,6 +604,7 @@ export default function TransactionsScreen() {
           const category = categories.find((c) => c.id === tx.categoryId);
           const renderRightActions = () => (
             <TouchableOpacity
+              accessibilityLabel={`Eliminar transacción ${tx.description}`}
               onPress={() => handleDelete(tx.id)}
               style={{
                 backgroundColor: '#EF4444',
@@ -626,9 +616,9 @@ export default function TransactionsScreen() {
                 marginLeft: 8,
               }}>
               <Ionicons name="trash-outline" size={22} color="#FFF" />
-              <Text style={{ fontSize: 11, color: '#FFF', fontWeight: '600', marginTop: 2 }}>
+              <ThemedText type="badge" color="#FFF" style={{ marginTop: 2 }}>
                 Eliminar
-              </Text>
+              </ThemedText>
             </TouchableOpacity>
           );
           return (
@@ -646,11 +636,7 @@ export default function TransactionsScreen() {
                   marginBottom: 8,
                   flexDirection: 'row',
                   alignItems: 'center',
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.05,
-                  shadowRadius: 4,
-                  elevation: 2,
+                  ...shadows.sm,
                 }}
               >
                 <View style={{
@@ -662,36 +648,32 @@ export default function TransactionsScreen() {
                   alignItems: 'center',
                   marginRight: 14,
                 }}>
-                  <Text style={{ fontSize: 20 }}>{category?.icon || '📦'}</Text>
+                  <Ionicons name={(category?.icon as any) || 'cube-outline'} size={20} color={tx.type === 'income' ? themeColors.success : themeColors.danger} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 15, fontWeight: '600', color: themeColors.text }}>
+                  <ThemedText type="body" themeColor="text" style={{ fontWeight: '600' }}>
                     {tx.description}
-                  </Text>
+                  </ThemedText>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                    <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>
+                    <ThemedText type="caption" themeColor="textSecondary">
                       {account?.icon} {account?.name}
-                    </Text>
-                    <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>·</Text>
-                    <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>
+                    </ThemedText>
+                    <ThemedText type="caption" themeColor="textSecondary">·</ThemedText>
+                    <ThemedText type="caption" themeColor="textSecondary">
                       {formatDateShort(tx.date)}
-                    </Text>
+                    </ThemedText>
                   </View>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
                   {tx.amountUSD && (
-                    <Text style={{
-                      fontSize: 15,
-                      fontWeight: '700',
-                      color: tx.type === 'income' ? themeColors.success : themeColors.danger,
-                    }}>
+                    <ThemedText type="body" color={tx.type === 'income' ? themeColors.success : themeColors.danger} style={{ fontWeight: '700' }}>
                       {tx.type === 'income' ? '+' : '-'}{formatUSD(tx.amountUSD)}
-                    </Text>
+                    </ThemedText>
                   )}
                   {tx.amountBS && (
-                    <Text style={{ fontSize: 12, color: themeColors.textSecondary }}>
+                    <ThemedText type="caption" themeColor="textSecondary">
                       {formatBS(tx.amountBS)}
-                    </Text>
+                    </ThemedText>
                   )}
                 </View>
               </View>
@@ -703,6 +685,7 @@ export default function TransactionsScreen() {
 
       {/* FAB */}
       <TouchableOpacity
+        accessibilityLabel="Nueva transacción"
         onPress={openNewModal}
         style={{
           position: 'absolute',
@@ -714,11 +697,8 @@ export default function TransactionsScreen() {
           backgroundColor: themeColors.primary,
           justifyContent: 'center',
           alignItems: 'center',
-          shadowColor: themeColors.primary,
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.3,
-          shadowRadius: 8,
-          elevation: 6,
+          ...shadows.lg,
+          ...shadows.primary,
         }}
       >
         <Ionicons name="add" size={28} color="#FFFFFF" />
@@ -744,10 +724,10 @@ export default function TransactionsScreen() {
               keyboardShouldPersistTaps="handled"
             >
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                <Text style={{ fontSize: 24, fontWeight: '700', color: themeColors.text }}>
+                <ThemedText type="h2" themeColor="text">
                   Nueva Transacción
-                </Text>
-                <TouchableOpacity onPress={() => setShowModal(false)}>
+                </ThemedText>
+                <TouchableOpacity accessibilityLabel="Cerrar modal" onPress={() => setShowModal(false)}>
                   <Ionicons name="close" size={24} color={themeColors.textSecondary} />
                 </TouchableOpacity>
               </View>
@@ -759,6 +739,7 @@ export default function TransactionsScreen() {
                   return (
                     <TouchableOpacity
                       key={type}
+                      accessibilityLabel={`Seleccionar tipo ${type === 'expense' ? 'Gasto' : type === 'income' ? 'Ingreso' : 'Transferencia'}`}
                       onPress={() => {
                         if (isDisabled) {
                           Alert.alert('Transferencia', 'Necesitas al menos 2 cuentas para transferir');
@@ -775,26 +756,23 @@ export default function TransactionsScreen() {
                         opacity: isDisabled ? 0.4 : 1,
                       }}
                     >
-                      <Text style={{
-                        color: txType === type ? '#FFF' : themeColors.text,
-                        fontWeight: '600',
-                        fontSize: 13,
-                      }}>
+                      <ThemedText type="buttonSmall" color={txType === type ? '#FFF' : themeColors.text}>
                         {type === 'expense' ? 'Gasto' : type === 'income' ? 'Ingreso' : 'Transf.'}
-                      </Text>
+                      </ThemedText>
                     </TouchableOpacity>
                   );
                 })}
               </View>
 
               {/* Cuenta */}
-              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+              <ThemedText type="buttonSmall" themeColor="textSecondary" style={{ marginBottom: 8 }}>
                 Cuenta
-              </Text>
+              </ThemedText>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
                 {accounts.map((account) => (
                   <TouchableOpacity
                     key={account.id}
+                    accessibilityLabel={`Seleccionar cuenta ${account.name}`}
                     onPress={() => setSelectedAccountId(account.id)}
                     style={{
                       paddingHorizontal: 16,
@@ -802,17 +780,16 @@ export default function TransactionsScreen() {
                       borderRadius: 12,
                       backgroundColor: selectedAccountId === account.id ? account.color + '20' : themeColors.surface,
                       marginRight: 8,
-                      borderWidth: 1,
-                      borderColor: selectedAccountId === account.id ? account.color : themeColors.border,
+                      ...shadows.sm,
                       flexDirection: 'row',
                       alignItems: 'center',
                       gap: 6,
                     }}
                   >
                     <Text style={{ fontSize: 16 }}>{account.icon}</Text>
-                    <Text style={{ fontSize: 14, fontWeight: '500', color: themeColors.text }}>
+                    <ThemedText type="body" themeColor="text">
                       {account.name}
-                    </Text>
+                    </ThemedText>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
@@ -820,15 +797,16 @@ export default function TransactionsScreen() {
               {/* Cuenta Destino (solo para transferencias) */}
               {txType === 'transfer' && (
                 <>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+                  <ThemedText type="buttonSmall" themeColor="textSecondary" style={{ marginBottom: 8 }}>
                     Cuenta Destino
-                  </Text>
+                  </ThemedText>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
                     {accounts
                       .filter((a) => a.id !== selectedAccountId)
                       .map((account) => (
                         <TouchableOpacity
                           key={account.id}
+                          accessibilityLabel={`Seleccionar cuenta destino ${account.name}`}
                           onPress={() => setTransferToAccountId(account.id)}
                           style={{
                             paddingHorizontal: 16,
@@ -836,17 +814,16 @@ export default function TransactionsScreen() {
                             borderRadius: 12,
                             backgroundColor: transferToAccountId === account.id ? account.color + '20' : themeColors.surface,
                             marginRight: 8,
-                            borderWidth: 1,
-                            borderColor: transferToAccountId === account.id ? account.color : themeColors.border,
+                            ...shadows.sm,
                             flexDirection: 'row',
                             alignItems: 'center',
                             gap: 6,
                           }}
                         >
                           <Text style={{ fontSize: 16 }}>{account.icon}</Text>
-                          <Text style={{ fontSize: 14, fontWeight: '500', color: themeColors.text }}>
+                          <ThemedText type="body" themeColor="text">
                             {account.name}
-                          </Text>
+                          </ThemedText>
                         </TouchableOpacity>
                       ))}
                   </ScrollView>
@@ -855,19 +832,19 @@ export default function TransactionsScreen() {
 
               {/* Descripción */}
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary }}>
+                <ThemedText type="buttonSmall" themeColor="textSecondary">
                   Descripción
-                </Text>
+                </ThemedText>
                 {suggestingCategory && (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                     <ActivityIndicator size="small" color={themeColors.primary} />
-                    <Text style={{ fontSize: 11, color: themeColors.textSecondary }}>Analizando...</Text>
+                    <ThemedText type="badge" themeColor="textSecondary">Analizando...</ThemedText>
                   </View>
                 )}
                 {suggestedCategoryName && !suggestingCategory && (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                     <Ionicons name="sparkles" size={14} color={themeColors.primary} />
-                    <Text style={{ fontSize: 11, color: themeColors.primary }}>Sugerido: {suggestedCategoryName}</Text>
+                    <ThemedText type="badge" themeColor="primary">Sugerido: {suggestedCategoryName}</ThemedText>
                   </View>
                 )}
               </View>
@@ -906,17 +883,18 @@ export default function TransactionsScreen() {
                   fontSize: 15,
                   color: themeColors.text,
                   marginBottom: 16,
-                  borderWidth: 1,
-                  borderColor: suggestedCategoryName ? themeColors.primary : themeColors.border,
+                  ...shadows.sm,
+                  borderWidth: suggestedCategoryName ? 1 : 0,
+                  borderColor: suggestedCategoryName ? themeColors.primary : 'transparent',
                 }}
               />
 
               {/* Montos */}
               <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.usd, marginBottom: 8 }}>
+                  <ThemedText type="buttonSmall" themeColor="usd" style={{ marginBottom: 8 }}>
                     Monto en USD
-                  </Text>
+                  </ThemedText>
                   <TextInput
                     value={amountUSD}
                     onChangeText={setAmountUSD}
@@ -930,15 +908,14 @@ export default function TransactionsScreen() {
                       fontSize: 18,
                       fontWeight: '600',
                       color: themeColors.usd,
-                      borderWidth: 1,
-                      borderColor: themeColors.border,
+                      ...shadows.sm,
                     }}
                   />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.bs, marginBottom: 8 }}>
+                  <ThemedText type="buttonSmall" themeColor="bs" style={{ marginBottom: 8 }}>
                     Monto en Bs
-                  </Text>
+                  </ThemedText>
                   <TextInput
                     value={amountBS}
                     onChangeText={setAmountBS}
@@ -952,21 +929,21 @@ export default function TransactionsScreen() {
                       fontSize: 18,
                       fontWeight: '600',
                       color: themeColors.bs,
-                      borderWidth: 1,
-                      borderColor: themeColors.border,
+                      ...shadows.sm,
                     }}
                   />
                 </View>
               </View>
 
               {/* Categoría */}
-              <Text style={{ fontSize: 13, fontWeight: '600', color: themeColors.textSecondary, marginBottom: 8 }}>
+              <ThemedText type="buttonSmall" themeColor="textSecondary" style={{ marginBottom: 8 }}>
                 Categoría
-              </Text>
+              </ThemedText>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 24 }}>
                 {categories.map((cat) => (
                   <TouchableOpacity
                     key={cat.id}
+                    accessibilityLabel={`Seleccionar categoría ${cat.name}`}
                     onPress={() => setSelectedCategoryId(cat.id)}
                     style={{
                       paddingHorizontal: 14,
@@ -974,34 +951,35 @@ export default function TransactionsScreen() {
                       borderRadius: 12,
                       backgroundColor: selectedCategoryId === cat.id ? cat.color + '20' : themeColors.surface,
                       marginRight: 8,
-                      borderWidth: 1,
-                      borderColor: selectedCategoryId === cat.id ? cat.color : themeColors.border,
+                      ...shadows.sm,
                       flexDirection: 'row',
                       alignItems: 'center',
                       gap: 6,
                     }}
                   >
-                    <Text style={{ fontSize: 16 }}>{cat.icon}</Text>
-                    <Text style={{ fontSize: 14, fontWeight: '500', color: themeColors.text }}>
+                    <Ionicons name={(cat.icon as any) || 'cube-outline'} size={18} color={themeColors.primary} />
+                    <ThemedText type="body" themeColor="text">
                       {cat.name}
-                    </Text>
+                    </ThemedText>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
 
               {/* Guardar */}
               <TouchableOpacity
+                accessibilityLabel="Guardar transacción"
                 onPress={handleSubmit}
                 style={{
                   backgroundColor: themeColors.primary,
                   borderRadius: 14,
                   padding: 16,
                   alignItems: 'center',
+                  ...shadows.primary,
                 }}
               >
-                <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '600' }}>
+                <ThemedText style={{ color: '#FFF' }} type="button">
                   Guardar Transacción
-                </Text>
+                </ThemedText>
               </TouchableOpacity>
             </ScrollView>
           </KeyboardAvoidingView>

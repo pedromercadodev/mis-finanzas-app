@@ -4,7 +4,6 @@ import PieChartInteractive from '../../src/components/PieChartInteractive';
 import type { PieSlice } from '../../src/components/PieChartInteractive';
 import {
   View,
-  Text,
   ScrollView,
   TouchableOpacity,
   Dimensions,
@@ -17,6 +16,8 @@ import CashFlowChart from '../../src/components/CashFlowChart';
 import { useThemeColors } from '../../src/hooks/useThemeColors';
 import { ReportsSkeleton } from '../../src/components/Skeleton';
 import { formatUSD, formatBS } from '../../src/utils/format';
+import ThemedText from '../../src/components/ThemedText';
+import { shadows } from '../../src/theme/shadows';
 import {
   getCategoryBreakdown,
   getCashFlowHistory,
@@ -157,9 +158,9 @@ export default function ReportsScreen() {
         <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
           {/* Header */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-            <Text style={{ fontSize: 28, fontWeight: '700', color: themeColors.text }}>
+            <ThemedText type="h1">
               Reportes
-            </Text>
+            </ThemedText>
             <Ionicons name="bar-chart" size={28} color={themeColors.primary} />
           </View>
 
@@ -184,25 +185,21 @@ export default function ReportsScreen() {
                     borderRadius: 16,
                     padding: 16,
                     marginBottom: 20,
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.05,
-                    shadowRadius: 8,
-                    elevation: 2,
+                    ...shadows.md,
                   }}>
-                  <Text style={{ fontSize: 16, fontWeight: '600', color: themeColors.text, marginBottom: 12 }}>
+                  <ThemedText type="h4" themeColor="text" style={{ marginBottom: 12 }}>
                     Resumen del período
-                  </Text>
+                  </ThemedText>
                   <View style={{ flexDirection: 'row', gap: 12 }}>
                     <View style={{ flex: 1, alignItems: 'center', padding: 12, backgroundColor: themeColors.successLight, borderRadius: 12 }}>
-                      <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>Ingresos</Text>
-                      <Text style={{ fontSize: 16, fontWeight: '700', color: themeColors.success }}>
+                      <ThemedText type="caption" themeColor="textSecondary" style={{ marginBottom: 4 }}>Ingresos</ThemedText>
+                      <ThemedText type="h3" themeColor="success">
                         {formatUSD(summary.totalIncomeUSD)}
-                      </Text>
+                      </ThemedText>
                       {summary.totalIncomeBS > 0 && (
-                        <Text style={{ fontSize: 11, color: themeColors.success, marginTop: 2 }}>
+                        <ThemedText type="badge" themeColor="success" style={{ marginTop: 2 }}>
                           {formatBS(summary.totalIncomeBS)}
-                        </Text>
+                        </ThemedText>
                       )}
                       {comparison?.incomeChange !== null && comparison?.incomeChange !== undefined && (
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 4 }}>
@@ -211,21 +208,21 @@ export default function ReportsScreen() {
                             size={11}
                             color={comparison.incomeChange >= 0 ? themeColors.success : themeColors.danger}
                           />
-                          <Text style={{ fontSize: 11, fontWeight: '600', color: comparison.incomeChange >= 0 ? themeColors.success : themeColors.danger }}>
+                          <ThemedText type="badge" color={comparison.incomeChange >= 0 ? themeColors.success : themeColors.danger}>
                             {Math.abs(comparison.incomeChange)}%
-                          </Text>
+                          </ThemedText>
                         </View>
                       )}
                     </View>
                     <View style={{ flex: 1, alignItems: 'center', padding: 12, backgroundColor: themeColors.dangerLight, borderRadius: 12 }}>
-                      <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>Gastos</Text>
-                      <Text style={{ fontSize: 16, fontWeight: '700', color: themeColors.danger }}>
+                      <ThemedText type="caption" themeColor="textSecondary" style={{ marginBottom: 4 }}>Gastos</ThemedText>
+                      <ThemedText type="h3" themeColor="danger">
                         {formatUSD(summary.totalExpenseUSD)}
-                      </Text>
+                      </ThemedText>
                       {summary.totalExpenseBS > 0 && (
-                        <Text style={{ fontSize: 11, color: themeColors.danger, marginTop: 2 }}>
+                        <ThemedText type="badge" themeColor="danger" style={{ marginTop: 2 }}>
                           {formatBS(summary.totalExpenseBS)}
-                        </Text>
+                        </ThemedText>
                       )}
                       {comparison?.expenseChange !== null && comparison?.expenseChange !== undefined && (
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 4 }}>
@@ -234,21 +231,21 @@ export default function ReportsScreen() {
                             size={11}
                             color={comparison.expenseChange >= 0 ? themeColors.danger : themeColors.success}
                           />
-                          <Text style={{ fontSize: 11, fontWeight: '600', color: comparison.expenseChange >= 0 ? themeColors.danger : themeColors.success }}>
+                          <ThemedText type="badge" color={comparison.expenseChange >= 0 ? themeColors.danger : themeColors.success}>
                             {Math.abs(comparison.expenseChange)}%
-                          </Text>
+                          </ThemedText>
                         </View>
                       )}
                     </View>
                     <View style={{ flex: 1, alignItems: 'center', padding: 12, backgroundColor: themeColors.primaryLight, borderRadius: 12 }}>
-                      <Text style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>Neto</Text>
-                      <Text style={{ fontSize: 16, fontWeight: '700', color: summary.netUSD >= 0 ? themeColors.success : themeColors.danger }}>
+                      <ThemedText type="caption" themeColor="textSecondary" style={{ marginBottom: 4 }}>Neto</ThemedText>
+                      <ThemedText type="h3" color={summary.netUSD >= 0 ? themeColors.success : themeColors.danger}>
                         {formatUSD(summary.netUSD)}
-                      </Text>
+                      </ThemedText>
                       {summary.netBS !== 0 && (
-                        <Text style={{ fontSize: 11, color: summary.netBS >= 0 ? themeColors.success : themeColors.danger, marginTop: 2 }}>
+                        <ThemedText type="badge" color={summary.netBS >= 0 ? themeColors.success : themeColors.danger} style={{ marginTop: 2 }}>
                           {formatBS(summary.netBS)}
-                        </Text>
+                        </ThemedText>
                       )}
                       {comparison?.netChange !== null && comparison?.netChange !== undefined && (
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 4 }}>
@@ -257,9 +254,9 @@ export default function ReportsScreen() {
                             size={11}
                             color={comparison.netChange >= 0 ? themeColors.success : themeColors.danger}
                           />
-                          <Text style={{ fontSize: 11, fontWeight: '600', color: comparison.netChange >= 0 ? themeColors.success : themeColors.danger }}>
+                          <ThemedText type="badge" color={comparison.netChange >= 0 ? themeColors.success : themeColors.danger}>
                             {Math.abs(comparison.netChange)}%
-                          </Text>
+                          </ThemedText>
                         </View>
                       )}
                     </View>
@@ -277,6 +274,7 @@ export default function ReportsScreen() {
                   <TouchableOpacity
                     key={tab.key}
                     onPress={() => handleTabChange(tab.key)}
+                    accessibilityLabel={`Ver ${tab.label.toLowerCase()}`}
                     style={{
                       flex: 1,
                       flexDirection: 'row',
@@ -286,20 +284,19 @@ export default function ReportsScreen() {
                       paddingVertical: 10,
                       borderRadius: 12,
                       backgroundColor: activeTab === tab.key ? themeColors.primary : themeColors.surface,
+                      minHeight: 44,
+                      ...(activeTab === tab.key ? shadows.primary : shadows.sm),
                     }}>
                     <Ionicons
                       name={tab.icon as any}
                       size={16}
                       color={activeTab === tab.key ? '#FFFFFF' : themeColors.textSecondary}
                     />
-                    <Text
-                      style={{
-                        fontSize: 12,
-                        fontWeight: '600',
-                        color: activeTab === tab.key ? '#FFFFFF' : themeColors.textSecondary,
-                      }}>
+                    <ThemedText
+                      type="buttonSmall"
+                      color={activeTab === tab.key ? '#FFFFFF' : themeColors.textSecondary}>
                       {tab.label}
-                    </Text>
+                    </ThemedText>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -313,15 +310,11 @@ export default function ReportsScreen() {
                     borderRadius: 16,
                     padding: 16,
                     marginBottom: 20,
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.05,
-                    shadowRadius: 8,
-                    elevation: 2,
+                    ...shadows.md,
                   }}>
-                  <Text style={{ fontSize: 16, fontWeight: '600', color: themeColors.text, marginBottom: 16 }}>
+                  <ThemedText type="h4" themeColor="text" style={{ marginBottom: 16 }}>
                     Historial de Flujo de Caja (USD)
-                  </Text>
+                  </ThemedText>
                   {cashFlowData.length > 0 ? (
                     <CashFlowChart
                       data={cashFlowData}
@@ -331,9 +324,9 @@ export default function ReportsScreen() {
                   ) : (
                     <View style={{ alignItems: 'center', paddingVertical: 40 }}>
                       <Ionicons name="analytics-outline" size={48} color={themeColors.textSecondary} />
-                      <Text style={{ marginTop: 12, color: themeColors.textSecondary, fontSize: 14 }}>
+                      <ThemedText type="body" themeColor="textSecondary" style={{ marginTop: 12 }}>
                         No hay datos de flujo de caja en este período
-                      </Text>
+                      </ThemedText>
                     </View>
                   )}
                 </View>
@@ -345,15 +338,11 @@ export default function ReportsScreen() {
                     borderRadius: 16,
                     padding: 16,
                     marginBottom: 20,
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.05,
-                    shadowRadius: 8,
-                    elevation: 2,
+                    ...shadows.md,
                   }}>
-                  <Text style={{ fontSize: 16, fontWeight: '600', color: themeColors.text, marginBottom: 16 }}>
+                  <ThemedText type="h4" themeColor="text" style={{ marginBottom: 16 }}>
                     {activeTab === 'expense' ? 'Gastos por Categoría' : 'Ingresos por Categoría'}
-                  </Text>
+                  </ThemedText>
                   {categoryData.length > 0 ? (
                     <>
                       <PieChartInteractive
@@ -364,9 +353,9 @@ export default function ReportsScreen() {
                   ) : (
                     <View style={{ alignItems: 'center', paddingVertical: 40 }}>
                       <Ionicons name="pie-chart-outline" size={48} color={themeColors.textSecondary} />
-                      <Text style={{ marginTop: 12, color: themeColors.textSecondary, fontSize: 14 }}>
+                      <ThemedText type="body" themeColor="textSecondary" style={{ marginTop: 12 }}>
                         No hay {activeTab === 'expense' ? 'gastos' : 'ingresos'} en este período
-                      </Text>
+                      </ThemedText>
                     </View>
                   )}
                 </View>
