@@ -25,6 +25,7 @@ export default function TabLayout() {
           <Tabs.Screen name="budgets" options={{ href: null }} />
           <Tabs.Screen name="goals" options={{ href: null }} />
           <Tabs.Screen name="subscriptions" options={{ href: null }} />
+          <Tabs.Screen name="debts" options={{ href: null }} />
         </Tabs>
       </AnimatedTransition>
     </View>

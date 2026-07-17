@@ -28,16 +28,17 @@ import { createGoal, updateGoalProgress, deleteGoal } from '../src/services/goal
 import { createSubscription, updateSubscription, deleteSubscription } from '../src/services/subscriptions';
 import { setAllocation } from '../src/services/budgetAllocations';
 import { createDebt, recordPayment, deleteDebt } from '../src/services/debts';
+import GlassCard from '../src/components/GlassCard';
 import {
   saveChatMessage,
   getChatHistory,
   getChatSessions,
+  getSessionMessages,
   clearChatHistory,
   type ChatHistoryMessage,
 } from '../src/services/chatHistory';
 import AnimatedScreen from '../src/components/AnimatedScreen';
 import ThemedText from '../src/components/ThemedText';
-import { shadows } from '../src/theme/shadows';
 import type { DeepSeekMessage, DeepSeekAction, TransactionAction, CreateAccountAction, UpdateAccountAction, TransferAction, CreateGoalAction, UpdateGoalProgressAction, DeleteGoalAction, CreateSubscriptionAction, UpdateSubscriptionAction, DeleteSubscriptionAction, SetBudgetAction, CreateDebtAction, PayDebtAction, DeleteDebtAction, UpdateTransactionAction, DeleteTransactionAction, DeleteAccountAction } from '../src/services/deepseek';
 import type { Category } from '../src/utils/types';
 
@@ -850,41 +851,28 @@ export default function AIChatScreen() {
         });
 
       } else if (action.actionType === 'set_budget') {
-        // === ASIGNAR PRESUPUESTO ===
-        const bg = action as SetBudgetAction;
-        const bgCatId = categoryMapRef.current[bg.category];
-        if (!bgCatId) {
-          const catsList = categories.map(c => c.name).join(', ');
-          await addMessage({
-            id: (Date.now() + 1).toString(),
-            role: 'assistant',
-            content: `⚠️ La categoría "${bg.category}" no es válida. Categorías disponibles: ${catsList}.`,
-            isSuccess: false,
-          });
-          setMessages((prev) =>
-            prev.map((m) => m.id === msg.id ? { ...m, isCancelled: true, isAction: false } : m)
-          );
-          setIsLoading(false);
-          return;
-        }
+        // === ESTABLECER PRESUPUESTO ===
+        const budget = action as SetBudgetAction;
+        const catId = categoryMapRef.current[budget.category] || 12;
+        const monthStr = budget.month || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
 
-        await setAllocation(bgCatId, bg.month, bg.amountUSD, bg.amountBS || 0);
+        await setAllocation(catId, monthStr, budget.amountUSD, budget.amountBS || 0);
 
         await addMessage({
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: `✅ **¡Listo!** Se asignó presupuesto de **$${bg.amountUSD} USD**${bg.amountBS ? ` y **Bs.${bg.amountBS}**` : ''} a **${bg.category}** para **${bg.month}**.`,
+          content: `✅ **¡Listo!** Se estableció un presupuesto de **$${budget.amountUSD} USD**${budget.amountBS ? ` y **Bs.${budget.amountBS}**` : ''} para "${budget.category}".`,
           isSuccess: true,
         });
 
       } else if (action.actionType === 'create_debt') {
         // === CREAR DEUDA ===
         const debt = action as CreateDebtAction;
-        // type y personName son requeridos en este punto (validados en deepseek.ts)
+        const debtType = debt.type || 'borrowed';
         await createDebt({
-          type: debt.type!,
-          personName: sanitizeInput(debt.personName!, 100),
+          personName: sanitizeInput(debt.personName, 100),
           description: sanitizeInput(debt.description, 200) || null,
+          type: debtType,
           amountUSD: debt.currency === 'USD' ? debt.amount : null,
           amountBS: debt.currency === 'BS' ? debt.amount : null,
           currency: debt.currency,
@@ -898,28 +886,27 @@ export default function AIChatScreen() {
           notes: null,
         });
 
-        const debtTypeLabel = debt.type === 'lent' ? 'préstamo' : 'deuda';
         await addMessage({
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: `✅ **¡Listo!** Se registró ${debtTypeLabel} de **${debt.currency === 'USD' ? '$' : 'Bs.'}${debt.amount}** con **${debt.personName}**.`,
+          content: `✅ **¡Listo!** Se registró la deuda ${debtType === 'lent' ? 'que prestaste a' : 'que debes a'} **${debt.personName}** por **${debt.currency === 'USD' ? '$' : 'Bs.'}${debt.amount}**.`,
           isSuccess: true,
         });
 
       } else if (action.actionType === 'pay_debt') {
         // === PAGAR DEUDA ===
-        const pd = action as PayDebtAction;
+        const pay = action as PayDebtAction;
         await recordPayment(
-          pd.debtId,
-          pd.currency === 'USD' ? pd.amount : 0,
-          pd.currency === 'BS' ? pd.amount : 0,
+          pay.debtId,
+          pay.currency === 'USD' ? pay.amount : 0,
+          pay.currency === 'BS' ? pay.amount : 0,
           getLocalDateString()
         );
 
         await addMessage({
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: `✅ **¡Listo!** Se registró el pago de **${pd.currency === 'USD' ? '$' : 'Bs.'}${pd.amount}** a la deuda.`,
+          content: `✅ **¡Listo!** Se registró un pago de **${pay.currency === 'USD' ? '$' : 'Bs.'}${pay.amount}** a la deuda.`,
           isSuccess: true,
         });
 
@@ -944,10 +931,9 @@ export default function AIChatScreen() {
       );
 
     } catch (error: any) {
-      // T14: Manejo de errores granular en confirmAction
-      const errorMsg = getErrorMessage(error, 'No se pudo completar la operación.');
+      const errorMsg = getErrorMessage(error, 'No se pudo ejecutar la acción.');
       console.error('[AI-CHAT CONFIRM ERROR]', error?.message || error);
-      addMessage({
+      await addMessage({
         id: (Date.now() + 1).toString(),
         role: 'assistant',
         content: `❌ **Error al ejecutar:** ${errorMsg}`,
@@ -956,48 +942,50 @@ export default function AIChatScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [accounts, loadAccounts, loadTransactions, addMessage, findAccount, sanitizeInput, getErrorMessage]);
+  }, [accounts, addMessage, executeTransaction, findAccount, getErrorMessage, loadAccounts, loadTransactions, sanitizeInput]);
 
   // Cancelar acción
-  const cancelAction = useCallback((msg: ChatMessage) => {
+  const cancelAction = useCallback(async (msg: ChatMessage) => {
     setMessages((prev) =>
       prev.map((m) =>
         m.id === msg.id ? { ...m, isCancelled: true, isAction: false } : m
       )
     );
 
-    addMessage({
+    await addMessage({
       id: (Date.now() + 1).toString(),
       role: 'assistant',
-      content: '❌ **Operación cancelada.** No se realizaron cambios.',
+      content: '❌ Operación cancelada. ¿Necesitas algo más?',
     });
   }, [addMessage]);
 
-  // Iniciar reconocimiento de voz
-  const startListening = useCallback(async () => {
-    const SpeechRecognition = (global as any).SpeechRecognition ||
-      (global as any).webkitSpeechRecognition;
+  // ============================================================
+  // Reconocimiento de voz (SpeechRecognition API)
+  // ============================================================
+  const startListening = useCallback(() => {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      Alert.alert('No soportado', 'El reconocimiento de voz no está disponible en este dispositivo.');
+      return;
+    }
 
-    if (SpeechRecognition) {
-      setIsListening(true);
+    try {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
       recognition.lang = 'es-ES';
       recognition.interimResults = false;
-      recognition.continuous = false;
+      recognition.maxAlternatives = 1;
+
+      setIsListening(true);
 
       recognition.onresult = (event: any) => {
         const transcript = event.results[0][0].transcript;
-        setInputText(transcript);
+        setInputText((prev) => (prev ? prev + ' ' + transcript : transcript));
         setIsListening(false);
-        setTimeout(() => sendMessage(transcript), 500);
       };
 
       recognition.onerror = () => {
         setIsListening(false);
-        Alert.alert(
-          'Reconocimiento de voz',
-          'No se pudo reconocer la voz. Asegúrate de haber concedido permisos de micrófono.'
-        );
+        Alert.alert('Error', 'No se pudo reconocer tu voz. Intenta de nuevo.');
       };
 
       recognition.onend = () => {
@@ -1005,1008 +993,771 @@ export default function AIChatScreen() {
       };
 
       recognition.start();
-    } else {
-      Alert.alert(
-        'Dictado por voz',
-        'Usa el botón de micrófono del teclado de iOS para dictar, o escribe tu mensaje.'
-      );
+    } catch {
+      setIsListening(false);
+      Alert.alert('Error', 'No se pudo iniciar el reconocimiento de voz.');
     }
-  }, [sendMessage]);
-
-  // Abrir historial
-  const openHistory = useCallback(async () => {
-    const sessions = await getChatSessions();
-    setChatSessions(sessions);
-    setShowHistory(true);
   }, []);
 
-  // Cargar una sesión del historial
-  const loadSession = useCallback(async (sessionId: string) => {
-    setShowHistory(false);
+  // ============================================================
+  // Historial de sesiones
+  // ============================================================
+  const openHistory = useCallback(async () => {
     try {
-      const history = await getChatHistory();
-      const startIndex = history.findIndex((m) => m.id === sessionId);
-      if (startIndex === -1) return;
+      const sessions = await getChatSessions();
+      setChatSessions(sessions);
+      setShowHistory(true);
+    } catch (error) {
+      console.error('Error loading sessions:', error);
+    }
+  }, []);
 
-      const sessionMsgs: ChatMessage[] = [];
-      let lastTimestamp: string | null = null;
-      for (let i = startIndex; i < history.length; i++) {
-        const msg = history[i];
-        if (lastTimestamp) {
-          const timeDiff = new Date(msg.timestamp).getTime() - new Date(lastTimestamp).getTime();
-          if (timeDiff > 30 * 60 * 1000) break;
-        }
-        lastTimestamp = msg.timestamp;
-        sessionMsgs.push({
-          id: msg.id,
-          role: msg.role,
-          content: msg.content,
-        });
+  const loadSession = useCallback(async (sessionId: string) => {
+    try {
+      const history = await getSessionMessages(sessionId);
+      if (history.length > 0) {
+        const chatMessages: ChatMessage[] = history.map((m) => ({
+          id: m.id,
+          role: m.role,
+          content: m.content,
+        }));
+        setMessages(chatMessages);
       }
-
-      if (sessionMsgs.length > 0) {
-        setMessages(sessionMsgs);
-        // Al cargar una sesión, reiniciamos el resumen para que se recalcule
-        resumenAntiguoRef.current = '';
-      }
+      setShowHistory(false);
     } catch (error) {
       console.error('Error loading session:', error);
     }
   }, []);
 
-  // Limpiar historial
   const handleClearHistory = useCallback(() => {
     Alert.alert(
       'Limpiar historial',
-      '¿Estás seguro de que quieres eliminar todo el historial de conversaciones?',
+      '¿Estás seguro de eliminar todo el historial de conversaciones?',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
-          text: 'Limpiar',
+          text: 'Eliminar',
           style: 'destructive',
           onPress: async () => {
             await clearChatHistory();
-            resumenAntiguoRef.current = '';
-            setMessages([
-              {
-                id: Date.now().toString(),
-                role: 'assistant',
-                content: '🧹 **Historial limpiado.** ¿En qué puedo ayudarte?',
-              },
-            ]);
+            setMessages([]);
             setShowHistory(false);
+            loadChatHistory();
           },
         },
       ]
     );
   }, []);
 
-  // Renderizar cada mensaje
+  // ============================================================
+  // Renderizar mensaje individual
+  // ============================================================
   const renderMessage = useCallback(({ item }: { item: ChatMessage }) => {
     const isUser = item.role === 'user';
+    const isAction = item.isAction && !item.isConfirmed && !item.isCancelled;
+    const isSuccess = item.isSuccess;
+    const isCancelled = item.isCancelled;
 
-    const mdStyle = isUser ? undefined : getMarkdownStyles(themeColors.text, themeColors.surface, themeColors.background);
+    const mdStyles = getMarkdownStyles(
+      isUser ? themeColors.onSecondaryContainer : themeColors.text,
+      themeColors.surfaceContainer,
+      themeColors.surfaceContainerHigh
+    );
 
-    return (
-      <View
-        style={{
-          alignItems: isUser ? 'flex-end' : 'flex-start',
-          marginBottom: 12,
-          paddingHorizontal: 16,
-        }}
-      >
-        {/* Burbuja de mensaje */}
-        <View
-          style={{
-            maxWidth: '88%',
-            backgroundColor: isUser
-              ? themeColors.primary
-              : themeColors.surface,
+    if (isUser) {
+      return (
+        <View style={{
+          flexDirection: 'row',
+          width: '100%',
+          justifyContent: 'flex-end',
+          marginBottom: 16,
+          paddingHorizontal: 24,
+        }}>
+          <View style={{
+            backgroundColor: themeColors.secondaryContainer,
             borderRadius: 16,
-            borderBottomRightRadius: isUser ? 4 : 16,
-            borderBottomLeftRadius: isUser ? 16 : 4,
-            padding: 12,
-            borderWidth: isUser ? 0 : 1,
-            borderColor: themeColors.border,
-          }}
-        >
-          {isUser ? (
-            <ThemedText
-              style={{
-                fontSize: 15,
-                color: '#FFF',
-                lineHeight: 20,
-              }}
-            >
-              {item.content}
-            </ThemedText>
-          ) : (
-            <Markdown style={mdStyle}>
+            borderTopRightRadius: 4,
+            padding: 16,
+            maxWidth: '85%',
+            shadowColor: '#0A1E3D',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.6,
+            shadowRadius: 12,
+            elevation: 4,
+          }}>
+            <Markdown style={mdStyles}>
               {item.content}
             </Markdown>
-          )}
+          </View>
+        </View>
+      );
+    }
 
-          {/* Preview de transacción */}
-          {item.action && item.action.actionType === 'transaction' && (
-            <View
-              style={{
-                marginTop: 12,
-                backgroundColor: themeColors.background,
-                borderRadius: 10,
-                padding: 12,
-                borderLeftWidth: 3,
-                borderLeftColor: item.action.type === 'expense' ? themeColors.danger : themeColors.success,
-              }}
-            >
-              <ThemedText type="caption" themeColor="textSecondary" style={{ marginBottom: 4 }}>
-                {item.action.type === 'expense' ? '💸 GASTO' : '💰 INGRESO'}
-              </ThemedText>
-              <ThemedText type="h3" themeColor="text">
-                {item.action.currency === 'USD' ? '$' : 'Bs.'}
-                {item.action.amount}
-              </ThemedText>
-              <ThemedText type="body" themeColor="textSecondary" style={{ marginTop: 2 }}>
-                {item.action.description}
-              </ThemedText>
-              <View
-                style={{
-                  backgroundColor: themeColors.primaryLight + '40',
-                  borderRadius: 6,
-                  paddingHorizontal: 8,
-                  paddingVertical: 2,
-                  alignSelf: 'flex-start',
-                  marginTop: 6,
-                }}
-              >
-                <ThemedText type="badge" themeColor="primary">
-                  {item.action.category}
-                </ThemedText>
+    if (isAction && item.action) {
+      const action = item.action;
+      let actionLabel = '';
+      let actionIcon: keyof typeof Ionicons.glyphMap = 'flash-outline';
+      let actionColor = themeColors.secondary;
+      let previewItems: { label: string; value: string; color?: string }[] = [];
+
+      switch (action.actionType) {
+        case 'transaction': {
+          const tx = action as TransactionAction;
+          actionLabel = tx.type === 'expense' ? 'Registrar Gasto' : 'Registrar Ingreso';
+          actionIcon = tx.type === 'expense' ? 'trending-down-outline' : 'trending-up-outline';
+          actionColor = tx.type === 'expense' ? themeColors.danger : themeColors.secondary;
+          previewItems = [
+            { label: 'Descripción', value: tx.description || '' },
+            { label: 'Monto', value: `${tx.currency === 'USD' ? '$' : 'Bs.'}${tx.amount}`, color: tx.type === 'expense' ? themeColors.danger : themeColors.secondary },
+            { label: 'Categoría', value: tx.category || '' },
+          ];
+          break;
+        }
+        case 'update_transaction': {
+          const utx = action as UpdateTransactionAction;
+          actionLabel = 'Actualizar Transacción';
+          actionIcon = 'create-outline';
+          previewItems = [{ label: 'ID Transacción', value: `#${utx.transactionId}` }];
+          if (utx.description) previewItems.push({ label: 'Nueva descripción', value: utx.description });
+          if (utx.amount !== undefined) previewItems.push({ label: 'Nuevo monto', value: `${utx.currency === 'USD' ? '$' : 'Bs.'}${utx.amount}` });
+          break;
+        }
+        case 'delete_transaction': {
+          const dtx = action as DeleteTransactionAction;
+          actionLabel = 'Eliminar Transacción';
+          actionIcon = 'trash-outline';
+          actionColor = themeColors.danger;
+          previewItems = [{ label: 'ID Transacción', value: `#${dtx.transactionId}` }];
+          break;
+        }
+        case 'create_account': {
+          const acc = action as CreateAccountAction;
+          actionLabel = 'Crear Cuenta';
+          actionIcon = 'add-circle-outline';
+          previewItems = [
+            { label: 'Nombre', value: acc.name || '' },
+            { label: 'Tipo', value: acc.type === 'cash' ? 'Efectivo' : acc.type === 'bank' ? 'Banco' : acc.type === 'virtual_card' ? 'Tarjeta Virtual' : acc.type === 'exchange' ? 'Exchange' : 'Otro' },
+          ];
+          if (acc.initialBalanceUSD) previewItems.push({ label: 'Saldo USD', value: `$${acc.initialBalanceUSD}`, color: themeColors.secondary });
+          if (acc.initialBalanceBS) previewItems.push({ label: 'Saldo BS', value: `Bs.${acc.initialBalanceBS}`, color: themeColors.tertiary });
+          break;
+        }
+        case 'update_account': {
+          const ua = action as UpdateAccountAction;
+          actionLabel = 'Actualizar Cuenta';
+          actionIcon = 'create-outline';
+          previewItems = [{ label: 'Cuenta', value: `#${ua.accountId}` }];
+          if (ua.name) previewItems.push({ label: 'Nuevo nombre', value: ua.name });
+          break;
+        }
+        case 'delete_account': {
+          const da = action as DeleteAccountAction;
+          actionLabel = 'Eliminar Cuenta';
+          actionIcon = 'trash-outline';
+          actionColor = themeColors.danger;
+          previewItems = [{ label: 'Cuenta', value: `#${da.accountId}` }];
+          break;
+        }
+        case 'transfer': {
+          const tr = action as TransferAction;
+          actionLabel = 'Transferencia';
+          actionIcon = 'swap-horizontal-outline';
+          actionColor = themeColors.tertiary;
+          previewItems = [
+            { label: 'Desde', value: `#${tr.fromAccountId}` },
+            { label: 'Hacia', value: `#${tr.toAccountId}` },
+            { label: 'Monto', value: `${tr.currency === 'USD' ? '$' : 'Bs.'}${tr.amount}`, color: themeColors.tertiary },
+          ];
+          break;
+        }
+        case 'create_goal': {
+          const g = action as CreateGoalAction;
+          actionLabel = 'Crear Meta';
+          actionIcon = 'flag-outline';
+          previewItems = [
+            { label: 'Nombre', value: g.name || '' },
+            { label: 'Objetivo', value: `${g.currency === 'USD' ? '$' : 'Bs.'}${g.targetAmount}`, color: themeColors.secondary },
+          ];
+          break;
+        }
+        case 'update_goal_progress': {
+          const gp = action as UpdateGoalProgressAction;
+          actionLabel = 'Actualizar Progreso';
+          actionIcon = 'trending-up-outline';
+          previewItems = [
+            { label: 'Meta', value: `#${gp.goalId}` },
+            { label: 'Agregar', value: `${gp.amount}`, color: themeColors.secondary },
+          ];
+          break;
+        }
+        case 'delete_goal': {
+          const dg = action as DeleteGoalAction;
+          actionLabel = 'Eliminar Meta';
+          actionIcon = 'trash-outline';
+          actionColor = themeColors.danger;
+          previewItems = [{ label: 'Meta', value: `#${dg.goalId}` }];
+          break;
+        }
+        case 'create_subscription': {
+          const sub = action as CreateSubscriptionAction;
+          actionLabel = 'Crear Suscripción';
+          actionIcon = 'calendar-outline';
+          previewItems = [
+            { label: 'Nombre', value: sub.name || '' },
+            { label: 'Monto', value: `${sub.currency === 'USD' ? '$' : 'Bs.'}${sub.amount}`, color: themeColors.secondary },
+            { label: 'Frecuencia', value: sub.frequency || '' },
+          ];
+          break;
+        }
+        case 'update_subscription': {
+          const us = action as UpdateSubscriptionAction;
+          actionLabel = 'Actualizar Suscripción';
+          actionIcon = 'create-outline';
+          previewItems = [{ label: 'Suscripción', value: `#${us.subscriptionId}` }];
+          if (us.name) previewItems.push({ label: 'Nuevo nombre', value: us.name });
+          break;
+        }
+        case 'delete_subscription': {
+          const ds = action as DeleteSubscriptionAction;
+          actionLabel = 'Eliminar Suscripción';
+          actionIcon = 'trash-outline';
+          actionColor = themeColors.danger;
+          previewItems = [{ label: 'Suscripción', value: `#${ds.subscriptionId}` }];
+          break;
+        }
+        case 'set_budget': {
+          const b = action as SetBudgetAction;
+          actionLabel = 'Establecer Presupuesto';
+          actionIcon = 'wallet-outline';
+          previewItems = [
+            { label: 'Categoría', value: b.category || '' },
+            { label: 'Monto USD', value: `$${b.amountUSD}`, color: themeColors.secondary },
+          ];
+          if (b.amountBS) previewItems.push({ label: 'Monto BS', value: `Bs.${b.amountBS}`, color: themeColors.tertiary });
+          break;
+        }
+        case 'create_debt': {
+          const d = action as CreateDebtAction;
+          actionLabel = d.type === 'lent' ? 'Registrar Préstamo' : 'Registrar Deuda';
+          actionIcon = d.type === 'lent' ? 'arrow-forward-outline' : 'arrow-back-outline';
+          actionColor = d.type === 'lent' ? themeColors.secondary : themeColors.danger;
+          previewItems = [
+            { label: 'Persona', value: d.personName || '' },
+            { label: 'Monto', value: `${d.currency === 'USD' ? '$' : 'Bs.'}${d.amount}`, color: actionColor },
+          ];
+          break;
+        }
+        case 'pay_debt': {
+          const p = action as PayDebtAction;
+          actionLabel = 'Pagar Deuda';
+          actionIcon = 'cash-outline';
+          previewItems = [
+            { label: 'Deuda', value: `#${p.debtId}` },
+            { label: 'Pago', value: `${p.currency === 'USD' ? '$' : 'Bs.'}${p.amount}`, color: themeColors.secondary },
+          ];
+          break;
+        }
+        case 'delete_debt': {
+          const dd = action as DeleteDebtAction;
+          actionLabel = 'Eliminar Deuda';
+          actionIcon = 'trash-outline';
+          actionColor = themeColors.danger;
+          previewItems = [{ label: 'Deuda', value: `#${dd.debtId}` }];
+          break;
+        }
+        default:
+          actionLabel = 'Acción';
+          actionIcon = 'flash-outline';
+      }
+
+      return (
+        <View style={{
+          flexDirection: 'row',
+          width: '100%',
+          justifyContent: 'flex-start',
+          marginBottom: 16,
+          paddingHorizontal: 24,
+        }}>
+          <View style={{
+            width: 32,
+            height: 32,
+            borderRadius: 16,
+            backgroundColor: themeColors.surfaceVariant,
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginRight: 8,
+            marginTop: 4,
+          }}>
+            <Ionicons name="sparkles" size={14} color={themeColors.secondary} />
+          </View>
+          <View style={{ flex: 1, maxWidth: '85%' }}>
+            <View style={{
+              backgroundColor: themeColors.surfaceVariant,
+              borderRadius: 16,
+              borderTopLeftRadius: 4,
+              padding: 16,
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.05)',
+              shadowColor: '#0A1E3D',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.6,
+              shadowRadius: 12,
+              elevation: 4,
+            }}>
+              <Markdown style={mdStyles}>
+                {item.content}
+              </Markdown>
+              {previewItems.length > 0 && (
+                <View style={{
+                  backgroundColor: themeColors.surfaceContainer,
+                  borderRadius: 12,
+                  padding: 12,
+                  marginTop: 12,
+                  borderWidth: 1,
+                  borderColor: themeColors.outlineVariant + '30',
+                }}>
+                  {previewItems.map((pItem, idx) => (
+                    <View key={idx} style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      paddingVertical: 4,
+                    }}>
+                      <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ fontSize: 13 }}>
+                        {pItem.label}
+                      </ThemedText>
+                      <ThemedText type="body" style={{ fontSize: 13, fontWeight: '600', color: pItem.color || themeColors.text }}>
+                        {pItem.value}
+                      </ThemedText>
+                    </View>
+                  ))}
+                </View>
+              )}
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+                <TouchableOpacity
+                  onPress={() => confirmAction(item)}
+                  style={{
+                    paddingHorizontal: 16,
+                    paddingVertical: 8,
+                    borderRadius: 20,
+                    borderWidth: 1,
+                    borderColor: themeColors.secondary,
+                  }}
+                >
+                  <ThemedText type="caption" style={{ color: themeColors.secondary, fontSize: 11, letterSpacing: 0.5, fontWeight: '600' }}>
+                    CONFIRMAR
+                  </ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => cancelAction(item)}
+                  style={{
+                    paddingHorizontal: 16,
+                    paddingVertical: 8,
+                    borderRadius: 20,
+                    borderWidth: 1,
+                    borderColor: themeColors.outlineVariant,
+                  }}
+                >
+                  <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ fontSize: 11, letterSpacing: 0.5, fontWeight: '600' }}>
+                    CANCELAR
+                  </ThemedText>
+                </TouchableOpacity>
               </View>
             </View>
-          )}
-
-          {/* Preview de creación de cuenta */}
-          {item.action && item.action.actionType === 'create_account' && (
-            <View
-              style={{
-                marginTop: 12,
-                backgroundColor: themeColors.background,
-                borderRadius: 10,
-                padding: 12,
-                borderLeftWidth: 3,
-                borderLeftColor: themeColors.primary,
-              }}
-            >
-              <ThemedText type="caption" themeColor="textSecondary" style={{ marginBottom: 4 }}>
-                🏦 NUEVA CUENTA
-              </ThemedText>
-              <ThemedText type="h3" themeColor="text">
-                {item.action.name}
-              </ThemedText>
-              <ThemedText type="body" themeColor="textSecondary" style={{ marginTop: 2 }}>
-                Tipo: {item.action.type === 'cash' ? 'Efectivo' : item.action.type === 'bank' ? 'Banco' : item.action.type === 'virtual_card' ? 'Tarjeta Virtual' : item.action.type === 'exchange' ? 'Exchange/Pago Móvil' : 'Otro'}
-              </ThemedText>
-              <ThemedText type="body" themeColor="textSecondary">
-                Moneda: {item.action.currency === 'BOTH' ? 'USD y BS' : item.action.currency}
-              </ThemedText>
-              {(item.action.initialBalanceUSD > 0 || item.action.initialBalanceBS > 0) && (
-                <ThemedText type="body" themeColor="textSecondary">
-                  Saldo inicial: {item.action.initialBalanceUSD > 0 ? `$${item.action.initialBalanceUSD} USD` : ''}{item.action.initialBalanceUSD > 0 && item.action.initialBalanceBS > 0 ? ' + ' : ''}{item.action.initialBalanceBS > 0 ? `Bs.${item.action.initialBalanceBS}` : ''}
-                </ThemedText>
-              )}
-            </View>
-          )}
-
-          {/* Preview de actualizar cuenta */}
-          {item.action && item.action.actionType === 'update_account' && (
-            <View
-              style={{
-                marginTop: 12,
-                backgroundColor: themeColors.background,
-                borderRadius: 10,
-                padding: 12,
-                borderLeftWidth: 3,
-                borderLeftColor: themeColors.warning,
-              }}
-            >
-              <ThemedText type="caption" themeColor="textSecondary" style={{ marginBottom: 4 }}>
-                ✏️ ACTUALIZAR CUENTA
-              </ThemedText>
-              {item.action.name && (
-                <ThemedText type="body" themeColor="text">
-                  Nuevo nombre: <ThemedText style={{ fontWeight: '700' }}>{item.action.name}</ThemedText>
-                </ThemedText>
-              )}
-              <ThemedText type="caption" themeColor="textSecondary" style={{ marginTop: 4 }}>
-                Account ID: {item.action.accountId}
-              </ThemedText>
-            </View>
-          )}
-
-          {/* Preview de actualizar transacción */}
-          {item.action && item.action.actionType === 'update_transaction' && (
-            <View
-              style={{
-                marginTop: 12,
-                backgroundColor: themeColors.background,
-                borderRadius: 10,
-                padding: 12,
-                borderLeftWidth: 3,
-                borderLeftColor: themeColors.warning,
-              }}
-            >
-              <ThemedText type="caption" themeColor="textSecondary" style={{ marginBottom: 4 }}>
-                ✏️ ACTUALIZAR TRANSACCIÓN
-              </ThemedText>
-              <ThemedText type="body" themeColor="text">
-                ID: <ThemedText style={{ fontWeight: '700' }}>{(item.action as any).transactionId}</ThemedText>
-              </ThemedText>
-              {(item.action as any).description && (
-                <ThemedText type="body" themeColor="textSecondary" style={{ marginTop: 2 }}>
-                  Nueva descripción: {(item.action as any).description}
-                </ThemedText>
-              )}
-              {(item.action as any).amount !== undefined && (
-                <ThemedText type="body" themeColor="textSecondary" style={{ marginTop: 2 }}>
-                  Nuevo monto: {(item.action as any).currency === 'USD' ? '$' : 'Bs.'}{(item.action as any).amount}
-                </ThemedText>
-              )}
-            </View>
-          )}
-
-          {/* Preview de eliminar transacción */}
-          {item.action && item.action.actionType === 'delete_transaction' && (
-            <View
-              style={{
-                marginTop: 12,
-                backgroundColor: themeColors.background,
-                borderRadius: 10,
-                padding: 12,
-                borderLeftWidth: 3,
-                borderLeftColor: themeColors.danger,
-              }}
-            >
-              <ThemedText type="caption" themeColor="textSecondary" style={{ marginBottom: 4 }}>
-                🗑️ ELIMINAR TRANSACCIÓN
-              </ThemedText>
-              <ThemedText type="body" themeColor="text">
-                ID de transacción: <ThemedText style={{ fontWeight: '700' }}>{(item.action as any).transactionId}</ThemedText>
-              </ThemedText>
-            </View>
-          )}
-
-          {/* Preview de eliminar cuenta */}
-          {item.action && item.action.actionType === 'delete_account' && (
-            <View
-              style={{
-                marginTop: 12,
-                backgroundColor: themeColors.background,
-                borderRadius: 10,
-                padding: 12,
-                borderLeftWidth: 3,
-                borderLeftColor: themeColors.danger,
-              }}
-            >
-              <ThemedText type="caption" themeColor="textSecondary" style={{ marginBottom: 4 }}>
-                🗑️ ELIMINAR CUENTA
-              </ThemedText>
-              <ThemedText type="body" themeColor="text">
-                Cuenta: <ThemedText style={{ fontWeight: '700' }}>{(item.action as any).accountId}</ThemedText>
-              </ThemedText>
-            </View>
-          )}
-
-          {/* Preview de transferencia */}
-          {item.action && item.action.actionType === 'transfer' && (
-            <View
-              style={{
-                marginTop: 12,
-                backgroundColor: themeColors.background,
-                borderRadius: 10,
-                padding: 12,
-                borderLeftWidth: 3,
-                borderLeftColor: '#8B5CF6',
-              }}
-            >
-              <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
-                TRANSFERENCIA
-              </ThemedText>
-              <ThemedText style={{ fontSize: 16, fontWeight: '700', color: themeColors.text }}>
-                {(item.action as any).currency === 'USD' ? '$' : 'Bs.'}{(item.action as any).amount}
-              </ThemedText>
-              <ThemedText style={{ fontSize: 13, color: themeColors.textSecondary, marginTop: 2 }}>
-                De: <ThemedText style={{ fontWeight: '600' }}>{(item.action as any).fromAccountId}</ThemedText>
-              </ThemedText>
-              <ThemedText style={{ fontSize: 13, color: themeColors.textSecondary }}>
-                A: <ThemedText style={{ fontWeight: '600' }}>{(item.action as any).toAccountId}</ThemedText>
-              </ThemedText>
-              {(item.action as any).description && (
-                <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary, marginTop: 2 }}>
-                  {(item.action as any).description}
-                </ThemedText>
-              )}
-            </View>
-          )}
-
-          {/* Preview de crear meta */}
-          {item.action && item.action.actionType === 'create_goal' && (
-            <View
-              style={{
-                marginTop: 12,
-                backgroundColor: themeColors.background,
-                borderRadius: 10,
-                padding: 12,
-                borderLeftWidth: 3,
-                borderLeftColor: themeColors.success,
-              }}
-            >
-              <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
-                NUEVA META
-              </ThemedText>
-              <ThemedText style={{ fontSize: 16, fontWeight: '700', color: themeColors.text }}>
-                {(item.action as any).name}
-              </ThemedText>
-              <ThemedText style={{ fontSize: 14, color: themeColors.text, marginTop: 2 }}>
-                Objetivo: {(item.action as any).currency === 'USD' ? '$' : 'Bs.'}{(item.action as any).targetAmount}
-              </ThemedText>
-              {(item.action as any).deadline && (
-                <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary, marginTop: 2 }}>
-                  Fecha límite: {(item.action as any).deadline}
-                </ThemedText>
-              )}
-            </View>
-          )}
-
-          {/* Preview de actualizar progreso de meta */}
-          {item.action && item.action.actionType === 'update_goal_progress' && (
-            <View
-              style={{
-                marginTop: 12,
-                backgroundColor: themeColors.background,
-                borderRadius: 10,
-                padding: 12,
-                borderLeftWidth: 3,
-                borderLeftColor: themeColors.success,
-              }}
-            >
-              <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
-                PROGRESO DE META
-              </ThemedText>
-              <ThemedText style={{ fontSize: 13, color: themeColors.text }}>
-                Meta ID: <ThemedText style={{ fontWeight: '700' }}>{(item.action as any).goalId}</ThemedText>
-              </ThemedText>
-              <ThemedText style={{ fontSize: 14, color: themeColors.text, marginTop: 2 }}>
-                Agregar: <ThemedText style={{ fontWeight: '700' }}>{(item.action as any).amount}</ThemedText>
-              </ThemedText>
-            </View>
-          )}
-
-          {/* Preview de eliminar meta */}
-          {item.action && item.action.actionType === 'delete_goal' && (
-            <View
-              style={{
-                marginTop: 12,
-                backgroundColor: themeColors.background,
-                borderRadius: 10,
-                padding: 12,
-                borderLeftWidth: 3,
-                borderLeftColor: themeColors.danger,
-              }}
-            >
-              <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
-                ELIMINAR META
-              </ThemedText>
-              <ThemedText style={{ fontSize: 13, color: themeColors.text }}>
-                Meta ID: <ThemedText style={{ fontWeight: '700' }}>{(item.action as any).goalId}</ThemedText>
-              </ThemedText>
-            </View>
-          )}
-
-          {/* Preview de crear suscripción */}
-          {item.action && item.action.actionType === 'create_subscription' && (
-            <View
-              style={{
-                marginTop: 12,
-                backgroundColor: themeColors.background,
-                borderRadius: 10,
-                padding: 12,
-                borderLeftWidth: 3,
-                borderLeftColor: themeColors.warning,
-              }}
-            >
-              <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
-                NUEVA SUSCRIPCIÓN
-              </ThemedText>
-              <ThemedText style={{ fontSize: 16, fontWeight: '700', color: themeColors.text }}>
-                {(item.action as any).name}
-              </ThemedText>
-              <ThemedText style={{ fontSize: 14, color: themeColors.text, marginTop: 2 }}>
-                {(item.action as any).currency === 'USD' ? '$' : 'Bs.'}{(item.action as any).amount}
-              </ThemedText>
-              <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary, marginTop: 2 }}>
-                Frecuencia: {(item.action as any).frequency} · Categoría: {(item.action as any).category}
-              </ThemedText>
-            </View>
-          )}
-
-          {/* Preview de actualizar suscripción */}
-          {item.action && item.action.actionType === 'update_subscription' && (
-            <View
-              style={{
-                marginTop: 12,
-                backgroundColor: themeColors.background,
-                borderRadius: 10,
-                padding: 12,
-                borderLeftWidth: 3,
-                borderLeftColor: themeColors.warning,
-              }}
-            >
-              <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
-                ACTUALIZAR SUSCRIPCIÓN
-              </ThemedText>
-              <ThemedText style={{ fontSize: 13, color: themeColors.text }}>
-                ID: <ThemedText style={{ fontWeight: '700' }}>{(item.action as any).subscriptionId}</ThemedText>
-              </ThemedText>
-              {(item.action as any).name && (
-                <ThemedText style={{ fontSize: 13, color: themeColors.textSecondary, marginTop: 2 }}>
-                  Nuevo nombre: {(item.action as any).name}
-                </ThemedText>
-              )}
-              {(item.action as any).amount !== undefined && (
-                <ThemedText style={{ fontSize: 13, color: themeColors.textSecondary, marginTop: 2 }}>
-                  Nuevo monto: {(item.action as any).currency === 'USD' ? '$' : 'Bs.'}{(item.action as any).amount}
-                </ThemedText>
-              )}
-            </View>
-          )}
-
-          {/* Preview de eliminar suscripción */}
-          {item.action && item.action.actionType === 'delete_subscription' && (
-            <View
-              style={{
-                marginTop: 12,
-                backgroundColor: themeColors.background,
-                borderRadius: 10,
-                padding: 12,
-                borderLeftWidth: 3,
-                borderLeftColor: themeColors.danger,
-              }}
-            >
-              <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
-                ELIMINAR SUSCRIPCIÓN
-              </ThemedText>
-              <ThemedText style={{ fontSize: 13, color: themeColors.text }}>
-                Suscripción ID: <ThemedText style={{ fontWeight: '700' }}>{(item.action as any).subscriptionId}</ThemedText>
-              </ThemedText>
-            </View>
-          )}
-
-          {/* Preview de asignar presupuesto */}
-          {item.action && item.action.actionType === 'set_budget' && (
-            <View
-              style={{
-                marginTop: 12,
-                backgroundColor: themeColors.background,
-                borderRadius: 10,
-                padding: 12,
-                borderLeftWidth: 3,
-                borderLeftColor: '#3B82F6',
-              }}
-            >
-              <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
-                ASIGNAR PRESUPUESTO
-              </ThemedText>
-              <ThemedText style={{ fontSize: 14, color: themeColors.text }}>
-                Categoría: <ThemedText style={{ fontWeight: '700' }}>{(item.action as any).category}</ThemedText>
-              </ThemedText>
-              <ThemedText style={{ fontSize: 14, color: themeColors.text, marginTop: 2 }}>
-                ${(item.action as any).amountUSD} USD
-              </ThemedText>
-              {(item.action as any).amountBS > 0 && (
-                <ThemedText style={{ fontSize: 14, color: themeColors.text }}>
-                  Bs.{(item.action as any).amountBS}
-                </ThemedText>
-              )}
-              <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary, marginTop: 2 }}>
-                Mes: {(item.action as any).month}
-              </ThemedText>
-            </View>
-          )}
-
-          {/* Preview de crear deuda */}
-          {item.action && item.action.actionType === 'create_debt' && (
-            <View
-              style={{
-                marginTop: 12,
-                backgroundColor: themeColors.background,
-                borderRadius: 10,
-                padding: 12,
-                borderLeftWidth: 3,
-                borderLeftColor: themeColors.danger,
-              }}
-            >
-              <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
-                {(item.action as any).type === 'lent' ? 'PRÉSTAMO (TÚ PRESTASTE)' : 'DEUDA (TÚ DEBES)'}
-              </ThemedText>
-              <ThemedText style={{ fontSize: 16, fontWeight: '700', color: themeColors.text }}>
-                {(item.action as any).currency === 'USD' ? '$' : 'Bs.'}{(item.action as any).amount}
-              </ThemedText>
-              <ThemedText style={{ fontSize: 14, color: themeColors.text, marginTop: 2 }}>
-                Con: <ThemedText style={{ fontWeight: '600' }}>{(item.action as any).personName}</ThemedText>
-              </ThemedText>
-              {(item.action as any).description && (
-                <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary, marginTop: 2 }}>
-                  {(item.action as any).description}
-                </ThemedText>
-              )}
-              {(item.action as any).dueDate && (
-                <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary, marginTop: 2 }}>
-                  Vence: {(item.action as any).dueDate}
-                </ThemedText>
-              )}
-            </View>
-          )}
-
-          {/* Preview de pagar deuda */}
-          {item.action && item.action.actionType === 'pay_debt' && (
-            <View
-              style={{
-                marginTop: 12,
-                backgroundColor: themeColors.background,
-                borderRadius: 10,
-                padding: 12,
-                borderLeftWidth: 3,
-                borderLeftColor: themeColors.success,
-              }}
-            >
-              <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
-                PAGAR DEUDA
-              </ThemedText>
-              <ThemedText style={{ fontSize: 13, color: themeColors.text }}>
-                Deuda ID: <ThemedText style={{ fontWeight: '700' }}>{(item.action as any).debtId}</ThemedText>
-              </ThemedText>
-              <ThemedText style={{ fontSize: 14, color: themeColors.text, marginTop: 2 }}>
-                Monto: {(item.action as any).currency === 'USD' ? '$' : 'Bs.'}{(item.action as any).amount}
-              </ThemedText>
-            </View>
-          )}
-
-          {/* Preview de eliminar deuda */}
-          {item.action && item.action.actionType === 'delete_debt' && (
-            <View
-              style={{
-                marginTop: 12,
-                backgroundColor: themeColors.background,
-                borderRadius: 10,
-                padding: 12,
-                borderLeftWidth: 3,
-                borderLeftColor: themeColors.danger,
-              }}
-            >
-              <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary, marginBottom: 4 }}>
-                ELIMINAR DEUDA
-              </ThemedText>
-              <ThemedText style={{ fontSize: 13, color: themeColors.text }}>
-                Deuda ID: <ThemedText style={{ fontWeight: '700' }}>{(item.action as any).debtId}</ThemedText>
-              </ThemedText>
-            </View>
-          )}
+          </View>
         </View>
+      );
+    }
 
-        {/* Botones de Confirmar/Cancelar */}
-        {item.isAction && !item.isConfirmed && !item.isCancelled && (
-          <View
-            style={{
-              flexDirection: 'row',
-              gap: 8,
-              marginTop: 8,
-            }}
-          >
-            <TouchableOpacity
-              onPress={() => confirmAction(item)}
-              disabled={isLoading}
-              accessibilityLabel="Confirmar acción"
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 4,
-                backgroundColor: themeColors.success,
-                borderRadius: 10,
-                paddingHorizontal: 16,
-                paddingVertical: 8,
-                opacity: isLoading ? 0.6 : 1,
-              }}
-            >
-              <Ionicons name="checkmark-circle" size={18} color="#FFF" />
-              <ThemedText style={{ color: '#FFF', fontWeight: '600', fontSize: 14 }}>
-                Confirmar
-              </ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => cancelAction(item)}
-              disabled={isLoading}
-              accessibilityLabel="Cancelar acción"
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 4,
-                backgroundColor: themeColors.danger,
-                borderRadius: 10,
-                paddingHorizontal: 16,
-                paddingVertical: 8,
-                opacity: isLoading ? 0.6 : 1,
-              }}
-            >
-              <Ionicons name="close-circle" size={18} color="#FFF" />
-              <ThemedText style={{ color: '#FFF', fontWeight: '600', fontSize: 14 }}>
-                Cancelar
-              </ThemedText>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Indicador de confirmado */}
-        {item.isConfirmed && (
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 4,
-              marginTop: 4,
-            }}
-          >
-            <Ionicons name="checkmark-circle" size={14} color={themeColors.success} />
-            <ThemedText style={{ fontSize: 12, color: themeColors.success }}>
-              Operación completada
-            </ThemedText>
-          </View>
-        )}
-
-        {/* Indicador de cancelado */}
-        {item.isCancelled && (
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 4,
-              marginTop: 4,
-            }}
-          >
-            <Ionicons name="close-circle" size={14} color={themeColors.danger} />
-            <ThemedText style={{ fontSize: 12, color: themeColors.danger }}>
-              Cancelado
-            </ThemedText>
-          </View>
-        )}
+    return (
+      <View style={{
+        flexDirection: 'row',
+        width: '100%',
+        justifyContent: 'flex-start',
+        marginBottom: 16,
+        paddingHorizontal: 24,
+      }}>
+        <View style={{
+          width: 32,
+          height: 32,
+          borderRadius: 16,
+          backgroundColor: themeColors.surfaceVariant,
+          justifyContent: 'center',
+          alignItems: 'center',
+          marginRight: 8,
+          marginTop: 4,
+        }}>
+          <Ionicons name="sparkles" size={14} color={themeColors.secondary} />
+        </View>
+        <View style={{
+          backgroundColor: themeColors.surfaceVariant,
+          borderRadius: 16,
+          borderTopLeftRadius: 4,
+          padding: 16,
+          maxWidth: '85%',
+          borderWidth: 1,
+          borderColor: isSuccess ? themeColors.secondary + '30' : 'rgba(255,255,255,0.05)',
+          shadowColor: '#0A1E3D',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.6,
+          shadowRadius: 12,
+          elevation: 4,
+        }}>
+          <Markdown style={mdStyles}>
+            {item.content}
+          </Markdown>
+        </View>
       </View>
     );
-  }, [themeColors, confirmAction, cancelAction, isLoading]);
+  }, [themeColors, confirmAction, cancelAction]);
+
+  // ============================================================
+  // JSX: UI Principal
+  // ============================================================
+
+  const hasMessages = messages.length > 0;
+  const inputStyle = {
+    backgroundColor: themeColors.surfaceContainer,
+    borderWidth: 1,
+    borderColor: themeColors.outlineVariant + '50',
+    borderRadius: 10,
+    padding: 14,
+    fontSize: 15,
+    color: themeColors.text,
+  };
 
   return (
     <AnimatedScreen>
-    <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-      >
+      <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
         {/* Header */}
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            paddingHorizontal: 16,
-            paddingVertical: 12,
-            borderBottomWidth: 1,
-            borderBottomColor: themeColors.border,
-          }}
-        >
-          <TouchableOpacity onPress={() => router.back()} accessibilityLabel="Cerrar asistente">
-            <Ionicons name="close" size={24} color={themeColors.text} />
-          </TouchableOpacity>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Ionicons name="sparkles" size={20} color={themeColors.primary} />
-            <ThemedText style={{ fontSize: 17, fontWeight: '600', color: themeColors.text }}>
-              Asistente IA
-            </ThemedText>
-          </View>
-          <View style={{ flexDirection: 'row', gap: 12 }}>
-            <TouchableOpacity onPress={openHistory} accessibilityLabel="Ver historial">
-              <Ionicons name="time-outline" size={22} color={themeColors.textSecondary} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/settings')} accessibilityLabel="Ir a ajustes">
-              <Ionicons name="settings-outline" size={22} color={themeColors.textSecondary} />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Mensajes */}
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          keyExtractor={(item) => item.id}
-          renderItem={renderMessage}
-          contentContainerStyle={{
-            paddingVertical: 16,
-            flexGrow: 1,
-          }}
-          onContentSizeChange={scrollToBottom}
-          onLayout={scrollToBottom}
-        />
-
-        {/* Indicador de carga con UI de razonamiento (T15) */}
-        {isLoading && (
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-              paddingVertical: 8,
-            }}
-          >
-            <ActivityIndicator size="small" color={themeColors.primary} />
-            <ThemedText style={{ fontSize: 13, color: themeColors.textSecondary }}>
-              {thinkingStep || 'Pensando...'}
-            </ThemedText>
-          </View>
-        )}
-
-        {/* Indicador de escucha */}
-        {isListening && (
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-              paddingVertical: 8,
-              backgroundColor: themeColors.primaryLight + '40',
-            }}
-          >
-            <ActivityIndicator size="small" color={themeColors.primary} />
-            <ThemedText style={{ fontSize: 13, color: themeColors.primary, fontWeight: '600' }}>
-              Escuchando...
-            </ThemedText>
-          </View>
-        )}
-
-        {/* Input Bar */}
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 8,
-            paddingHorizontal: 12,
-            paddingVertical: 8,
-            borderTopWidth: 1,
-            borderTopColor: themeColors.border,
-            backgroundColor: themeColors.background,
-          }}
-        >
-          {/* Botón micrófono */}
+        <View style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          paddingHorizontal: 24,
+          paddingVertical: 12,
+          backgroundColor: themeColors.surface + '80',
+          borderBottomWidth: 1,
+          borderBottomColor: themeColors.outlineVariant + '20',
+        }}>
           <TouchableOpacity
-            onPress={startListening}
-            disabled={isListening}
-            accessibilityLabel={isListening ? 'Detener grabación' : 'Iniciar grabación de voz'}
+            onPress={() => router.back()}
             style={{
               width: 40,
               height: 40,
               borderRadius: 20,
-              backgroundColor: isListening ? themeColors.danger : themeColors.surface,
+              backgroundColor: themeColors.primaryContainer,
               justifyContent: 'center',
               alignItems: 'center',
             }}
           >
-            <Ionicons
-              name={isListening ? 'mic' : 'mic-outline'}
-              size={20}
-              color={isListening ? '#FFF' : themeColors.text}
-            />
+            <Ionicons name="arrow-back" size={22} color={themeColors.onPrimaryContainer} />
           </TouchableOpacity>
 
-          {/* Input de texto */}
-          <TextInput
-            value={inputText}
-            onChangeText={setInputText}
-            placeholder="Escribe o dicta tu mensaje..."
-            placeholderTextColor={themeColors.textSecondary}
-            multiline
-            maxLength={500}
-            style={{
-              flex: 1,
-              backgroundColor: themeColors.surface,
-              borderRadius: 20,
-              paddingHorizontal: 16,
-              paddingVertical: 10,
-              fontSize: 15,
-              color: themeColors.text,
-              maxHeight: 100,
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <View style={{
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              backgroundColor: themeColors.surfaceVariant,
+              justifyContent: 'center',
+              alignItems: 'center',
               borderWidth: 1,
-              borderColor: themeColors.border,
-            }}
-            onSubmitEditing={() => sendMessage(inputText)}
-            blurOnSubmit
-          />
+              borderColor: themeColors.outlineVariant + '50',
+            }}>
+              <Ionicons name="sparkles" size={18} color={themeColors.secondary} />
+            </View>
+            <ThemedText type="h3" themeColor="secondary" style={{ fontWeight: '700' }}>
+              Asistente Kinetic
+            </ThemedText>
+          </View>
 
-          {/* Botón enviar */}
           <TouchableOpacity
-            onPress={() => sendMessage(inputText)}
-            disabled={!inputText.trim() || isLoading}
-            accessibilityLabel="Enviar mensaje"
+            onPress={openHistory}
             style={{
               width: 40,
               height: 40,
               borderRadius: 20,
-              backgroundColor: inputText.trim() && !isLoading
-                ? themeColors.primary
-                : themeColors.surface,
+              backgroundColor: themeColors.surfaceVariant + '60',
               justifyContent: 'center',
               alignItems: 'center',
             }}
           >
-            <Ionicons
-              name="send"
-              size={18}
-              color={inputText.trim() && !isLoading ? '#FFF' : themeColors.textSecondary}
-            />
+            <Ionicons name="time-outline" size={22} color={themeColors.secondary} />
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
 
-      {/* Modal de Historial */}
-      <Modal
-        visible={showHistory}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowHistory(false)}
-      >
-        <View
-          style={{
+        {/* Contenido principal */}
+        {!hasMessages ? (
+          /* Welcome State */
+          <View style={{
             flex: 1,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            justifyContent: 'flex-end',
-          }}
-        >
-          <View
-            style={{
-              backgroundColor: themeColors.surface,
-              borderTopLeftRadius: 20,
-              borderTopRightRadius: 20,
-              maxHeight: '70%',
-              paddingBottom: 30,
+            justifyContent: 'center',
+            alignItems: 'center',
+            paddingHorizontal: 32,
+            paddingBottom: 80,
+          }}>
+            <View style={{
+              width: 64,
+              height: 64,
+              borderRadius: 32,
+              backgroundColor: themeColors.surfaceVariant,
+              justifyContent: 'center',
+              alignItems: 'center',
+              marginBottom: 20,
+            }}>
+              <Ionicons name="sparkles" size={32} color={themeColors.secondary} />
+            </View>
+            <ThemedText type="h2" themeColor="text" style={{ fontWeight: '700', textAlign: 'center', marginBottom: 8 }}>
+              ¡Hola! Soy tu asistente financiero
+            </ThemedText>
+            <ThemedText type="body" themeColor="textSecondary" style={{ textAlign: 'center', lineHeight: 22 }}>
+              Puedo ayudarte a registrar gastos, crear cuentas, establecer metas y mucho más. ¡Pruébame!
+            </ThemedText>
+          </View>
+        ) : (
+          /* Lista de mensajes */
+          <FlatList
+            ref={flatListRef}
+            data={messages}
+            keyExtractor={(item) => item.id}
+            renderItem={renderMessage}
+            contentContainerStyle={{
+              paddingHorizontal: 20,
+              paddingTop: 16,
+              paddingBottom: 120,
             }}
-          >
-            {/* Header del modal */}
-            <View
+            onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+            ListFooterComponent={
+              isLoading ? (
+                <View style={{ alignItems: 'center', paddingVertical: 16 }}>
+                  {/* Thinking indicator: 3 animated dots */}
+                  <View style={{
+                    flexDirection: 'row',
+                    gap: 6,
+                    alignSelf: 'flex-start',
+                    backgroundColor: themeColors.surfaceVariant,
+                    borderRadius: 16,
+                    borderTopLeftRadius: 4,
+                    paddingHorizontal: 16,
+                    paddingVertical: 12,
+                    borderWidth: 1,
+                    borderColor: themeColors.outlineVariant + '20',
+                  }}>
+                    {[0, 1, 2].map((i) => (
+                      <View
+                        key={i}
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: 4,
+                          backgroundColor: themeColors.onSurfaceVariant,
+                          opacity: 0.6,
+                        }}
+                      />
+                    ))}
+                  </View>
+                  {thinkingStep && (
+                    <ThemedText
+                      type="caption"
+                      themeColor="textTertiary"
+                      style={{ marginTop: 8, fontStyle: 'italic' }}
+                    >
+                      {thinkingStep}
+                    </ThemedText>
+                  )}
+                </View>
+              ) : null
+            }
+          />
+        )}
+
+        {/* Bottom Input Bar */}
+        <View style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          paddingHorizontal: 16,
+          paddingBottom: Platform.OS === 'ios' ? 28 : 16,
+          paddingTop: 8,
+          backgroundColor: themeColors.surface + '99',
+          borderTopWidth: 1,
+          borderTopColor: themeColors.outlineVariant + '20',
+        }}>
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'flex-end',
+            gap: 8,
+            backgroundColor: themeColors.surfaceContainerHigh,
+            borderRadius: 16,
+            padding: 8,
+            borderWidth: 1,
+            borderColor: themeColors.outlineVariant + '30',
+          }}>
+            {/* Mic button */}
+            <TouchableOpacity
+              onPress={startListening}
               style={{
-                flexDirection: 'row',
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: isListening ? themeColors.danger + '20' : themeColors.surfaceVariant + '60',
+                justifyContent: 'center',
                 alignItems: 'center',
-                justifyContent: 'space-between',
-                paddingHorizontal: 16,
-                paddingVertical: 14,
-                borderBottomWidth: 1,
-                borderBottomColor: themeColors.border,
               }}
             >
-              <ThemedText style={{ fontSize: 17, fontWeight: '600', color: themeColors.text }}>
+              <Ionicons
+                name={isListening ? "mic" : "mic-outline"}
+                size={20}
+                color={isListening ? themeColors.danger : themeColors.onSurfaceVariant}
+              />
+            </TouchableOpacity>
+
+            {/* Text input */}
+            <TextInput
+              style={[inputStyle, { flex: 1, borderRadius: 12, maxHeight: 100 }]}
+              placeholder="Escribe un mensaje..."
+              placeholderTextColor={themeColors.textTertiary}
+              value={inputText}
+              onChangeText={setInputText}
+              multiline
+              editable={!isLoading}
+            />
+
+            {/* Send button */}
+            <TouchableOpacity
+              onPress={() => {
+                if (inputText.trim() && !isLoading) {
+                  sendMessage(inputText.trim());
+                  setInputText('');
+                }
+              }}
+              disabled={!inputText.trim() || isLoading}
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                backgroundColor: inputText.trim() && !isLoading ? themeColors.secondary : themeColors.surfaceVariant,
+                justifyContent: 'center',
+                alignItems: 'center',
+                shadowColor: inputText.trim() && !isLoading ? themeColors.secondary : 'transparent',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 12,
+                elevation: inputText.trim() && !isLoading ? 6 : 0,
+              }}
+            >
+              <Ionicons
+                name="send"
+                size={20}
+                color={inputText.trim() && !isLoading ? themeColors.text : themeColors.onSurfaceVariant}
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* History Modal */}
+        <Modal visible={showHistory} animationType="slide" presentationStyle="pageSheet">
+          <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
+            <View style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              paddingHorizontal: 24,
+              paddingVertical: 16,
+              backgroundColor: themeColors.surface + '80',
+              borderBottomWidth: 1,
+              borderBottomColor: themeColors.outlineVariant + '20',
+            }}>
+              <ThemedText type="h3" themeColor="text" style={{ fontWeight: '700' }}>
                 Historial
               </ThemedText>
-              <View style={{ flexDirection: 'row', gap: 12 }}>
-                <TouchableOpacity onPress={handleClearHistory} accessibilityLabel="Limpiar historial">
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TouchableOpacity
+                  onPress={handleClearHistory}
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    backgroundColor: themeColors.danger + '15',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                >
                   <Ionicons name="trash-outline" size={20} color={themeColors.danger} />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => setShowHistory(false)} accessibilityLabel="Cerrar historial">
-                  <Ionicons name="close" size={22} color={themeColors.text} />
+                <TouchableOpacity
+                  onPress={() => setShowHistory(false)}
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    backgroundColor: themeColors.surfaceVariant + '60',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                >
+                  <Ionicons name="close" size={22} color={themeColors.onSurfaceVariant} />
                 </TouchableOpacity>
               </View>
             </View>
 
-            {/* Lista de sesiones */}
-            {chatSessions.length === 0 ? (
-              <View style={{ padding: 40, alignItems: 'center' }}>
-                <Ionicons name="chatbubbles-outline" size={40} color={themeColors.textSecondary} />
-                <ThemedText style={{ fontSize: 15, color: themeColors.textSecondary, marginTop: 12, textAlign: 'center' }}>
-                  No hay conversaciones guardadas aún.
-                </ThemedText>
-              </View>
-            ) : (
-              <ScrollView style={{ paddingHorizontal: 16, paddingTop: 8 }}>
-                {chatSessions.map((session) => (
-                  <TouchableOpacity
-                    key={session.id}
-                    onPress={() => loadSession(session.id)}
-                    accessibilityLabel={`Cargar conversación: ${session.preview}`}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 12,
-                      paddingVertical: 12,
-                      borderBottomWidth: 1,
-                      borderBottomColor: themeColors.border + '60',
-                    }}
-                  >
-                    <View
-                      style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: 20,
-                        backgroundColor: themeColors.primary + '20',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <Ionicons name="chatbubble-ellipses" size={20} color={themeColors.primary} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <ThemedText
-                        style={{
-                          fontSize: 14,
-                          fontWeight: '500',
-                          color: themeColors.text,
-                        }}
-                        numberOfLines={1}
-                      >
-                        {session.preview}
-                      </ThemedText>
-                      <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary, marginTop: 2 }}>
-                        {session.date} · {session.count} mensajes
-                      </ThemedText>
-                    </View>
-                    <Ionicons name="chevron-forward" size={18} color={themeColors.textSecondary} />
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            )}
-          </View>
-        </View>
-      </Modal>
+            <FlatList
+              data={chatSessions}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={{ padding: 20, gap: 8 }}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  onPress={() => loadSession(item.id)}
+                  style={{
+                    backgroundColor: themeColors.surfaceContainer,
+                    borderRadius: 12,
+                    padding: 16,
+                    borderWidth: 1,
+                    borderColor: themeColors.outlineVariant + '30',
+                  }}
+                >
+                  <ThemedText type="bodyMedium" themeColor="text" numberOfLines={2} style={{ marginBottom: 4 }}>
+                    {item.preview}
+                  </ThemedText>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <ThemedText type="caption" themeColor="textTertiary">
+                      {item.date}
+                    </ThemedText>
+                    <ThemedText type="caption" themeColor="textTertiary">
+                      {item.count} mensajes
+                    </ThemedText>
+                  </View>
+                </TouchableOpacity>
+              )}
+              ListEmptyComponent={
+                <View style={{ paddingVertical: 60, alignItems: 'center' }}>
+                  <Ionicons name="chatbubble-ellipses-outline" size={48} color={themeColors.onSurfaceVariant} style={{ opacity: 0.4, marginBottom: 12 }} />
+                  <ThemedText type="body" themeColor="textSecondary">
+                    No hay conversaciones guardadas
+                  </ThemedText>
+                </View>
+              }
+            />
+          </SafeAreaView>
+        </Modal>
 
-      {/* Modal para seleccionar cuenta cuando hay múltiples cuentas */}
-      <Modal visible={showAccountPicker} animationType="fade" transparent>
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            justifyContent: 'center',
-            alignItems: 'center',
-            padding: 24,
-          }}
-        >
-          <View
-            style={{
-              backgroundColor: themeColors.surface,
-              borderRadius: 20,
-              width: '100%',
-              maxWidth: 380,
-              padding: 24,
-              ...shadows.lg,
+        {/* Account Picker Modal */}
+        <Modal visible={showAccountPicker} transparent animationType="fade">
+          <TouchableOpacity
+            style={{ flex: 1, backgroundColor: themeColors.overlay, justifyContent: 'center', alignItems: 'center' }}
+            activeOpacity={1}
+            onPress={() => {
+              setShowAccountPicker(false);
+              setPendingAction(null);
+              setPendingAccountCallback(null);
             }}
           >
-            <ThemedText
-              style={{
-                fontSize: 20,
-                fontWeight: '700',
-                color: themeColors.text,
-                marginBottom: 4,
-                textAlign: 'center',
-              }}
-            >
-              Seleccionar cuenta
-            </ThemedText>
-            <ThemedText
-              style={{
-                fontSize: 14,
-                color: themeColors.textSecondary,
-                marginBottom: 20,
-                textAlign: 'center',
-              }}
-            >
-              ¿En qué cuenta deseas registrar esta transacción?
-            </ThemedText>
-
-            <ScrollView style={{ maxHeight: 300 }}>
+            <GlassCard padding={24} style={{ width: '85%', maxWidth: 360 }}>
+              <ThemedText type="h3" themeColor="text" style={{ fontWeight: '700', marginBottom: 16, textAlign: 'center' }}>
+                Seleccionar cuenta
+              </ThemedText>
               {accounts.map((account) => (
                 <TouchableOpacity
                   key={account.id}
@@ -2016,90 +1767,42 @@ export default function AIChatScreen() {
                     setPendingAction(null);
                     setPendingAccountCallback(null);
                   }}
-                  accessibilityLabel={`Seleccionar cuenta: ${account.name}`}
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
+                    gap: 12,
                     paddingVertical: 14,
                     paddingHorizontal: 16,
                     borderRadius: 12,
-                    marginBottom: 8,
-                    backgroundColor: themeColors.background,
+                    marginBottom: 4,
+                    backgroundColor: themeColors.surfaceVariant + '30',
                   }}
                 >
-                  <View
-                    style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 20,
-                      backgroundColor: account.type === 'cash' ? '#D1FAE5' : account.type === 'bank' ? '#DBEAFE' : '#FEF3C7',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      marginRight: 12,
-                    }}
-                  >
-                    <Ionicons
-                      name={account.type === 'cash' ? 'cash-outline' : account.type === 'bank' ? 'business-outline' : 'card-outline'}
-                      size={20}
-                      color={themeColors.primary}
-                    />
+                  <View style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    backgroundColor: themeColors.surfaceVariant,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}>
+                    <Ionicons name="wallet-outline" size={20} color={themeColors.secondary} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <ThemedText
-                      style={{
-                        fontSize: 16,
-                        fontWeight: '600',
-                        color: themeColors.text,
-                      }}
-                    >
+                    <ThemedText type="bodyMedium" themeColor="text" style={{ fontWeight: '600' }}>
                       {account.name}
                     </ThemedText>
-                    <ThemedText style={{ fontSize: 13, color: themeColors.textSecondary, marginTop: 2 }}>
-                      {account.type === 'cash' ? 'Efectivo' : account.type === 'bank' ? 'Banco' : 'Crédito'}
+                    <ThemedText type="caption" themeColor="textSecondary">
+                      {account.type}
                     </ThemedText>
                   </View>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    {account.initialBalanceUSD != null && (
-                      <ThemedText style={{ fontSize: 14, fontWeight: '600', color: themeColors.text }}>
-                        ${account.initialBalanceUSD.toFixed(2)}
-                      </ThemedText>
-                    )}
-                    {account.initialBalanceBS != null && (
-                      <ThemedText style={{ fontSize: 12, color: themeColors.textSecondary }}>
-                        Bs. {account.initialBalanceBS.toFixed(2)}
-                      </ThemedText>
-                    )}
-                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={themeColors.onSurfaceVariant} />
                 </TouchableOpacity>
               ))}
-            </ScrollView>
-
-            <TouchableOpacity
-              onPress={() => {
-                if (pendingAction) {
-                  cancelAction(pendingAction);
-                }
-                setShowAccountPicker(false);
-                setPendingAction(null);
-                setPendingAccountCallback(null);
-              }}
-              accessibilityLabel="Cancelar selección de cuenta"
-              style={{
-                marginTop: 12,
-                paddingVertical: 14,
-                borderRadius: 12,
-                backgroundColor: themeColors.background,
-                alignItems: 'center',
-              }}
-            >
-              <ThemedText style={{ fontSize: 16, fontWeight: '500', color: themeColors.danger }}>
-                Cancelar
-              </ThemedText>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-    </SafeAreaView>
+            </GlassCard>
+          </TouchableOpacity>
+        </Modal>
+      </SafeAreaView>
     </AnimatedScreen>
   );
 }

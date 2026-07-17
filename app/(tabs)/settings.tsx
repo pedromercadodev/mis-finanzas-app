@@ -13,13 +13,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { colors } from '../../src/theme/colors';
-import { shadows } from '../../src/theme/shadows';
 import { useThemeColors } from '../../src/hooks/useThemeColors';
 import ThemedText from '../../src/components/ThemedText';
+import GlassCard from '../../src/components/GlassCard';
 import { useExchangeRates } from '../../src/hooks/useExchangeRates';
 import { useSettings } from '../../src/store/useSettings';
-import { formatBS } from '../../src/utils/format';
+import { formatUSD, formatBS } from '../../src/utils/format';
 import type { RateType } from '../../src/utils/types';
 import type { ThemeMode } from '../../src/store/useSettings';
 import { exportData, shareFile } from '../../src/services/export';
@@ -37,6 +36,7 @@ export default function SettingsScreen() {
     useDarkMode, setUseDarkMode,
     themeMode, setThemeMode,
     preferredRateType, setPreferredRateType,
+    expectedMonthlyIncome, setExpectedMonthlyIncome,
   } = useSettings();
   const {
     bcv: bcvRate,
@@ -48,6 +48,7 @@ export default function SettingsScreen() {
   const [showDeepseek, setShowDeepseek] = useState(false);
   const [showRate, setShowRate] = useState(false);
   const [rateInput, setRateInput] = useState(manualRate?.toString() || '');
+  const [incomeInput, setIncomeInput] = useState(expectedMonthlyIncome > 0 ? expectedMonthlyIncome.toString() : '');
   const [backupInfo, setBackupInfo] = useState<{ exists: boolean; fileName: string | null; fileSize: string | null; fileDate: string | null }>({ exists: false, fileName: null, fileSize: null, fileDate: null });
   const [importing, setImporting] = useState(false);
 
@@ -118,538 +119,704 @@ export default function SettingsScreen() {
     { label: 'BCV (Oficial)', value: 'BCV', icon: '🏛️' },
   ];
 
-  // Refrescar tasas al recibir foco (navegar a la pestaña)
+  // Refrescar tasas al recibir foco
   useFocusEffect(
     useCallback(() => {
       refreshRates();
     }, [refreshRates])
   );
 
+
+  const inputStyle = {
+    backgroundColor: themeColors.surfaceContainer,
+    borderWidth: 1,
+    borderColor: themeColors.outlineVariant + '50',
+    borderRadius: 10,
+    padding: 12,
+    fontSize: 14,
+    color: themeColors.text,
+  };
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
-        <ThemedText type="h1" themeColor="text" style={{ marginBottom: 24 }}>
-          Ajustes
-        </ThemedText>
-
-        {/* Sección APIs */}
-        <ThemedText type="small" themeColor="textSecondary" style={{ marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
-          APIs
-        </ThemedText>
-        <View style={{ backgroundColor: themeColors.surface, borderRadius: 16, marginBottom: 24, overflow: 'hidden', ...shadows.md }}>
-          <TouchableOpacity
-            accessibilityLabel={showDeepseek ? 'Ocultar configuración de DeepSeek' : 'Configurar DeepSeek API Key'}
-            onPress={() => setShowDeepseek(!showDeepseek)}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: 16,
-            }}
-          >
+      <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
+        {/* Header */}
+        <View style={{ paddingHorizontal: 24, paddingTop: 8, paddingBottom: 8 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: themeColors.primaryLight, justifyContent: 'center', alignItems: 'center' }}>
-                <Ionicons name="sparkles" size={18} color={themeColors.primary} />
-              </View>
-              <View>
-                <ThemedText type="body" themeColor="text">
-                  DeepSeek API Key
-                </ThemedText>
-                <ThemedText type="caption" themeColor="textSecondary">
-                  {deepseekKey ? '✓ Configurada' : 'No configurada'}
-                </ThemedText>
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
-          </TouchableOpacity>
-          {showDeepseek && (
-            <View style={{ padding: 16, gap: 10 }}>
-              <TextInput
-                value={deepseekKey}
-                onChangeText={(text) => { setDeepseekKey(text); }}
-                placeholder="sk-..."
-                placeholderTextColor={themeColors.textSecondary}
-                secureTextEntry
-                style={{
-                  backgroundColor: themeColors.background,
-                  borderRadius: 10,
-                  padding: 12,
-                  fontSize: 14,
-                  color: themeColors.text,
-                  ...shadows.sm,
-                }}
-              />
-              <TouchableOpacity
-                accessibilityLabel="Probar conexión con DeepSeek"
-                onPress={async () => {
-                  const result = await testDeepSeekConnection(deepseekKey);
-                  Alert.alert('DeepSeek', result.message);
-                }}
-                style={{
-                  backgroundColor: themeColors.primary,
-                  borderRadius: 10,
-                  padding: 12,
-                  alignItems: 'center',
-                  ...shadows.primary,
-                }}
-              >
-                <ThemedText style={{ color: '#FFF' }} type="button">
-                  Probar conexión
-                </ThemedText>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          <TouchableOpacity
-            accessibilityLabel={showRate ? 'Ocultar tasas de cambio' : 'Configurar tasas de cambio'}
-            onPress={() => setShowRate(!showRate)}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: 16,
-            }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: themeColors.warningLight, justifyContent: 'center', alignItems: 'center' }}>
-                <Ionicons name="trending-up" size={18} color={themeColors.warning} />
-              </View>
-              <View>
-                <ThemedText type="body" themeColor="text">
-                  Tasas de Cambio
-                </ThemedText>
-                <ThemedText type="caption" themeColor="textSecondary">
-                  {manualRate ? `Manual ${manualRateType === 'BCV' ? 'BCV' : 'Paralelo'}: ${formatBS(manualRate)}` : 'Automática'}
-                </ThemedText>
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
-          </TouchableOpacity>
-          {showRate && (
-            <View style={{ padding: 16, gap: 12 }}>
-              {/* Tasas actuales desde la BD */}
               <View style={{
-                backgroundColor: themeColors.background,
-                borderRadius: 12,
-                padding: 12,
-                gap: 8,
-                ...shadows.sm,
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: themeColors.primaryContainer,
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderWidth: 1,
+                borderColor: themeColors.outlineVariant + '50',
               }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <ThemedText type="caption" themeColor="textSecondary">BCV</ThemedText>
-                  <ThemedText type="body" themeColor="text" style={{ fontWeight: '700' }}>
-                    {bcvRate ? formatBS(bcvRate.rateUSDToBS) : '—'}
-                  </ThemedText>
-                </View>
-                <View style={{ height: 1, backgroundColor: themeColors.border }} />
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <ThemedText type="caption" themeColor="textSecondary">Paralelo (USDT)</ThemedText>
-                  <ThemedText type="body" themeColor="text" style={{ fontWeight: '700' }}>
-                    {parallelRate ? formatBS(parallelRate.rateUSDToBS) : '—'}
-                  </ThemedText>
-                </View>
-                {ratesLastUpdated && (
-                  <ThemedText type="badge" themeColor="textSecondary" style={{ textAlign: 'right', marginTop: 4 }}>
-                    Última actualización: {ratesLastUpdated.toLocaleString('es-VE', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      day: '2-digit',
-                      month: '2-digit',
-                    })}
-                  </ThemedText>
-                )}
-              </View>
-
-              <TouchableOpacity
-                accessibilityLabel="Actualizar tasas automáticas"
-                onPress={handleUpdateRate}
-                disabled={ratesLoading}
-                style={{
-                  backgroundColor: themeColors.primary,
-                  borderRadius: 10,
-                  padding: 12,
-                  alignItems: 'center',
-                  opacity: ratesLoading ? 0.6 : 1,
-                  ...shadows.primary,
-                }}
-              >
-                {ratesLoading ? (
-                  <ActivityIndicator size="small" color="#FFF" />
-                ) : (
-                  <ThemedText style={{ color: '#FFF' }} type="button">
-                    Actualizar tasas automáticas
-                  </ThemedText>
-                )}
-              </TouchableOpacity>
-
-              {/* Selector de tipo para tasa manual */}
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                {([{ label: 'BCV', value: 'BCV' as RateType, icon: 'business-outline' as const }, { label: 'Paralelo', value: 'PARALLEL' as RateType, icon: 'trending-up-outline' as const }]).map((opt) => (
-                  <TouchableOpacity
-                    key={opt.value}
-                    accessibilityLabel={`Seleccionar tipo de tasa ${opt.label}`}
-                    onPress={() => setManualRateType(opt.value)}
-                    style={{
-                      flex: 1,
-                      paddingVertical: 10,
-                      borderRadius: 10,
-                      backgroundColor: manualRateType === opt.value ? themeColors.primary : themeColors.background,
-                      alignItems: 'center',
-                      minHeight: 44,
-                      justifyContent: 'center',
-                      ...(manualRateType === opt.value ? shadows.primary : shadows.sm),
-                    }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      <Ionicons name={opt.icon} size={16} color={manualRateType === opt.value ? '#FFF' : themeColors.textSecondary} />
-                      <ThemedText
-                        type="buttonSmall"
-                        color={manualRateType === opt.value ? '#FFF' : themeColors.textSecondary}
-                      >
-                        {opt.label}
-                      </ThemedText>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                <TextInput
-                  value={rateInput}
-                  onChangeText={setRateInput}
-                  placeholder="Tasa manual USD→Bs"
-                  placeholderTextColor={themeColors.textSecondary}
-                  keyboardType="decimal-pad"
-                  style={{
-                    flex: 1,
-                    backgroundColor: themeColors.background,
-                    borderRadius: 10,
-                    padding: 12,
-                    fontSize: 14,
-                    color: themeColors.text,
-                    ...shadows.sm,
-                  }}
-                />
-                <TouchableOpacity
-                  accessibilityLabel="Guardar tasa manual"
-                  onPress={handleSaveManualRate}
-                  style={{
-                    backgroundColor: themeColors.success,
-                    borderRadius: 10,
-                    paddingHorizontal: 16,
-                    justifyContent: 'center',
-                    ...shadows.sm,
-                  }}
-                >
-                  <ThemedText style={{ color: '#FFF' }} type="button">Guardar</ThemedText>
-                </TouchableOpacity>
-              </View>
-
-              {/* Botón para volver a tasas automáticas */}
-              {manualRate !== null && (
-                <TouchableOpacity
-                  accessibilityLabel="Quitar tasa manual y volver a automática"
-                  onPress={() => {
-                    setManualRate(null);
-                    setRateInput('');
-                    Alert.alert('Tasa automática', 'Se ha eliminado la tasa manual. Ahora se usarán las tasas automáticas de la BD.');
-                  }}
-                  style={{
-                    backgroundColor: themeColors.danger,
-                    borderRadius: 10,
-                    padding: 12,
-                    alignItems: 'center',
-                    ...shadows.sm,
-                  }}
-                >
-                  <ThemedText style={{ color: '#FFF' }} type="button">
-                    Quitar tasa manual (volver a automática)
-                  </ThemedText>
-                </TouchableOpacity>
-              )}
-            </View>
-          )}
-        </View>
-
-        {/* Sección Cálculos */}
-        <ThemedText type="small" themeColor="textSecondary" style={{ marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
-          Cálculos
-        </ThemedText>
-        <View style={{ backgroundColor: themeColors.surface, borderRadius: 16, marginBottom: 24, overflow: 'hidden', ...shadows.md }}>
-          <View style={{ padding: 16 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-              <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: themeColors.primaryLight, justifyContent: 'center', alignItems: 'center' }}>
-                <Ionicons name="calculator" size={18} color={themeColors.primary} />
+                <Ionicons name="person" size={20} color={themeColors.secondary} />
               </View>
               <View>
-                <ThemedText type="body" themeColor="text">
-                  Tasa para calcular Bs total
+                <ThemedText type="body" themeColor="text" style={{ fontSize: 16, fontWeight: '600' }}>
+                  Buenos días
                 </ThemedText>
-                <ThemedText type="caption" themeColor="textSecondary">
-                  Usar tasa {preferredRateType === 'BCV' ? 'BCV (Oficial)' : 'Paralelo (USDT)'}
+                <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ fontSize: 12 }}>
+                  Mis Finanzas
                 </ThemedText>
               </View>
             </View>
-
-            {rateOptions.map((option) => {
-              const isSelected = preferredRateType === option.value;
-              return (
-                <TouchableOpacity
-                  key={option.value}
-                  accessibilityLabel={`Seleccionar tasa ${option.label} para cálculos`}
-                  onPress={() => setPreferredRateType(option.value)}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    paddingVertical: 12,
-                    paddingHorizontal: 12,
-                    backgroundColor: isSelected ? themeColors.primaryLight + '30' : 'transparent',
-                    borderRadius: 10,
-                    marginBottom: 4,
-                  }}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                    <Text style={{ fontSize: 18 }}>{option.icon}</Text>
-                    <ThemedText
-                      type="body"
-                      themeColor="text"
-                      style={{ fontWeight: isSelected ? '600' : '400' }}
-                    >
-                      {option.label}
-                    </ThemedText>
-                  </View>
-                  {isSelected && (
-                    <Ionicons name="checkmark-circle" size={22} color={themeColors.primary} />
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-
-            <ThemedText type="caption" themeColor="textSecondary" style={{ marginTop: 8, lineHeight: 16 }}>
-              Esta tasa se usará para convertir tus saldos en USD a Bs en la pantalla principal.
-              {manualRate && ` Actualmente hay una tasa manual de ${formatBS(manualRate)} configurada.`}
-            </ThemedText>
+            <TouchableOpacity
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Ionicons name="notifications-outline" size={22} color={themeColors.secondary} />
+            </TouchableOpacity>
           </View>
         </View>
 
-        {/* Sección Gestión */}
-        <ThemedText type="small" themeColor="textSecondary" style={{ marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
-          Gestión
-        </ThemedText>
-        <View style={{ backgroundColor: themeColors.surface, borderRadius: 16, marginBottom: 24, overflow: 'hidden', ...shadows.md }}>
-          <TouchableOpacity
-            accessibilityLabel="Ir a Cuentas"
-            onPress={() => router.push('/(tabs)/accounts')}
-            style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: 16,
-          }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: themeColors.successLight, justifyContent: 'center', alignItems: 'center' }}>
-                <Ionicons name="wallet" size={18} color={themeColors.success} />
-              </View>
-              <ThemedText type="body" themeColor="text">
-                Cuentas
-              </ThemedText>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            accessibilityLabel="Ir a Categorías"
-            onPress={() => router.push('/categories')}
-            style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: 16,
-          }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: themeColors.primaryLight, justifyContent: 'center', alignItems: 'center' }}>
-                <Ionicons name="folder" size={18} color={themeColors.primary} />
-              </View>
-              <ThemedText type="body" themeColor="text">
-                Categorías
-              </ThemedText>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            accessibilityLabel="Ir a Deudas y Préstamos"
-            onPress={() => router.push('/(tabs)/debts')}
-            style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: 16,
-          }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#FEE2E2', justifyContent: 'center', alignItems: 'center' }}>
-                <Ionicons name="cash" size={18} color="#DC2626" />
-              </View>
-              <ThemedText type="body" themeColor="text">
-                Deudas y Préstamos
-              </ThemedText>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
-          </TouchableOpacity>
+        {/* Page Title */}
+        <View style={{ paddingHorizontal: 24, marginBottom: 24, marginTop: 16 }}>
+          <ThemedText type="h1" themeColor="text" style={{ fontSize: 24 }}>
+            Ajustes
+          </ThemedText>
+          <ThemedText type="body" themeColor="onSurfaceVariant" style={{ fontSize: 14, marginTop: 4 }}>
+            Gestiona tus preferencias e integraciones
+          </ThemedText>
         </View>
 
-        {/* Sección Datos */}
-        <ThemedText type="small" themeColor="textSecondary" style={{ marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
-          Datos
-        </ThemedText>
-        <View style={{ backgroundColor: themeColors.surface, borderRadius: 16, marginBottom: 24, overflow: 'hidden', ...shadows.md }}>
-          <TouchableOpacity
-            accessibilityLabel="Exportar datos"
-            onPress={showExportOptions}
-            style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: 16,
-          }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: themeColors.warningLight, justifyContent: 'center', alignItems: 'center' }}>
-                <Ionicons name="download" size={18} color={themeColors.warning} />
-              </View>
-              <ThemedText type="body" themeColor="text">
-                Exportar datos
+        <View style={{ paddingHorizontal: 24, gap: 16 }}>
+          {/* Expected Monthly Income */}
+          <GlassCard padding={20}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <Ionicons name="cash" size={20} color={themeColors.secondary} />
+              <ThemedText type="h3" themeColor="text" style={{ fontSize: 18 }}>
+                Ingreso Mensual Esperado
               </ThemedText>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            accessibilityLabel="Respaldar base de datos"
-            onPress={async () => {
-              try {
-                await shareBackup();
-                const info = await getLastBackupInfo();
-                setBackupInfo(info);
-              } catch (error: any) {
-                Alert.alert('Error', error.message || 'No se pudo crear el respaldo');
-              }
-            }}
-            style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: 16,
-          }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#DBEAFE', justifyContent: 'center', alignItems: 'center' }}>
-                <Ionicons name="cloud-upload" size={18} color="#2563EB" />
+            <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ marginBottom: 12 }}>
+              Usado para cálculos de presupuesto y proyecciones
+            </ThemedText>
+            <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+              <View style={{ flex: 1, position: 'relative' }}>
+                <View style={{ position: 'absolute', left: 12, top: 0, bottom: 0, justifyContent: 'center', zIndex: 1 }}>
+                  <ThemedText type="body" themeColor="onSurfaceVariant" style={{ fontSize: 16 }}>$</ThemedText>
+                </View>
+                <TextInput
+                  style={[inputStyle, { paddingLeft: 28, fontSize: 18, fontWeight: '600', textAlign: 'right' }]}
+                  placeholder="0.00"
+                  placeholderTextColor={themeColors.outline}
+                  keyboardType="decimal-pad"
+                  value={incomeInput}
+                  onChangeText={setIncomeInput}
+                  accessibilityLabel="Ingreso mensual esperado en USD"
+                />
               </View>
-              <View>
-                <ThemedText type="body" themeColor="text">
-                  Respaldar base de datos
-                </ThemedText>
-                {backupInfo.exists && (
-                  <ThemedText type="caption" themeColor="textSecondary" style={{ marginTop: 2 }}>
-                    Último: {backupInfo.fileSize} • {backupInfo.fileDate}
-                  </ThemedText>
-                )}
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            accessibilityLabel="Restaurar respaldo de base de datos"
-            onPress={async () => {
-              if (importing) return;
-              setImporting(true);
-              try {
-                const success = await importBackup();
-                if (success) {
-                  Alert.alert(
-                    'Restaurado',
-                    'Base de datos restaurada correctamente. La app se cerrará para aplicar los cambios.',
-                    [{ text: 'OK', onPress: () => { /* El usuario debe reiniciar la app */ } }]
-                  );
-                }
-              } catch (error: any) {
-                Alert.alert('Error', error.message || 'No se pudo restaurar el respaldo');
-              } finally {
-                setImporting(false);
-              }
-            }}
-            style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: 16,
-          }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: themeColors.dangerLight, justifyContent: 'center', alignItems: 'center' }}>
-                {importing ? (
-                  <ActivityIndicator size="small" color={themeColors.danger} />
-                ) : (
-                  <Ionicons name="cloud-download" size={18} color={themeColors.danger} />
-                )}
-              </View>
-              <ThemedText type="body" themeColor="text">
-                Restaurar respaldo
-              </ThemedText>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Sección Apariencia */}
-        <ThemedText type="small" themeColor="textSecondary" style={{ marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
-          Apariencia
-        </ThemedText>
-        <View style={{ backgroundColor: themeColors.surface, borderRadius: 16, marginBottom: 24, overflow: 'hidden', ...shadows.md }}>
-          {([
-            { key: 'light' as ThemeMode, icon: 'sunny', label: 'Claro' },
-            { key: 'dark' as ThemeMode, icon: 'moon', label: 'Oscuro' },
-            { key: 'system' as ThemeMode, icon: 'phone-portrait', label: 'Sistema' },
-          ]).map((option, index) => {
-            const isActive = themeMode === option.key;
-            return (
               <TouchableOpacity
-                key={option.key}
-                accessibilityLabel={`Tema ${option.label}`}
+                accessibilityLabel="Guardar ingreso mensual"
                 onPress={() => {
-                  setThemeMode(option.key);
-                  // Sincronizar useDarkMode para compatibilidad con código legacy
-                  if (option.key === 'dark') setUseDarkMode(true);
-                  else if (option.key === 'light') setUseDarkMode(false);
-                  else setUseDarkMode(systemColorScheme === 'dark');
+                  const amount = parseFloat(incomeInput);
+                  if (!isNaN(amount) && amount >= 0) {
+                    setExpectedMonthlyIncome(amount);
+                  }
                 }}
                 style={{
-                  flexDirection: 'row',
+                  backgroundColor: themeColors.secondary,
+                  paddingVertical: 12,
+                  paddingHorizontal: 16,
+                  borderRadius: 10,
                   alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: 16,
-                  backgroundColor: isActive ? themeColors.primaryLight : 'transparent',
-                }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                  <View style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 10,
-                    backgroundColor: isActive ? themeColors.primary : themeColors.primaryLight,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                  }}>
-                    <Ionicons
-                      name={option.icon as any}
-                      size={18}
-                      color={isActive ? '#FFF' : themeColors.primary}
-                    />
-                  </View>
-                  <ThemedText type="body" themeColor="text">
-                    {option.label}
+                  justifyContent: 'center',
+                  shadowColor: themeColors.secondary,
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 12,
+                  elevation: 6,
+                }}
+              >
+                <Ionicons name="checkmark" size={20} color={themeColors.background} />
+              </TouchableOpacity>
+            </View>
+            {expectedMonthlyIncome > 0 && (
+              <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ marginTop: 8 }}>
+                Actual: {formatUSD(expectedMonthlyIncome)}
+              </ThemedText>
+            )}
+          </GlassCard>
+
+          {/* Integrations & APIs */}
+          <GlassCard noPadding>
+            <TouchableOpacity
+              accessibilityLabel={showDeepseek ? 'Ocultar configuración de APIs' : 'Mostrar configuración de APIs'}
+              onPress={() => setShowDeepseek(!showDeepseek)}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: 20,
+                borderBottomWidth: showDeepseek ? 1 : 0,
+                borderBottomColor: themeColors.outlineVariant + '30',
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="sparkles" size={20} color={themeColors.secondary} />
+                <ThemedText type="h3" themeColor="text" style={{ fontSize: 18 }}>
+                  Integraciones & APIs
+                </ThemedText>
+              </View>
+              <Ionicons
+                name={showDeepseek ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color={themeColors.onSurfaceVariant}
+              />
+            </TouchableOpacity>
+
+            {showDeepseek && (
+              <View style={{ paddingHorizontal: 20, paddingVertical: 16, gap: 14 }}>
+                {/* DeepSeek API */}
+                <View style={{ gap: 8 }}>
+                  <ThemedText type="small" themeColor="onSurfaceVariant" style={{ letterSpacing: 0.5 }}>
+                    DeepSeek API Key (Asistente IA)
                   </ThemedText>
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <TextInput
+                      value={deepseekKey}
+                      onChangeText={(text) => { setDeepseekKey(text); }}
+                      placeholder="sk-..."
+                      placeholderTextColor={themeColors.outline}
+                      secureTextEntry
+                      style={[inputStyle, { flex: 1 }]}
+                    />
+                    <TouchableOpacity
+                      accessibilityLabel="Probar conexión con DeepSeek"
+                      onPress={async () => {
+                        const result = await testDeepSeekConnection(deepseekKey);
+                        Alert.alert('DeepSeek', result.message);
+                      }}
+                      style={{
+                        backgroundColor: themeColors.surfaceVariant,
+                        borderRadius: 10,
+                        paddingHorizontal: 16,
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <ThemedText type="button" themeColor="text" style={{ fontSize: 12 }}>
+                        Probar
+                      </ThemedText>
+                    </TouchableOpacity>
+                  </View>
                 </View>
-                {isActive && (
-                  <Ionicons name="checkmark-circle" size={22} color={themeColors.primary} />
+
+                <View style={{ height: 1, backgroundColor: themeColors.outlineVariant + '30' }} />
+
+                {/* Exchange Rates */}
+                <View style={{ gap: 12 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <ThemedText type="small" themeColor="onSurfaceVariant" style={{ letterSpacing: 0.5 }}>
+                      Tasas de Cambio
+                    </ThemedText>
+                    <TouchableOpacity
+                      accessibilityLabel="Actualizar tasas"
+                      onPress={handleUpdateRate}
+                      disabled={ratesLoading}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                    >
+                      <Ionicons name="sync" size={14} color={themeColors.secondary} />
+                      <ThemedText type="small" style={{ color: themeColors.secondary, fontSize: 11 }}>
+                        Actualizar
+                      </ThemedText>
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={{
+                    backgroundColor: themeColors.surfaceContainer,
+                    borderRadius: 10,
+                    padding: 12,
+                    borderWidth: 1,
+                    borderColor: themeColors.outlineVariant + '50',
+                  }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <ThemedText type="body" themeColor="text" style={{ fontSize: 14 }}>BCV (Oficial)</ThemedText>
+                      <ThemedText type="body" style={{ color: themeColors.secondary, fontWeight: '600' }}>
+                        {bcvRate ? formatBS(bcvRate.rateUSDToBS) : '—'}
+                      </ThemedText>
+                    </View>
+                  </View>
+
+                  <View style={{
+                    backgroundColor: themeColors.surfaceContainer,
+                    borderRadius: 10,
+                    padding: 12,
+                    borderWidth: 1,
+                    borderColor: themeColors.outlineVariant + '50',
+                  }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <ThemedText type="body" themeColor="text" style={{ fontSize: 14 }}>Paralelo (USDT)</ThemedText>
+                      <ThemedText type="body" style={{ color: themeColors.tertiary, fontWeight: '600' }}>
+                        {parallelRate ? formatBS(parallelRate.rateUSDToBS) : '—'}
+                      </ThemedText>
+                    </View>
+                  </View>
+
+                  {ratesLastUpdated && (
+                    <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ textAlign: 'right', fontSize: 11 }}>
+                      Última actualización: {ratesLastUpdated.toLocaleString('es-VE', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        day: '2-digit',
+                        month: '2-digit',
+                      })}
+                    </ThemedText>
+                  )}
+
+                  {/* Rate Preference Toggle */}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                    <ThemedText type="body" themeColor="onSurfaceVariant" style={{ fontSize: 13 }}>
+                      Tasa por defecto para cálculos
+                    </ThemedText>
+                    <View style={{
+                      flexDirection: 'row',
+                      backgroundColor: themeColors.surfaceContainerHigh,
+                      borderRadius: 8,
+                      padding: 2,
+                    }}>
+                      {([{ label: 'BCV', value: 'BCV' as RateType }, { label: 'Paralelo', value: 'PARALLEL' as RateType }]).map((opt) => (
+                        <TouchableOpacity
+                          key={opt.value}
+                          onPress={() => setPreferredRateType(opt.value)}
+                          style={{
+                            paddingHorizontal: 12,
+                            paddingVertical: 6,
+                            borderRadius: 6,
+                            backgroundColor: preferredRateType === opt.value ? themeColors.secondary + '20' : 'transparent',
+                          }}
+                        >
+                          <ThemedText
+                            type="small"
+                            style={{
+                              color: preferredRateType === opt.value ? themeColors.secondary : themeColors.onSurfaceVariant,
+                              fontSize: 11,
+                            }}
+                          >
+                            {opt.label}
+                          </ThemedText>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+
+                  {/* Manual Rate */}
+                  <View style={{ gap: 8 }}>
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                      {([{ label: 'BCV', value: 'BCV' as RateType, icon: 'business-outline' as const }, { label: 'Paralelo', value: 'PARALLEL' as RateType, icon: 'trending-up-outline' as const }]).map((opt) => (
+                        <TouchableOpacity
+                          key={opt.value}
+                          onPress={() => setManualRateType(opt.value)}
+                          style={{
+                            flex: 1,
+                            paddingVertical: 8,
+                            borderRadius: 8,
+                            backgroundColor: manualRateType === opt.value ? themeColors.secondary + '20' : themeColors.surfaceContainer,
+                            alignItems: 'center',
+                            borderWidth: 1,
+                            borderColor: manualRateType === opt.value ? themeColors.secondary + '30' : themeColors.outlineVariant + '30',
+                          }}
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                            <Ionicons name={opt.icon} size={14} color={manualRateType === opt.value ? themeColors.secondary : themeColors.onSurfaceVariant} />
+                            <ThemedText
+                              type="small"
+                              style={{
+                                color: manualRateType === opt.value ? themeColors.secondary : themeColors.onSurfaceVariant,
+                                fontSize: 11,
+                              }}
+                            >
+                              {opt.label}
+                            </ThemedText>
+                          </View>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                      <TextInput
+                        value={rateInput}
+                        onChangeText={setRateInput}
+                        placeholder="Tasa manual USD→Bs"
+                        placeholderTextColor={themeColors.outline}
+                        keyboardType="decimal-pad"
+                        style={[inputStyle, { flex: 1 }]}
+                      />
+                      <TouchableOpacity
+                        accessibilityLabel="Guardar tasa manual"
+                        onPress={handleSaveManualRate}
+                        style={{
+                          backgroundColor: themeColors.secondary,
+                          borderRadius: 10,
+                          paddingHorizontal: 16,
+                          justifyContent: 'center',
+                          shadowColor: themeColors.secondary,
+                          shadowOffset: { width: 0, height: 4 },
+                          shadowOpacity: 0.3,
+                          shadowRadius: 12,
+                          elevation: 6,
+                        }}
+                      >
+                        <ThemedText style={{ color: themeColors.background, fontWeight: '600', fontSize: 13 }}>
+                          Guardar
+                        </ThemedText>
+                      </TouchableOpacity>
+                    </View>
+                    {manualRate !== null && (
+                      <TouchableOpacity
+                        accessibilityLabel="Quitar tasa manual"
+                        onPress={() => {
+                          setManualRate(null);
+                          setRateInput('');
+                          Alert.alert('Tasa automática', 'Se ha eliminado la tasa manual. Ahora se usarán las tasas automáticas de la BD.');
+                        }}
+                        style={{
+                          backgroundColor: themeColors.danger + '20',
+                          borderRadius: 10,
+                          padding: 10,
+                          alignItems: 'center',
+                          borderWidth: 1,
+                          borderColor: themeColors.danger + '30',
+                        }}
+                      >
+                        <ThemedText style={{ color: themeColors.danger, fontWeight: '600', fontSize: 13 }}>
+                          Quitar tasa manual
+                        </ThemedText>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+              </View>
+            )}
+          </GlassCard>
+
+          {/* Management */}
+          <GlassCard padding={20}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <Ionicons name="folder-open" size={20} color={themeColors.secondary} />
+              <ThemedText type="h3" themeColor="text" style={{ fontSize: 18 }}>
+                Gestión
+              </ThemedText>
+            </View>
+
+            <TouchableOpacity
+              accessibilityLabel="Ir a Cuentas"
+              onPress={() => router.push('/(tabs)/accounts')}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: 14,
+                borderRadius: 12,
+                backgroundColor: themeColors.surfaceContainer,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  backgroundColor: themeColors.secondary + '10',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                  <Ionicons name="wallet" size={16} color={themeColors.secondary} />
+                </View>
+                <ThemedText type="body" themeColor="text" style={{ fontSize: 15 }}>
+                  Cuentas
+                </ThemedText>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={themeColors.onSurfaceVariant} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              accessibilityLabel="Ir a Categorías"
+              onPress={() => router.push('/categories')}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: 14,
+                borderRadius: 12,
+                backgroundColor: themeColors.surfaceContainer,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  backgroundColor: themeColors.tertiary + '10',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                  <Ionicons name="folder" size={16} color={themeColors.tertiary} />
+                </View>
+                <ThemedText type="body" themeColor="text" style={{ fontSize: 15 }}>
+                  Categorías
+                </ThemedText>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={themeColors.onSurfaceVariant} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              accessibilityLabel="Ir a Deudas y Préstamos"
+              onPress={() => router.push('/(tabs)/debts')}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: 14,
+                borderRadius: 12,
+                backgroundColor: themeColors.surfaceContainer,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  backgroundColor: themeColors.danger + '10',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                  <Ionicons name="cash" size={16} color={themeColors.danger} />
+                </View>
+                <ThemedText type="body" themeColor="text" style={{ fontSize: 15 }}>
+                  Deudas y Préstamos
+                </ThemedText>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={themeColors.onSurfaceVariant} />
+            </TouchableOpacity>
+          </GlassCard>
+
+          {/* Appearance */}
+          <GlassCard padding={20}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+              <Ionicons name="color-palette-outline" size={20} color={themeColors.secondary} />
+              <ThemedText type="h3" themeColor="text" style={{ fontSize: 18 }}>
+                Apariencia
+              </ThemedText>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {([
+                { key: 'light' as ThemeMode, icon: 'sunny-outline' as const, label: 'Claro' },
+                { key: 'dark' as ThemeMode, icon: 'moon-outline' as const, label: 'Oscuro' },
+                { key: 'system' as ThemeMode, icon: 'phone-portrait-outline' as const, label: 'Sistema' },
+              ]).map((option) => {
+                const isActive = themeMode === option.key;
+                return (
+                  <TouchableOpacity
+                    key={option.key}
+                    accessibilityLabel={`Tema ${option.label}`}
+                    onPress={() => {
+                      setThemeMode(option.key);
+                      if (option.key === 'dark') setUseDarkMode(true);
+                      else if (option.key === 'light') setUseDarkMode(false);
+                      else setUseDarkMode(systemColorScheme === 'dark');
+                    }}
+                    style={{
+                      flex: 1,
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: 12,
+                      borderRadius: 12,
+                      borderWidth: isActive ? 2 : 1,
+                      borderColor: isActive ? themeColors.secondary : themeColors.outlineVariant + '50',
+                      backgroundColor: isActive ? themeColors.secondary + '08' : 'transparent',
+                    }}
+                  >
+                    <Ionicons
+                      name={option.icon}
+                      size={22}
+                      color={isActive ? themeColors.secondary : themeColors.onSurfaceVariant}
+                    />
+                    <ThemedText
+                      type="small"
+                      style={{
+                        color: isActive ? themeColors.secondary : themeColors.onSurfaceVariant,
+                        fontSize: 11,
+                      }}
+                    >
+                      {option.label}
+                    </ThemedText>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </GlassCard>
+
+          {/* Data Management */}
+          <GlassCard padding={20}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <Ionicons name="server-outline" size={20} color={themeColors.secondary} />
+              <ThemedText type="h3" themeColor="text" style={{ fontSize: 18 }}>
+                Gestión de Datos
+              </ThemedText>
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <TouchableOpacity
+                accessibilityLabel="Exportar CSV"
+                onPress={() => handleExport('csv')}
+                disabled={exporting}
+                style={{
+                  flex: 1,
+                  backgroundColor: themeColors.surfaceContainer,
+                  paddingVertical: 12,
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  borderWidth: 1,
+                  borderColor: themeColors.outlineVariant + '30',
+                }}
+              >
+                <Ionicons name="download-outline" size={20} color={themeColors.text} />
+                <ThemedText type="small" themeColor="text" style={{ fontSize: 11 }}>
+                  Exportar CSV
+                </ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                accessibilityLabel="Exportar JSON"
+                onPress={() => handleExport('json')}
+                disabled={exporting}
+                style={{
+                  flex: 1,
+                  backgroundColor: themeColors.surfaceContainer,
+                  paddingVertical: 12,
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  borderWidth: 1,
+                  borderColor: themeColors.outlineVariant + '30',
+                }}
+              >
+                <Ionicons name="code-slash-outline" size={20} color={themeColors.text} />
+                <ThemedText type="small" themeColor="text" style={{ fontSize: 11 }}>
+                  Exportar JSON
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ height: 1, backgroundColor: themeColors.outlineVariant + '30' }} />
+
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <TouchableOpacity
+                accessibilityLabel="Respaldar base de datos"
+                onPress={async () => {
+                  try {
+                    await shareBackup();
+                    const info = await getLastBackupInfo();
+                    setBackupInfo(info);
+                  } catch (error: any) {
+                    Alert.alert('Error', error.message || 'No se pudo crear el respaldo');
+                  }
+                }}
+                style={{
+                  flex: 1,
+                  backgroundColor: themeColors.secondary + '10',
+                  paddingVertical: 12,
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  borderWidth: 1,
+                  borderColor: themeColors.secondary + '30',
+                }}
+              >
+                <Ionicons name="cloud-upload-outline" size={20} color={themeColors.secondary} />
+                <ThemedText type="small" style={{ color: themeColors.secondary, fontSize: 11 }}>
+                  Respaldar
+                </ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                accessibilityLabel="Restaurar respaldo"
+                onPress={async () => {
+                  if (importing) return;
+                  setImporting(true);
+                  try {
+                    const success = await importBackup();
+                    if (success) {
+                      Alert.alert(
+                        'Restaurado',
+                        'Base de datos restaurada correctamente. La app se cerrará para aplicar los cambios.',
+                        [{ text: 'OK' }]
+                      );
+                    }
+                  } catch (error: any) {
+                    Alert.alert('Error', error.message || 'No se pudo restaurar el respaldo');
+                  } finally {
+                    setImporting(false);
+                  }
+                }}
+                style={{
+                  flex: 1,
+                  backgroundColor: themeColors.surfaceContainer,
+                  paddingVertical: 12,
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  borderWidth: 1,
+                  borderColor: themeColors.outlineVariant + '30',
+                }}
+              >
+                {importing ? (
+                  <ActivityIndicator size="small" color={themeColors.text} />
+                ) : (
+                  <>
+                    <Ionicons name="refresh-outline" size={20} color={themeColors.text} />
+                    <ThemedText type="small" themeColor="text" style={{ fontSize: 11 }}>
+                      Restaurar
+                    </ThemedText>
+                  </>
                 )}
               </TouchableOpacity>
-            );
-          })}
+            </View>
+
+            {backupInfo.exists && (
+              <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ fontSize: 11, textAlign: 'center' }}>
+                Último respaldo: {backupInfo.fileSize} • {backupInfo.fileDate}
+              </ThemedText>
+            )}
+          </GlassCard>
+
+          {/* Danger Zone */}
+          <GlassCard padding={20}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <Ionicons name="warning-outline" size={20} color={themeColors.danger} />
+              <ThemedText type="h3" style={{ color: themeColors.danger, fontSize: 18 }}>
+                Zona de Peligro
+              </ThemedText>
+            </View>
+            <ThemedText type="body" themeColor="onSurfaceVariant" style={{ fontSize: 13, marginBottom: 16 }}>
+              Elimina permanentemente tu cuenta y todos los datos financieros asociados.
+            </ThemedText>
+            <TouchableOpacity
+              style={{
+                backgroundColor: themeColors.danger + '10',
+                paddingVertical: 12,
+                borderRadius: 12,
+                alignItems: 'center',
+                borderWidth: 1,
+                borderColor: themeColors.danger + '30',
+              }}
+            >
+              <ThemedText style={{ color: themeColors.danger, fontWeight: '600', fontSize: 14 }}>
+                Eliminar Cuenta
+              </ThemedText>
+            </TouchableOpacity>
+          </GlassCard>
         </View>
       </ScrollView>
     </SafeAreaView>

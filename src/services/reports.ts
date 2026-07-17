@@ -258,3 +258,201 @@ export async function getPeriodComparison(
     previousNetUSD: prevSummary.netUSD,
   };
 }
+
+// ─── Interfaces para Tendencias Financieras ─────────────────────────────────
+
+export interface MonthlyTrend {
+  month: string;
+  label: string;
+  incomeUSD: number;
+  expenseUSD: number;
+  savingsUSD: number;
+  savingsRate: number; // porcentaje
+}
+
+export interface SavingsProjection {
+  currentSavings: number;
+  monthlySavings: number;
+  projectedMonths: { month: string; savings: number }[];
+  monthsToGoal: number | null;
+}
+
+export interface CategoryBudgetAnalysis {
+  categoryId: number;
+  categoryName: string;
+  icon: string;
+  color: string;
+  spentUSD: number;
+  budgetUSD: number;
+  percentage: number;
+  isOverBudget: boolean;
+}
+
+export interface ExpenseAnalysis {
+  largestExpense: { categoryName: string; amountUSD: number } | null;
+  averageMonthlyExpense: number;
+  expenseCount: number;
+  topCategories: { categoryName: string; amountUSD: number; percentage: number }[];
+}
+
+/**
+ * Obtiene tendencias mensuales de los últimos N meses (ingresos, gastos, ahorro, tasa de ahorro).
+ */
+export async function getMonthlyTrends(months: number = 6): Promise<MonthlyTrend[]> {
+  const db = await getDatabase();
+  const now = new Date();
+  const results: MonthlyTrend[] = [];
+
+  for (let i = months - 1; i >= 0; i--) {
+    const year = now.getFullYear();
+    const month = now.getMonth() - i;
+    const dateObj = new Date(year, month, 1);
+    const yearMonth = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
+    const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    const label = `${monthNames[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
+
+    const firstDay = `${yearMonth}-01`;
+    const lastDayDate = new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 0);
+    const lastDay = lastDayDate.toISOString().split('T')[0];
+
+    const row = await db.getFirstAsync<any>(
+      `SELECT
+         COALESCE(SUM(CASE WHEN type = 'income' THEN COALESCE(amountUSD, 0) ELSE 0 END), 0) as incomeUSD,
+         COALESCE(SUM(CASE WHEN type = 'expense' THEN COALESCE(amountUSD, 0) ELSE 0 END), 0) as expenseUSD
+       FROM transactions
+       WHERE date >= ? AND date <= ?
+         AND type IN ('income', 'expense')`,
+      [firstDay, lastDay]
+    );
+
+    const incomeUSD = row?.incomeUSD || 0;
+    const expenseUSD = row?.expenseUSD || 0;
+    const savingsUSD = incomeUSD - expenseUSD;
+    const savingsRate = incomeUSD > 0 ? Math.round((savingsUSD / incomeUSD) * 100) : 0;
+
+    results.push({ month: yearMonth, label, incomeUSD, expenseUSD, savingsUSD, savingsRate });
+  }
+
+  return results;
+}
+
+/**
+ * Calcula proyecciones de ahorro basadas en el promedio mensual actual y las metas.
+ */
+export async function getSavingsProjections(
+  goalTargetAmount: number = 0,
+  months: number = 12
+): Promise<SavingsProjection> {
+  const trends = await getMonthlyTrends(3);
+  const avgMonthlySavings = trends.length > 0
+    ? Math.round(trends.reduce((sum, t) => sum + t.savingsUSD, 0) / trends.length)
+    : 0;
+
+  const currentSavings = trends.length > 0 ? trends[trends.length - 1].savingsUSD : 0;
+
+  const projectedMonths: { month: string; savings: number }[] = [];
+  let runningSavings = currentSavings;
+  const now = new Date();
+
+  for (let i = 1; i <= months; i++) {
+    const futureDate = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    const monthLabel = `${['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][futureDate.getMonth()]} ${futureDate.getFullYear()}`;
+    runningSavings += avgMonthlySavings;
+    projectedMonths.push({ month: monthLabel, savings: Math.max(0, runningSavings) });
+  }
+
+  let monthsToGoal: number | null = null;
+  if (goalTargetAmount > 0 && avgMonthlySavings > 0) {
+    const remaining = goalTargetAmount - currentSavings;
+    monthsToGoal = Math.ceil(remaining / avgMonthlySavings);
+  }
+
+  return {
+    currentSavings,
+    monthlySavings: avgMonthlySavings,
+    projectedMonths,
+    monthsToGoal: monthsToGoal !== null && monthsToGoal > 0 ? monthsToGoal : null,
+  };
+}
+
+/**
+ * Obtiene análisis de gastos por categoría comparando con presupuestos.
+ */
+export async function getCategoryBudgetAnalysis(month: string): Promise<CategoryBudgetAnalysis[]> {
+  const db = await getDatabase();
+
+  const rows = await db.getAllAsync<any>(
+    `SELECT
+       c.id as categoryId,
+       c.name as categoryName,
+       c.icon,
+       c.color,
+       COALESCE(SUM(COALESCE(t.amountUSD, 0)), 0) as spentUSD,
+       COALESCE((SELECT ba.amountUSD FROM budget_allocations ba WHERE ba.categoryId = c.id AND ba.month = ?), 0) as budgetUSD
+     FROM transactions t
+     LEFT JOIN categories c ON t.categoryId = c.id
+     WHERE t.type = 'expense'
+       AND t.date LIKE ?
+     GROUP BY c.id
+     ORDER BY spentUSD DESC`,
+    [month, `${month}%`]
+  );
+
+  return rows.map((row: any) => ({
+    categoryId: row.categoryId,
+    categoryName: row.categoryName || 'Sin categoría',
+    icon: row.icon || 'help-outline',
+    color: row.color || '#999',
+    spentUSD: row.spentUSD,
+    budgetUSD: row.budgetUSD,
+    percentage: row.budgetUSD > 0 ? Math.round((row.spentUSD / row.budgetUSD) * 100) : 0,
+    isOverBudget: row.budgetUSD > 0 && row.spentUSD > row.budgetUSD,
+  }));
+}
+
+/**
+ * Obtiene análisis detallado de gastos: categoría más grande, promedio mensual, top categorías.
+ */
+export async function getExpenseAnalysis(
+  startDate: string,
+  endDate: string
+): Promise<ExpenseAnalysis> {
+  const db = await getDatabase();
+
+  const categoryTotals = await db.getAllAsync<any>(
+    `SELECT
+       c.name as categoryName,
+       COALESCE(SUM(COALESCE(t.amountUSD, 0)), 0) as amountUSD
+     FROM transactions t
+     LEFT JOIN categories c ON t.categoryId = c.id
+     WHERE t.type = 'expense'
+       AND t.date >= ? AND t.date <= ?
+     GROUP BY c.id
+     ORDER BY amountUSD DESC`,
+    [startDate, endDate]
+  );
+
+  const totalExpense = categoryTotals.reduce((sum: number, r: any) => sum + r.amountUSD, 0);
+  const expenseCount = categoryTotals.length;
+
+  // Calcular meses en el rango
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const monthDiff = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) + 1;
+  const averageMonthlyExpense = monthDiff > 0 ? Math.round(totalExpense / monthDiff) : totalExpense;
+
+  const topCategories = categoryTotals.slice(0, 5).map((r: any) => ({
+    categoryName: r.categoryName || 'Sin categoría',
+    amountUSD: r.amountUSD,
+    percentage: totalExpense > 0 ? Math.round((r.amountUSD / totalExpense) * 100) : 0,
+  }));
+
+  return {
+    largestExpense: categoryTotals.length > 0
+      ? { categoryName: categoryTotals[0].categoryName || 'Sin categoría', amountUSD: categoryTotals[0].amountUSD }
+      : null,
+    averageMonthlyExpense,
+    expenseCount,
+    topCategories,
+  };
+}

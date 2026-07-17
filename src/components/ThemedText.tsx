@@ -6,7 +6,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 interface ThemedTextProps extends TextProps {
   type?: TypographyKey;
   color?: string;
-  themeColor?: 'text' | 'textSecondary' | 'textTertiary' | 'primary' | 'success' | 'danger' | 'warning' | 'usd' | 'bs';
+  themeColor?: 'text' | 'textSecondary' | 'textTertiary' | 'primary' | 'success' | 'danger' | 'warning' | 'usd' | 'bs' | 'secondary' | 'tertiary' | 'onSurfaceVariant' | 'onSecondaryContainer' | 'onPrimaryContainer';
   opacity?: number;
 }
 

@@ -22,12 +22,14 @@ interface SettingsState {
   useDarkMode: boolean;
   themeMode: ThemeMode;
   preferredRateType: RateType;
+  expectedMonthlyIncome: number;
   setDeepseekKey: (key: string) => void;
   setManualRate: (rate: number | null) => void;
   setManualRateType: (type: RateType) => void;
   setUseDarkMode: (use: boolean) => void;
   setThemeMode: (mode: ThemeMode) => void;
   setPreferredRateType: (type: RateType) => void;
+  setExpectedMonthlyIncome: (income: number) => void;
   /** Carga la API Key desde SecureStore al iniciar */
   loadDeepseekKey: () => Promise<void>;
 }
@@ -41,6 +43,7 @@ export const useSettings = create<SettingsState>()(
       useDarkMode: false,
       themeMode: 'system',
       preferredRateType: 'PARALLEL',
+      expectedMonthlyIncome: 0,
       setDeepseekKey: async (key: string) => {
         // Guardar en SecureStore (cifrado) si está disponible
         if (SecureStoreModule) {
@@ -57,6 +60,7 @@ export const useSettings = create<SettingsState>()(
       setUseDarkMode: (use) => set({ useDarkMode: use }),
       setThemeMode: (mode) => set({ themeMode: mode }),
       setPreferredRateType: (type) => set({ preferredRateType: type }),
+      setExpectedMonthlyIncome: (income) => set({ expectedMonthlyIncome: income }),
       loadDeepseekKey: async () => {
         if (SecureStoreModule) {
           try {

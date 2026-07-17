@@ -1,7 +1,6 @@
 import { View, Text, TouchableOpacity, Dimensions, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../hooks/useThemeColors';
-import { shadows } from '../theme/shadows';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { usePathname, useRouter } from 'expo-router';
 import { useEffect, useCallback } from 'react';
@@ -119,9 +118,7 @@ export default function AnimatedTabBar() {
     <View
       style={{
         flexDirection: 'row',
-        backgroundColor: Platform.OS === 'ios'
-          ? themeColors.surface + 'E8'
-          : themeColors.surface,
+        backgroundColor: themeColors.surface + '99',
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
         paddingBottom: insets.bottom + 8,
@@ -129,11 +126,18 @@ export default function AnimatedTabBar() {
         height: 70 + insets.bottom,
         position: 'relative',
         overflow: 'hidden',
-        // Sin border — solo sombra para profundidad
-        ...shadows.xl,
+        // Glassmorphism: backdrop blur via border + shadow
+        borderTopWidth: 1,
+        borderTopColor: themeColors.outlineVariant + '30',
+        // Sombra profunda estilo Kinetic Ledger
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -8 },
+        shadowOpacity: 0.3,
+        shadowRadius: 24,
+        elevation: 16,
       }}
     >
-      {/* Indicador deslizante redondeado */}
+      {/* Indicador deslizante redondeado — estilo Kinetic Ledger */}
       <Animated.View
         style={[
           {
@@ -142,7 +146,7 @@ export default function AnimatedTabBar() {
             left: TAB_WIDTH * 0.2,
             width: TAB_WIDTH * 0.6,
             height: 3,
-            backgroundColor: themeColors.primary,
+            backgroundColor: themeColors.secondary,
             borderRadius: 2,
           },
           indicatorStyle,
@@ -177,6 +181,9 @@ export default function AnimatedTabBar() {
           ],
         }));
 
+        // Si es el tab de Asistente, usar estilo FAB (círculo más grande)
+        const isFab = tab.name === 'ai-chat';
+
         return (
           <TouchableOpacity
             key={tab.name}
@@ -188,19 +195,31 @@ export default function AnimatedTabBar() {
               flex: 1,
               alignItems: 'center',
               justifyContent: 'center',
-              paddingTop: 6,
+              paddingTop: isFab ? 0 : 6,
             }}
           >
             <Animated.View
               style={[
                 {
-                  width: 46,
-                  height: 46,
-                  borderRadius: 23,
-                  backgroundColor: isActive ? themeColors.primary + '14' : 'transparent',
+                  width: isFab ? 52 : 46,
+                  height: isFab ? 52 : 46,
+                  borderRadius: isFab ? 26 : 23,
+                  backgroundColor: isFab
+                    ? themeColors.primary
+                    : isActive
+                      ? themeColors.secondary + '14'
+                      : 'transparent',
                   justifyContent: 'center',
                   alignItems: 'center',
-                  marginBottom: 3,
+                  marginBottom: isFab ? 0 : 3,
+                  // Sombra para FAB
+                  ...(isFab ? {
+                    shadowColor: themeColors.primary,
+                    shadowOffset: { width: 0, height: 0 },
+                    shadowOpacity: 0.4,
+                    shadowRadius: 20,
+                    elevation: 8,
+                  } : {}),
                 },
                 iconContainerStyle,
               ]}
@@ -208,30 +227,33 @@ export default function AnimatedTabBar() {
               <Animated.View style={outlineIconStyle}>
                 <Ionicons
                   name={tab.icon as any}
-                  size={24}
-                  color={isActive ? themeColors.primary : themeColors.textTertiary}
+                  size={isFab ? 26 : 24}
+                  color={isFab ? themeColors.background : (isActive ? themeColors.secondary : themeColors.textTertiary)}
                 />
               </Animated.View>
 
               <Animated.View style={filledIconStyle}>
                 <Ionicons
                   name={tab.iconActive as any}
-                  size={24}
-                  color={themeColors.primary}
+                  size={isFab ? 26 : 24}
+                  color={isFab ? themeColors.background : themeColors.secondary}
                 />
               </Animated.View>
             </Animated.View>
-            <Text
-              style={{
-                fontSize: 10,
-                fontWeight: isActive ? '600' : '400',
-                color: isActive ? themeColors.primary : themeColors.textTertiary,
-                marginTop: 1,
-              }}
-              numberOfLines={1}
-            >
-              {tab.title}
-            </Text>
+            {!isFab && (
+              <Text
+                style={{
+                  fontSize: 10,
+                  fontWeight: isActive ? '600' : '400',
+                  color: isActive ? themeColors.secondary : themeColors.textTertiary,
+                  marginTop: 1,
+                  letterSpacing: 0.5,
+                }}
+                numberOfLines={1}
+              >
+                {tab.title}
+              </Text>
+            )}
           </TouchableOpacity>
         );
       })}

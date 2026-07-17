@@ -16,21 +16,31 @@ import { useThemeColors } from '../../src/hooks/useThemeColors';
 import { useAccounts } from '../../src/store/useAccounts';
 import AnimatedScreen from '../../src/components/AnimatedScreen';
 import ThemedText from '../../src/components/ThemedText';
-import { shadows } from '../../src/theme/shadows';
 import type { AccountType, CurrencyType } from '../../src/utils/types';
 
-const accountTypes: { key: AccountType; label: string; icon: string }[] = [
-  { key: 'exchange', label: 'Exchange', icon: '💰' },
-  { key: 'bank', label: 'Banco', icon: '🏦' },
-  { key: 'virtual_card', label: 'Tarjeta Virtual', icon: '💳' },
-  { key: 'cash', label: 'Efectivo', icon: '💵' },
-  { key: 'other', label: 'Otra', icon: '📦' },
+// Mapeo de tipos del diseño Kinetic Ledger a tipos existentes
+const accountTypeOptions: { key: AccountType; label: string }[] = [
+  { key: 'bank', label: 'Corriente' },
+  { key: 'cash', label: 'Ahorros' },
+  { key: 'exchange', label: 'Digital' },
 ];
 
-const accountIcons = [
-  '💰', '🏦', '💳', '💵', '📱', '🌐', '🏧', '🎯',
-  '💼', '📊', '🪙', '💎', '🏠', '🚗', '✈️', '🎓',
-  '🛒', '🍔', '🎮', '👕', '💊', '🐕', '🎵', '📸',
+// Iconos del diseño Kinetic Ledger mapeados a Ionicons
+const accountIconOptions: { iconName: keyof typeof Ionicons.glyphMap; label: string }[] = [
+  { iconName: 'wallet-outline', label: 'Billetera' },
+  { iconName: 'business-outline', label: 'Banco' },
+  { iconName: 'save-outline', label: 'Ahorros' },
+  { iconName: 'card-outline', label: 'Tarjeta' },
+  { iconName: 'briefcase-outline', label: 'Trabajo' },
+];
+
+// Colores del diseño Kinetic Ledger
+const colorOptions = [
+  { hex: '#dae2fd', name: 'Azul' },    // primary-fixed
+  { hex: '#4edea3', name: 'Verde' },   // secondary
+  { hex: '#ffb95f', name: 'Naranja' }, // tertiary
+  { hex: '#818cf8', name: 'Púrpura' }, // indigo-400
+  { hex: '#ffb4ab', name: 'Rojo' },    // error/danger
 ];
 
 export default function NewAccountScreen() {
@@ -38,11 +48,10 @@ export default function NewAccountScreen() {
   const themeColors = useThemeColors();
   const { addAccount, loadAccounts } = useAccounts();
   const [name, setName] = useState('');
-  const [type, setType] = useState<AccountType>('exchange');
+  const [type, setType] = useState<AccountType>('bank');
   const [currency, setCurrency] = useState<CurrencyType>('BOTH');
-  const [icon, setIcon] = useState('💰');
-  const [color, setColor] = useState<string>(accountColors[0].hex);
-  const [platform, setPlatform] = useState('');
+  const [icon, setIcon] = useState('wallet-outline');
+  const [color, setColor] = useState<string>(colorOptions[0].hex);
   const [initialUSD, setInitialUSD] = useState('');
   const [initialBS, setInitialBS] = useState('');
   const [toastMessage, setToastMessage] = useState('');
@@ -69,7 +78,7 @@ export default function NewAccountScreen() {
       icon,
       color,
       isActive: 1,
-      platform: platform.trim() || null,
+      platform: null,
     });
 
     await loadAccounts();
@@ -77,254 +86,419 @@ export default function NewAccountScreen() {
     setTimeout(() => router.back(), 800);
   };
 
+  const inputStyle = {
+    backgroundColor: themeColors.surfaceContainer,
+    borderWidth: 1,
+    borderColor: themeColors.outlineVariant + '50',
+    borderRadius: 10,
+    padding: 14,
+    fontSize: 15,
+    color: themeColors.text,
+  };
+
   return (
     <AnimatedScreen>
-    <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ flex: 1 }}
-      >
-        <ScrollView
-          contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
-          keyboardShouldPersistTaps="handled"
+      <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
+        {/* Ambient Background Gradient */}
+        <View
+          style={{
+            position: 'absolute',
+            top: -100,
+            right: -100,
+            width: 250,
+            height: 250,
+            borderRadius: 125,
+            backgroundColor: themeColors.surfaceVariant + '30',
+            opacity: 0.3,
+          }}
+          pointerEvents="none"
+        />
+
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1 }}
         >
-          {/* Nombre */}
-          <ThemedText type="small" themeColor="textSecondary" style={{ marginBottom: 8 }}>
-            Nombre de la cuenta
-          </ThemedText>
-          <TextInput
-            value={name}
-            onChangeText={setName}
-            placeholder="Ej: Binance, Facebank, Mercantil..."
-            placeholderTextColor={themeColors.textSecondary}
-            style={{
-              backgroundColor: themeColors.surface,
-              borderRadius: 12,
-              padding: 14,
-              fontSize: 15,
-              color: themeColors.text,
-              marginBottom: 20,
-              borderWidth: 1,
-              borderColor: themeColors.border,
-            }}
-          />
-
-          {/* Tipo */}
-          <ThemedText type="small" themeColor="textSecondary" style={{ marginBottom: 8 }}>
-            Tipo de cuenta
-          </ThemedText>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
-            {accountTypes.map((t) => (
+          <ScrollView
+            contentContainerStyle={{ padding: 24, paddingBottom: 40 }}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Header */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
+              <ThemedText type="h1" themeColor="text" style={{ fontSize: 24 }}>
+                Nueva Cuenta
+              </ThemedText>
               <TouchableOpacity
-                key={t.key}
-                onPress={() => setType(t.key)}
-                accessibilityLabel={`Tipo de cuenta: ${t.label}`}
+                onPress={() => router.back()}
                 style={{
-                  paddingHorizontal: 16,
-                  paddingVertical: 10,
-                  borderRadius: 12,
-                  backgroundColor: type === t.key ? themeColors.primary : themeColors.surface,
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: themeColors.surfaceContainer + '99',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderWidth: 1,
+                  borderColor: themeColors.outlineVariant + '30',
+                }}
+              >
+                <Ionicons name="close" size={20} color={themeColors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Account Name */}
+            <View style={{ marginBottom: 24 }}>
+              <ThemedText
+                type="caption"
+                themeColor="onSurfaceVariant"
+                style={{
+                  marginBottom: 8,
+                  fontSize: 11,
+                  letterSpacing: 0.8,
+                  textTransform: 'uppercase',
+                  fontWeight: '600',
+                }}
+              >
+                Nombre de la Cuenta
+              </ThemedText>
+              <View
+                style={[
+                  inputStyle,
+                  {
+                    borderRadius: 12,
+                    borderColor: name ? themeColors.secondary + '60' : themeColors.outlineVariant + '50',
+                  },
+                ]}
+              >
+                <TextInput
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="Ej. Principal, Ahorros Viaje"
+                  placeholderTextColor={themeColors.textSecondary + '80'}
+                  style={{
+                    fontSize: 15,
+                    color: themeColors.text,
+                    padding: 0,
+                  }}
+                />
+              </View>
+            </View>
+
+            {/* Account Type - Segmented Pill */}
+            <View style={{ marginBottom: 24 }}>
+              <ThemedText
+                type="caption"
+                themeColor="onSurfaceVariant"
+                style={{
+                  marginBottom: 8,
+                  fontSize: 11,
+                  letterSpacing: 0.8,
+                  textTransform: 'uppercase',
+                  fontWeight: '600',
+                }}
+              >
+                Tipo de Cuenta
+              </ThemedText>
+              <View
+                style={{
                   flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 6,
+                  padding: 4,
+                  backgroundColor: themeColors.surfaceContainer + '99',
+                  borderRadius: 12,
                   borderWidth: 1,
-                  borderColor: type === t.key ? themeColors.primary : themeColors.border,
+                  borderColor: themeColors.outlineVariant + '20',
                 }}
               >
-                <ThemedText style={{ fontSize: 16 }}>{t.icon}</ThemedText>
-                <ThemedText type="body" color={type === t.key ? '#FFF' : themeColors.text}>
-                  {t.label}
-                </ThemedText>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Moneda */}
-          <ThemedText type="small" themeColor="textSecondary" style={{ marginBottom: 8 }}>
-            Moneda
-          </ThemedText>
-          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
-            {(['USD', 'BS', 'BOTH'] as CurrencyType[]).map((cur) => (
-              <TouchableOpacity
-                key={cur}
-                onPress={() => setCurrency(cur)}
-                accessibilityLabel={`Moneda: ${cur === 'USD' ? 'USD' : cur === 'BS' ? 'Bolívares' : 'Ambas monedas'}`}
-                style={{
-                  flex: 1,
-                  paddingVertical: 12,
-                  borderRadius: 12,
-                  backgroundColor: currency === cur ? themeColors.primary : themeColors.surface,
-                  alignItems: 'center',
-                  borderWidth: 1,
-                  borderColor: currency === cur ? themeColors.primary : themeColors.border,
-                }}
-              >
-                <ThemedText type="bodyMedium" color={currency === cur ? '#FFF' : themeColors.text}>
-                  {cur === 'USD' ? 'USD' : cur === 'BS' ? 'BS' : 'Ambas'}
-                </ThemedText>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Plataforma (para billeteras digitales/cripto) */}
-          <ThemedText type="small" themeColor="textSecondary" style={{ marginBottom: 8 }}>
-            Plataforma (opcional)
-          </ThemedText>
-          <TextInput
-            value={platform}
-            onChangeText={setPlatform}
-            placeholder="Ej: Binance, Coinbase, Facebank..."
-            placeholderTextColor={themeColors.textSecondary}
-            style={{
-              backgroundColor: themeColors.surface,
-              borderRadius: 12,
-              padding: 14,
-              fontSize: 15,
-              color: themeColors.text,
-              marginBottom: 20,
-              borderWidth: 1,
-              borderColor: themeColors.border,
-            }}
-          />
-
-          {/* Icono */}
-          <ThemedText type="small" themeColor="textSecondary" style={{ marginBottom: 8 }}>
-            Icono
-          </ThemedText>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
-            {accountIcons.map((ic) => (
-              <TouchableOpacity
-                key={ic}
-                onPress={() => setIcon(ic)}
-                accessibilityLabel={`Seleccionar icono ${ic}`}
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 12,
-                  backgroundColor: icon === ic ? themeColors.primaryLight : themeColors.surface,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  borderWidth: 2,
-                  borderColor: icon === ic ? themeColors.primary : themeColors.border,
-                }}
-              >
-                <ThemedText style={{ fontSize: 22 }}>{ic}</ThemedText>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Color */}
-          <ThemedText type="small" themeColor="textSecondary" style={{ marginBottom: 8 }}>
-            Color
-          </ThemedText>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
-            {accountColors.map((c) => (
-              <TouchableOpacity
-                key={c.hex}
-                onPress={() => setColor(c.hex)}
-                accessibilityLabel={`Seleccionar color ${c.hex}`}
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 12,
-                  backgroundColor: c.hex,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  borderWidth: color === c.hex ? 3 : 0,
-                  borderColor: themeColors.surface,
-                }}
-              >
-                {color === c.hex && (
-                  <Ionicons name="checkmark" size={22} color="#FFF" />
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Saldo Inicial */}
-          <ThemedText type="small" themeColor="textSecondary" style={{ marginBottom: 8 }}>
-            Saldo inicial (opcional)
-          </ThemedText>
-          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 32 }}>
-            <View style={{ flex: 1 }}>
-              <ThemedText type="badge" themeColor="usd" style={{ marginBottom: 4 }}>USD</ThemedText>
-              <TextInput
-                value={initialUSD}
-                onChangeText={setInitialUSD}
-                placeholder="0.00"
-                placeholderTextColor={themeColors.textSecondary}
-                keyboardType="decimal-pad"
-                style={{
-                  backgroundColor: themeColors.surface,
-                  borderRadius: 12,
-                  padding: 14,
-                  fontSize: 16,
-                  fontWeight: '600',
-                  color: themeColors.usd,
-                  borderWidth: 1,
-                  borderColor: themeColors.border,
-                }}
-              />
+                {accountTypeOptions.map((opt) => (
+                  <TouchableOpacity
+                    key={opt.key}
+                    onPress={() => setType(opt.key)}
+                    activeOpacity={0.7}
+                    style={{
+                      flex: 1,
+                      paddingVertical: 10,
+                      borderRadius: 10,
+                      backgroundColor: type === opt.key ? themeColors.surfaceContainerHighest : 'transparent',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <ThemedText
+                      type="body"
+                      color={type === opt.key ? themeColors.text : themeColors.textSecondary}
+                      style={{ fontSize: 13, fontWeight: type === opt.key ? '600' : '400' }}
+                    >
+                      {opt.label}
+                    </ThemedText>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
-            <View style={{ flex: 1 }}>
-              <ThemedText type="badge" themeColor="bs" style={{ marginBottom: 4 }}>Bs</ThemedText>
-              <TextInput
-                value={initialBS}
-                onChangeText={setInitialBS}
-                placeholder="0.00"
-                placeholderTextColor={themeColors.textSecondary}
-                keyboardType="decimal-pad"
-                style={{
-                  backgroundColor: themeColors.surface,
-                  borderRadius: 12,
-                  padding: 14,
-                  fontSize: 16,
-                  fontWeight: '600',
-                  color: themeColors.bs,
-                  borderWidth: 1,
-                  borderColor: themeColors.border,
-                }}
-              />
-            </View>
-          </View>
 
-          {/* Guardar */}
-          <TouchableOpacity
-            onPress={handleCreate}
-            accessibilityLabel="Crear cuenta"
+            {/* Initial Balance */}
+            <View style={{ marginBottom: 24 }}>
+              <ThemedText
+                type="caption"
+                themeColor="onSurfaceVariant"
+                style={{
+                  marginBottom: 8,
+                  fontSize: 11,
+                  letterSpacing: 0.8,
+                  textTransform: 'uppercase',
+                  fontWeight: '600',
+                }}
+              >
+                Saldo Inicial
+              </ThemedText>
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <View style={{ flex: 1 }}>
+                  <View
+                    style={[
+                      inputStyle,
+                      {
+                        borderRadius: 12,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        borderColor: initialUSD ? themeColors.secondary + '60' : themeColors.outlineVariant + '50',
+                      },
+                    ]}
+                  >
+                    <ThemedText
+                      type="body"
+                      themeColor="textSecondary"
+                      style={{ fontSize: 16, fontWeight: '500', marginRight: 6 }}
+                    >
+                      $
+                    </ThemedText>
+                    <TextInput
+                      value={initialUSD}
+                      onChangeText={setInitialUSD}
+                      placeholder="0.00"
+                      placeholderTextColor={themeColors.textSecondary + '80'}
+                      keyboardType="decimal-pad"
+                      style={{
+                        flex: 1,
+                        fontSize: 16,
+                        fontWeight: '600',
+                        color: themeColors.usd,
+                        padding: 0,
+                      }}
+                    />
+                  </View>
+                  <ThemedText
+                    type="caption"
+                    themeColor="onSurfaceVariant"
+                    style={{
+                      textAlign: 'center',
+                      marginTop: 4,
+                      fontSize: 10,
+                      letterSpacing: 1,
+                      textTransform: 'uppercase',
+                      opacity: 0.7,
+                    }}
+                  >
+                    USD
+                  </ThemedText>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View
+                    style={[
+                      inputStyle,
+                      {
+                        borderRadius: 12,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        borderColor: initialBS ? themeColors.secondary + '60' : themeColors.outlineVariant + '50',
+                      },
+                    ]}
+                  >
+                    <ThemedText
+                      type="body"
+                      themeColor="textSecondary"
+                      style={{ fontSize: 16, fontWeight: '500', marginRight: 6 }}
+                    >
+                      Bs
+                    </ThemedText>
+                    <TextInput
+                      value={initialBS}
+                      onChangeText={setInitialBS}
+                      placeholder="0.00"
+                      placeholderTextColor={themeColors.textSecondary + '80'}
+                      keyboardType="decimal-pad"
+                      style={{
+                        flex: 1,
+                        fontSize: 16,
+                        fontWeight: '600',
+                        color: themeColors.bs,
+                        padding: 0,
+                      }}
+                    />
+                  </View>
+                  <ThemedText
+                    type="caption"
+                    themeColor="onSurfaceVariant"
+                    style={{
+                      textAlign: 'center',
+                      marginTop: 4,
+                      fontSize: 10,
+                      letterSpacing: 1,
+                      textTransform: 'uppercase',
+                      opacity: 0.7,
+                    }}
+                  >
+                    VES
+                  </ThemedText>
+                </View>
+              </View>
+            </View>
+
+            {/* Color Selection Gallery */}
+            <View style={{ marginBottom: 24 }}>
+              <ThemedText
+                type="caption"
+                themeColor="onSurfaceVariant"
+                style={{
+                  marginBottom: 12,
+                  fontSize: 11,
+                  letterSpacing: 0.8,
+                  textTransform: 'uppercase',
+                  fontWeight: '600',
+                }}
+              >
+                Color de Tema
+              </ThemedText>
+              <View style={{ flexDirection: 'row', gap: 16 }}>
+                {colorOptions.map((c) => (
+                  <TouchableOpacity
+                    key={c.hex}
+                    onPress={() => setColor(c.hex)}
+                    activeOpacity={0.7}
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 22,
+                      backgroundColor: c.hex,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      borderWidth: color === c.hex ? 3 : 0,
+                      borderColor: themeColors.secondary,
+                      shadowColor: color === c.hex ? themeColors.secondary : 'transparent',
+                      shadowOffset: { width: 0, height: 0 },
+                      shadowOpacity: color === c.hex ? 0.5 : 0,
+                      shadowRadius: 8,
+                      elevation: color === c.hex ? 6 : 0,
+                    }}
+                  >
+                    {color === c.hex && (
+                      <Ionicons
+                        name="checkmark"
+                        size={20}
+                        color={c.hex === '#dae2fd' || c.hex === '#ffb4ab' ? '#0f172a' : '#FFFFFF'}
+                      />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Icon Selection Gallery */}
+            <View style={{ marginBottom: 32 }}>
+              <ThemedText
+                type="caption"
+                themeColor="onSurfaceVariant"
+                style={{
+                  marginBottom: 12,
+                  fontSize: 11,
+                  letterSpacing: 0.8,
+                  textTransform: 'uppercase',
+                  fontWeight: '600',
+                }}
+              >
+                Icono
+              </ThemedText>
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                {accountIconOptions.map((opt) => (
+                  <TouchableOpacity
+                    key={opt.iconName}
+                    onPress={() => setIcon(opt.iconName)}
+                    activeOpacity={0.7}
+                    style={{
+                      flex: 1,
+                      height: 56,
+                      borderRadius: 12,
+                      backgroundColor: icon === opt.iconName ? themeColors.secondary : themeColors.surfaceContainer + '99',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      borderWidth: 1,
+                      borderColor: icon === opt.iconName ? themeColors.secondary : themeColors.outlineVariant + '30',
+                      shadowColor: icon === opt.iconName ? themeColors.secondary : 'transparent',
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: icon === opt.iconName ? 0.2 : 0,
+                      shadowRadius: 12,
+                      elevation: icon === opt.iconName ? 6 : 0,
+                    }}
+                  >
+                    <Ionicons
+                      name={opt.iconName}
+                      size={24}
+                      color={icon === opt.iconName ? themeColors.text : themeColors.textSecondary}
+                    />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Create Button */}
+            <TouchableOpacity
+              onPress={handleCreate}
+              activeOpacity={0.9}
+              style={{
+                backgroundColor: themeColors.secondary,
+                borderRadius: 14,
+                paddingVertical: 16,
+                alignItems: 'center',
+                shadowColor: themeColors.secondary,
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 16,
+                elevation: 8,
+              }}
+            >
+              <ThemedText
+                type="button"
+                color={themeColors.text}
+                style={{ fontSize: 16, fontWeight: '600' }}
+              >
+                Crear Cuenta
+              </ThemedText>
+            </TouchableOpacity>
+          </ScrollView>
+        </KeyboardAvoidingView>
+
+        {/* Toast Notification */}
+        {toastVisible && (
+          <View
             style={{
-              backgroundColor: themeColors.primary,
+              position: 'absolute',
+              bottom: 40,
+              left: 24,
+              right: 24,
+              backgroundColor: themeColors.surfaceContainer + '99',
               borderRadius: 14,
               padding: 16,
               alignItems: 'center',
+              borderWidth: 1,
+              borderColor: themeColors.outlineVariant + '30',
+              shadowColor: '#0A1E3D',
+              shadowOffset: { width: 0, height: 8 },
+              shadowOpacity: 0.7,
+              shadowRadius: 24,
+              elevation: 10,
             }}
           >
-            <ThemedText type="button" style={{ color: '#FFF' }}>
-              Crear Cuenta
+            <ThemedText type="button" color={themeColors.text}>
+              {toastMessage}
             </ThemedText>
-          </TouchableOpacity>
-        </ScrollView>
-      </KeyboardAvoidingView>
-
-      {/* Toast Notification */}
-      {toastVisible && (
-        <View style={{
-          position: 'absolute',
-          bottom: 40,
-          left: 20,
-          right: 20,
-          backgroundColor: themeColors.text,
-          borderRadius: 14,
-          padding: 16,
-          alignItems: 'center',
-          ...shadows.lg,
-        }}>
-          <ThemedText type="button" style={{ color: '#FFF' }}>
-            {toastMessage}
-          </ThemedText>
-        </View>
-      )}
-    </SafeAreaView>
+          </View>
+        )}
+      </SafeAreaView>
     </AnimatedScreen>
   );
 }

@@ -16,7 +16,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import { useThemeColors } from '../../src/hooks/useThemeColors';
 import ThemedText from '../../src/components/ThemedText';
-import { shadows } from '../../src/theme/shadows';
 import { getGoals, createGoal, deleteGoal, markGoalCelebrated, updateGoalProgress } from '../../src/services/goals';
 import { getItemsByGoalId, createItem, deleteItem, toggleItemCompleted, recalculateGoalProgress } from '../../src/services/goalItems';
 import { formatUSD, formatBS } from '../../src/utils/format';
@@ -302,262 +301,307 @@ export default function GoalsScreen() {
     }
   };
 
+  const getGoalStatus = (goal: GoalWithItems) => {
+    const progress = goal.targetAmount > 0 ? Math.min((goal.currentAmount / goal.targetAmount) * 100, 100) : 0;
+    if (progress >= 100 && goal.celebratedAt) return { color: themeColors.secondary, label: 'Completada', icon: 'checkmark-circle' as const, borderColor: themeColors.secondary };
+    if (progress >= 100) return { color: themeColors.secondary, label: '¡Completada!', icon: 'checkmark-circle' as const, borderColor: themeColors.secondary };
+    if (progress > 0) return { color: themeColors.secondary, label: 'En progreso', icon: 'trending-up' as const, borderColor: themeColors.secondary };
+    return { color: themeColors.tertiary, label: 'Recién creada', icon: 'flag-outline' as const, borderColor: themeColors.tertiary };
+  };
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
       <ScrollView
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        contentContainerStyle={{ padding: 20, paddingBottom: 100 }}
+        contentContainerStyle={{ paddingBottom: 100 }}
       >
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <ThemedText type="h1" themeColor="text">
-            Metas
-          </ThemedText>
-          <TouchableOpacity
-            onPress={() => setShowModal(true)}
-            accessibilityLabel="Crear nueva meta"
-            style={{
-              backgroundColor: themeColors.primary,
-              borderRadius: 12,
-              paddingHorizontal: 16,
-              paddingVertical: 10,
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 6,
-            }}
-          >
-            <Ionicons name="add" size={18} color="#FFF" />
-            <ThemedText style={{ color: '#FFF' }} type="button">Nueva</ThemedText>
-          </TouchableOpacity>
+        {/* Header */}
+        <View style={{ paddingHorizontal: 24, paddingTop: 8, paddingBottom: 24 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View style={{
+                width: 40, height: 40, borderRadius: 20,
+                backgroundColor: themeColors.primaryContainer,
+                justifyContent: 'center', alignItems: 'center',
+              }}>
+                <Ionicons name="flag" size={20} color={themeColors.onPrimaryContainer} />
+              </View>
+              <ThemedText type="h1" themeColor="text" style={{ fontSize: 28, fontWeight: '700' }}>
+                Metas
+              </ThemedText>
+            </View>
+            <TouchableOpacity
+              onPress={() => setShowModal(true)}
+              accessibilityLabel="Crear nueva meta"
+              style={{
+                backgroundColor: themeColors.secondary,
+                borderRadius: 12,
+                paddingHorizontal: 16,
+                paddingVertical: 10,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                shadowColor: themeColors.secondary,
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 8,
+                elevation: 6,
+              }}
+            >
+              <Ionicons name="add" size={18} color={themeColors.background} />
+              <ThemedText style={{ color: themeColors.background, fontWeight: '600' }} type="button">
+                Nueva
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {goals.map((goal) => {
-          const progress = goal.targetAmount > 0 ? Math.min((goal.currentAmount / goal.targetAmount) * 100, 100) : 0;
-          const isExpanded = expandedGoalId === goal.id;
-          const completedItems = goal.items.filter(i => i.isCompleted === 1).length;
-          const periodLabel = getPeriodLabel(goal.periodType);
+        {/* Goals Grid */}
+        <View style={{ paddingHorizontal: 24, gap: 12 }}>
+          {goals.map((goal) => {
+            const progress = goal.targetAmount > 0 ? Math.min((goal.currentAmount / goal.targetAmount) * 100, 100) : 0;
+            const isExpanded = expandedGoalId === goal.id;
+            const completedItems = goal.items.filter(i => i.isCompleted === 1).length;
+            const periodLabel = getPeriodLabel(goal.periodType);
+            const status = getGoalStatus(goal);
 
-          // Círculo de progreso con dos semicírculos (soporta 0-100%)
-          const progressFraction = progress / 100;
-          const halfSize = 40; // radio
-          const borderW = 6;
+            return (
+              <View key={goal.id}>
+                {/* Goal Card */}
+                <TouchableOpacity
+                  onPress={() => toggleExpand(goal.id)}
+                  onLongPress={() => handleDelete(goal.id, goal.name)}
+                  accessibilityLabel={`Meta: ${goal.name}, ${Math.round(progress)}% completada`}
+                  activeOpacity={0.7}
+                  style={{
+                    backgroundColor: themeColors.surfaceContainer + '99',
+                    borderRadius: 16,
+                    borderWidth: 1,
+                    borderColor: themeColors.outlineVariant + '30',
+                    borderLeftWidth: 4,
+                    borderLeftColor: status.borderColor,
+                    padding: 16,
+                    shadowColor: '#0A1E3D',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.5,
+                    shadowRadius: 8,
+                    elevation: 3,
+                  }}
+                >
+                  {/* Top Row: Icon + Info */}
+                  <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 }}>
+                    {/* Status Icon */}
+                    <View style={{
+                      width: 44, height: 44, borderRadius: 12,
+                      backgroundColor: status.color + '20',
+                      justifyContent: 'center', alignItems: 'center',
+                      marginRight: 12,
+                    }}>
+                      <Ionicons name={status.icon} size={22} color={status.color} />
+                    </View>
 
-          return (
-            <View key={goal.id} style={{ marginBottom: 12 }}>
-              <TouchableOpacity
-                onPress={() => toggleExpand(goal.id)}
-                onLongPress={() => handleDelete(goal.id, goal.name)}
-                accessibilityLabel={`Meta: ${goal.name}, ${Math.round(progress)}% completada`}
-                style={{
-                  backgroundColor: themeColors.surface,
-                  borderRadius: 20,
-                  padding: 20,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  ...shadows.md,
-                }}
-              >
-                <View style={{ width: 90, height: 90, justifyContent: 'center', alignItems: 'center', marginRight: 16 }}>
-                  {/* Círculo de fondo (gris) */}
-                  <View style={{
-                    width: 80, height: 80, borderRadius: 40, borderWidth: borderW,
-                    borderColor: themeColors.border, position: 'absolute',
-                  }} />
-                  {/* Círculo de progreso con dos semicírculos */}
-                  {progress > 0 && progress < 100 && (
-                    <>
-                      {/* Semicírculo izquierdo: se muestra cuando progress > 50% */}
-                      {progressFraction > 0.5 && (
-                        <View style={{
-                          width: halfSize, height: 80, position: 'absolute',
-                          left: 0, overflow: 'hidden',
-                        }}>
-                          <View style={{
-                            width: 80, height: 80, borderRadius: 40, borderWidth: borderW,
-                            borderColor: themeColors.primary, position: 'absolute',
-                            left: 0,
-                            borderRightColor: 'transparent', borderBottomColor: 'transparent',
-                            transform: [{ rotate: `${-90 + (progressFraction - 0.5) * 360}deg` }],
-                          }} />
+                    {/* Name + Amount */}
+                    <View style={{ flex: 1 }}>
+                      <ThemedText
+                        type="body"
+                        themeColor="text"
+                        style={{ fontWeight: '600', marginBottom: 2 }}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
+                        {goal.name}
+                      </ThemedText>
+                      <ThemedText type="body" themeColor="onSurfaceVariant" style={{ fontSize: 13 }}>
+                        {goal.currency === 'USD' ? formatUSD(goal.currentAmount) : formatBS(goal.currentAmount)}
+                        {' / '}
+                        {goal.currency === 'USD' ? formatUSD(goal.targetAmount) : formatBS(goal.targetAmount)}
+                      </ThemedText>
+                    </View>
+
+                    {/* Chevron */}
+                    <Ionicons
+                      name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                      size={20}
+                      color={themeColors.onSurfaceVariant}
+                      style={{ marginLeft: 8 }}
+                    />
+                  </View>
+
+                  {/* Progress Bar */}
+                  <View style={{ marginBottom: 8 }}>
+                    <View style={{
+                      height: 8,
+                      backgroundColor: themeColors.surfaceVariant,
+                      borderRadius: 4,
+                      overflow: 'hidden',
+                    }}>
+                      <View style={{
+                        width: `${Math.max(progress, 2)}%` as any,
+                        height: '100%',
+                        backgroundColor: progress >= 100 ? themeColors.secondary : status.color,
+                        borderRadius: 4,
+                      }} />
+                    </View>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
+                      <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ fontSize: 11 }}>
+                        {Math.round(progress)}%
+                      </ThemedText>
+                      {periodLabel && (
+                        <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ fontSize: 11 }}>
+                          {periodLabel}
+                        </ThemedText>
+                      )}
+                    </View>
+                  </View>
+
+                  {/* Bottom Row: Meta + Items + Actions */}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <View style={{ flexDirection: 'row', gap: 12 }}>
+                      {goal.deadline && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <Ionicons name="calendar-outline" size={12} color={themeColors.onSurfaceVariant} />
+                          <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ fontSize: 11 }}>
+                            {goal.deadline}
+                          </ThemedText>
                         </View>
                       )}
-                      {/* Semicírculo derecho: se muestra siempre que progress > 0 */}
-                      <View style={{
-                        width: halfSize, height: 80, position: 'absolute',
-                        right: 0, overflow: 'hidden',
-                      }}>
-                        <View style={{
-                          width: 80, height: 80, borderRadius: 40, borderWidth: borderW,
-                          borderColor: themeColors.primary, position: 'absolute',
-                          right: 0,
-                          borderLeftColor: 'transparent', borderBottomColor: 'transparent',
-                          transform: [{ rotate: `${-90 + Math.min(progressFraction, 0.5) * 360}deg` }],
-                        }} />
-                      </View>
-                    </>
-                  )}
-                  {/* Círculo completo al 100% */}
-                  {progress >= 100 && (
-                    <View style={{
-                      width: 80, height: 80, borderRadius: 40, borderWidth: borderW,
-                      borderColor: themeColors.primary, position: 'absolute',
-                    }} />
-                  )}
-                  <ThemedText type="h3" themeColor="primary">
-                    {Math.round(progress)}%
-                  </ThemedText>
-                </View>
-                <View style={{ flex: 1, flexShrink: 1 }}>
-                  <ThemedText
-                    type="body"
-                    themeColor="text"
-                    style={{ marginBottom: 4 }}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                  >
-                    {goal.name}
-                  </ThemedText>
-                  <ThemedText type="body" themeColor="textSecondary">
-                    {goal.currency === 'USD' ? formatUSD(goal.currentAmount) : formatBS(goal.currentAmount)}
-                    {' / '}
-                    {goal.currency === 'USD' ? formatUSD(goal.targetAmount) : formatBS(goal.targetAmount)}
-                  </ThemedText>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                    {periodLabel && (
-                      <ThemedText type="caption" themeColor="textSecondary">
-                        {periodLabel}
+                      {goal.items.length > 0 && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <Ionicons name="list-outline" size={12} color={themeColors.onSurfaceVariant} />
+                          <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ fontSize: 11 }}>
+                            {completedItems}/{goal.items.length}
+                          </ThemedText>
+                        </View>
+                      )}
+                    </View>
+
+                    {/* Deposit Button */}
+                    <TouchableOpacity
+                      onPress={(e) => { e.stopPropagation?.(); openDepositModal(goal.id); }}
+                      accessibilityLabel={`Abonar a meta ${goal.name}`}
+                      style={{
+                        backgroundColor: themeColors.secondary,
+                        borderRadius: 8,
+                        paddingHorizontal: 14,
+                        paddingVertical: 8,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 4,
+                      }}
+                    >
+                      <Ionicons name="wallet-outline" size={14} color={themeColors.background} />
+                      <ThemedText style={{ color: themeColors.background, fontSize: 12, fontWeight: '600' }} type="badge">
+                        Abonar
                       </ThemedText>
-                    )}
-                    {goal.deadline && (
-                      <ThemedText type="caption" themeColor="textSecondary">
-                        {goal.deadline}
-                      </ThemedText>
-                    )}
+                    </TouchableOpacity>
                   </View>
-                  {goal.items.length > 0 && (
-                    <ThemedText type="caption" themeColor="textSecondary" style={{ marginTop: 4 }}>
-                      {completedItems}/{goal.items.length} ítems
-                    </ThemedText>
-                  )}
-                </View>
-                <View style={{ alignItems: 'flex-end', gap: 6 }}>
-                  <TouchableOpacity
-                    onPress={(e) => { e.stopPropagation?.(); openDepositModal(goal.id); }}
-                    accessibilityLabel={`Abonar a meta ${goal.name}`}
-                    style={{
-                      backgroundColor: '#10B981',
-                      borderRadius: 8,
-                      paddingHorizontal: 12,
-                      paddingVertical: 10,
-                      minHeight: 44,
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <ThemedText style={{ color: '#FFF' }} type="badge">
-                      Abonar
-                    </ThemedText>
-                  </TouchableOpacity>
-                  <Ionicons
-                    name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                    size={20}
-                    color={themeColors.textSecondary}
-                  />
-                </View>
-              </TouchableOpacity>
+                </TouchableOpacity>
 
-              {/* Sub-ítems expandibles */}
-              {isExpanded && (
-                <View style={{
-                  backgroundColor: themeColors.surface,
-                  marginTop: -16,
-                  paddingTop: 20,
-                  paddingHorizontal: 20,
-                  paddingBottom: 16,
-                  borderRadius: 20,
-                  borderTopLeftRadius: 0,
-                  borderTopRightRadius: 0,
-                }}>
-                  {goal.items.length === 0 && (
-                    <ThemedText type="body" themeColor="textSecondary" style={{ textAlign: 'center', marginBottom: 12 }}>
-                      Sin sub-ítems aún. ¡Agrega los componentes de tu meta!
-                    </ThemedText>
-                  )}
-                  {goal.items.map((item) => {
-                    const itemProgress = item.targetAmount > 0
-                      ? Math.round((item.currentAmount / item.targetAmount) * 100)
-                      : 0;
-                    return (
-                      <TouchableOpacity
-                        key={item.id}
-                        onPress={() => handleToggleItem(item)}
-                        onLongPress={() => handleDeleteItem(item)}
-                        accessibilityLabel={`Ítem: ${item.name}, ${itemProgress}% completado. Presiona para marcar como ${item.isCompleted ? 'pendiente' : 'completado'}`}
-                        style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          paddingVertical: 10,
-                          borderBottomWidth: 1,
-                          borderBottomColor: themeColors.border,
-                        }}
-                      >
-                        <View style={{
-                          width: 24, height: 24, borderRadius: 12, borderWidth: 2,
-                          borderColor: item.isCompleted ? '#10B981' : themeColors.border,
-                          backgroundColor: item.isCompleted ? '#10B981' : 'transparent',
-                          justifyContent: 'center', alignItems: 'center', marginRight: 12,
-                        }}>
-                          {item.isCompleted === 1 && (
-                            <Ionicons name="checkmark" size={16} color="#FFF" />
-                          )}
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <ThemedText
-                            type="body"
-                            themeColor="text"
-                            style={{ textDecorationLine: item.isCompleted === 1 ? 'line-through' : 'none' }}
-                          >
-                            {item.name}
-                          </ThemedText>
-                          <ThemedText type="caption" themeColor="textSecondary">
-                            {goal.currency === 'USD' ? formatUSD(item.currentAmount) : formatBS(item.currentAmount)}
-                            {' / '}
-                            {goal.currency === 'USD' ? formatUSD(item.targetAmount) : formatBS(item.targetAmount)}
-                            {'  ·  '}{itemProgress}%
-                          </ThemedText>
-                        </View>
-                      </TouchableOpacity>
-                    );
-                  })}
-                  <TouchableOpacity
-                    onPress={() => openNewItemModal(goal.id)}
-                    accessibilityLabel={`Agregar ítem a meta ${goal.name}`}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 6,
-                      paddingVertical: 12,
-                      marginTop: 4,
-                    }}
-                  >
-                    <Ionicons name="add-circle-outline" size={18} color={themeColors.primary} />
-                    <ThemedText type="body" themeColor="primary">
-                      Agregar ítem
-                    </ThemedText>
-                  </TouchableOpacity>
-                </View>
-              )}
+                {/* Sub-ítems expandibles */}
+                {isExpanded && (
+                  <View style={{
+                    backgroundColor: themeColors.surfaceContainer + '60',
+                    marginTop: -8,
+                    marginHorizontal: 12,
+                    paddingTop: 16,
+                    paddingHorizontal: 16,
+                    paddingBottom: 12,
+                    borderRadius: 16,
+                    borderWidth: 1,
+                    borderColor: themeColors.outlineVariant + '20',
+                    borderTopLeftRadius: 0,
+                    borderTopRightRadius: 0,
+                  }}>
+                    {goal.items.length === 0 && (
+                      <ThemedText type="body" themeColor="onSurfaceVariant" style={{ textAlign: 'center', marginBottom: 12, fontSize: 13 }}>
+                        Sin sub-ítems aún. ¡Agrega los componentes de tu meta!
+                      </ThemedText>
+                    )}
+                    {goal.items.map((item) => {
+                      const itemProgress = item.targetAmount > 0
+                        ? Math.round((item.currentAmount / item.targetAmount) * 100)
+                        : 0;
+                      return (
+                        <TouchableOpacity
+                          key={item.id}
+                          onPress={() => handleToggleItem(item)}
+                          onLongPress={() => handleDeleteItem(item)}
+                          accessibilityLabel={`Ítem: ${item.name}, ${itemProgress}% completado. Presiona para marcar como ${item.isCompleted ? 'pendiente' : 'completado'}`}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            paddingVertical: 10,
+                            borderBottomWidth: 1,
+                            borderBottomColor: themeColors.outlineVariant + '20',
+                          }}
+                        >
+                          <View style={{
+                            width: 24, height: 24, borderRadius: 12, borderWidth: 2,
+                            borderColor: item.isCompleted ? themeColors.secondary : themeColors.outline,
+                            backgroundColor: item.isCompleted ? themeColors.secondary : 'transparent',
+                            justifyContent: 'center', alignItems: 'center', marginRight: 12,
+                          }}>
+                            {item.isCompleted === 1 && (
+                              <Ionicons name="checkmark" size={16} color={themeColors.background} />
+                            )}
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <ThemedText
+                              type="body"
+                              themeColor="text"
+                              style={{ textDecorationLine: item.isCompleted === 1 ? 'line-through' : 'none', fontSize: 14 }}
+                            >
+                              {item.name}
+                            </ThemedText>
+                            <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ fontSize: 11 }}>
+                              {goal.currency === 'USD' ? formatUSD(item.currentAmount) : formatBS(item.currentAmount)}
+                              {' / '}
+                              {goal.currency === 'USD' ? formatUSD(item.targetAmount) : formatBS(item.targetAmount)}
+                              {'  ·  '}{itemProgress}%
+                            </ThemedText>
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    })}
+                    <TouchableOpacity
+                      onPress={() => openNewItemModal(goal.id)}
+                      accessibilityLabel={`Agregar ítem a meta ${goal.name}`}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 6,
+                        paddingVertical: 12,
+                        marginTop: 4,
+                      }}
+                    >
+                      <Ionicons name="add-circle-outline" size={18} color={themeColors.secondary} />
+                      <ThemedText type="body" themeColor="secondary" style={{ fontSize: 13 }}>
+                        Agregar ítem
+                      </ThemedText>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            );
+          })}
+
+          {goals.length === 0 && (
+            <View style={{ alignItems: 'center', marginTop: 60, paddingHorizontal: 24 }}>
+              <View style={{
+                width: 80, height: 80, borderRadius: 40,
+                backgroundColor: themeColors.primaryContainer,
+                justifyContent: 'center', alignItems: 'center',
+                marginBottom: 16,
+              }}>
+                <Ionicons name="flag-outline" size={40} color={themeColors.onPrimaryContainer} />
+              </View>
+              <ThemedText type="body" themeColor="onSurfaceVariant" style={{ textAlign: 'center' }}>
+                No tienes metas aún.{'\n'}¡Crea tu primera meta de ahorro!
+              </ThemedText>
             </View>
-          );
-        })}
-
-        {goals.length === 0 && (
-          <View style={{ alignItems: 'center', marginTop: 60 }}>
-            <Text style={{ fontSize: 48, marginBottom: 16 }}>🎯</Text>
-            <ThemedText type="body" themeColor="textSecondary" style={{ textAlign: 'center' }}>
-              No tienes metas aún.{'\n'}¡Crea tu primera meta de ahorro!
-            </ThemedText>
-          </View>
-        )}
+          )}
+        </View>
       </ScrollView>
 
       {/* Toast Notification */}
@@ -571,7 +615,11 @@ export default function GoalsScreen() {
           borderRadius: 14,
           padding: 16,
           alignItems: 'center',
-          ...shadows.lg,
+          shadowColor: '#0A1E3D',
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: 0.6,
+          shadowRadius: 16,
+          elevation: 8,
         }}>
           <ThemedText style={{ color: '#FFF' }} type="button">
             {toastMessage}
@@ -586,17 +634,18 @@ export default function GoalsScreen() {
           justifyContent: 'center', alignItems: 'center', padding: 40,
         }}>
           <View style={{
-            backgroundColor: themeColors.surface, borderRadius: 24,
+            backgroundColor: themeColors.surfaceContainer, borderRadius: 24,
             padding: 32, alignItems: 'center', width: '100%', maxWidth: 320,
+            borderWidth: 1, borderColor: themeColors.outlineVariant + '30',
           }}>
             <Text style={{ fontSize: 56, marginBottom: 16 }}>🎉🎊🎉</Text>
             <ThemedText type="h2" themeColor="text" style={{ marginBottom: 8 }}>
               ¡Meta Completada!
             </ThemedText>
-            <ThemedText type="h3" themeColor="primary" style={{ marginBottom: 12 }}>
+            <ThemedText type="h3" themeColor="secondary" style={{ marginBottom: 12 }}>
               "{celebrationGoal?.name}"
             </ThemedText>
-            <ThemedText type="body" themeColor="textSecondary" style={{ textAlign: 'center', marginBottom: 24 }}>
+            <ThemedText type="body" themeColor="onSurfaceVariant" style={{ textAlign: 'center', marginBottom: 24 }}>
               Has alcanzado tu meta de {'\n'}
               {celebrationGoal?.currency === 'USD'
                 ? formatUSD(celebrationGoal?.targetAmount ?? 0)
@@ -608,12 +657,17 @@ export default function GoalsScreen() {
               onPress={handleCelebrate}
               accessibilityLabel="Celebrar meta completada"
               style={{
-                backgroundColor: '#F59E0B',
+                backgroundColor: themeColors.tertiary,
                 borderRadius: 14, paddingHorizontal: 32, paddingVertical: 14,
+                shadowColor: themeColors.tertiary,
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 8,
+                elevation: 6,
               }}
             >
-              <ThemedText style={{ color: '#FFF' }} type="button">
-                Celebrar!
+              <ThemedText style={{ color: themeColors.background }} type="button">
+                ¡Celebrar!
               </ThemedText>
             </TouchableOpacity>
           </View>
@@ -633,26 +687,26 @@ export default function GoalsScreen() {
                   Nueva Meta
                 </ThemedText>
                 <TouchableOpacity onPress={() => setShowModal(false)} accessibilityLabel="Cerrar modal de nueva meta">
-                  <Ionicons name="close" size={24} color={themeColors.textSecondary} />
+                  <Ionicons name="close" size={24} color={themeColors.onSurfaceVariant} />
                 </TouchableOpacity>
               </View>
 
-              <ThemedText type="caption" themeColor="textSecondary" style={{ marginBottom: 8 }}>
+              <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ marginBottom: 8 }}>
                 Nombre de la meta
               </ThemedText>
               <TextInput
                 value={name}
                 onChangeText={setName}
                 placeholder="Ej: Computadora nueva"
-                placeholderTextColor={themeColors.textSecondary}
+                placeholderTextColor={themeColors.onSurfaceVariant}
                 style={{
-                  backgroundColor: themeColors.surface, borderRadius: 12, padding: 14,
+                  backgroundColor: themeColors.surfaceContainer, borderRadius: 12, padding: 14,
                   fontSize: 15, color: themeColors.text, marginBottom: 16,
-                  ...shadows.sm,
+                  borderWidth: 1, borderColor: themeColors.outlineVariant + '30',
                 }}
               />
 
-              <ThemedText type="caption" themeColor="textSecondary" style={{ marginBottom: 8 }}>
+              <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ marginBottom: 8 }}>
                 Moneda
               </ThemedText>
               <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
@@ -663,14 +717,15 @@ export default function GoalsScreen() {
                     accessibilityLabel={`Seleccionar moneda ${cur === 'USD' ? 'USD' : 'Bolívares'}`}
                     style={{
                       flex: 1, paddingVertical: 12, borderRadius: 10,
-                      backgroundColor: currency === cur ? themeColors.primary : themeColors.surface,
+                      backgroundColor: currency === cur ? themeColors.secondary : themeColors.surfaceContainer,
                       alignItems: 'center',
-                      ...(currency === cur ? shadows.primary : shadows.sm),
+                      borderWidth: 1,
+                      borderColor: currency === cur ? themeColors.secondary : themeColors.outlineVariant + '30',
                     }}
                   >
                     <ThemedText
                       type="button"
-                      color={currency === cur ? '#FFF' : themeColors.text}
+                      color={currency === cur ? themeColors.background : themeColors.text}
                     >
                       {cur === 'USD' ? '$ USD' : 'Bs'}
                     </ThemedText>
@@ -678,7 +733,7 @@ export default function GoalsScreen() {
                 ))}
               </View>
 
-              <ThemedText type="caption" themeColor="textSecondary" style={{ marginBottom: 8 }}>
+              <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ marginBottom: 8 }}>
                 Tipo de plazo
               </ThemedText>
               <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
@@ -689,14 +744,15 @@ export default function GoalsScreen() {
                     accessibilityLabel={`Seleccionar plazo ${pt === 'none' ? 'sin fecha' : pt === 'weekly' ? 'semanal' : 'mensual'}`}
                     style={{
                       flex: 1, paddingVertical: 10, borderRadius: 10,
-                      backgroundColor: periodType === pt ? themeColors.primary : themeColors.surface,
+                      backgroundColor: periodType === pt ? themeColors.secondary : themeColors.surfaceContainer,
                       alignItems: 'center',
-                      ...(periodType === pt ? shadows.primary : shadows.sm),
+                      borderWidth: 1,
+                      borderColor: periodType === pt ? themeColors.secondary : themeColors.outlineVariant + '30',
                     }}
                   >
                     <ThemedText
                       type="buttonSmall"
-                      color={periodType === pt ? '#FFF' : themeColors.text}
+                      color={periodType === pt ? themeColors.background : themeColors.text}
                     >
                       {pt === 'none' ? 'Sin fecha' : pt === 'weekly' ? 'Semanal' : 'Mensual'}
                     </ThemedText>
@@ -704,19 +760,19 @@ export default function GoalsScreen() {
                 ))}
               </View>
 
-              <ThemedText type="caption" themeColor="textSecondary" style={{ marginBottom: 8 }}>
+              <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ marginBottom: 8 }}>
                 Monto objetivo
               </ThemedText>
               <TextInput
                 value={targetAmount}
                 onChangeText={setTargetAmount}
                 placeholder="Ej: 5000.00"
-                placeholderTextColor={themeColors.textSecondary}
+                placeholderTextColor={themeColors.onSurfaceVariant}
                 keyboardType="decimal-pad"
                 style={{
-                  backgroundColor: themeColors.surface, borderRadius: 12, padding: 14,
+                  backgroundColor: themeColors.surfaceContainer, borderRadius: 12, padding: 14,
                   fontSize: 18, fontWeight: '600', color: themeColors.text, marginBottom: 16,
-                  ...shadows.sm,
+                  borderWidth: 1, borderColor: themeColors.outlineVariant + '30',
                 }}
               />
 
@@ -730,11 +786,11 @@ export default function GoalsScreen() {
                   >
                     <View style={{
                       width: 22, height: 22, borderRadius: 6, borderWidth: 2,
-                      borderColor: hasDeadline ? themeColors.primary : themeColors.border,
-                      backgroundColor: hasDeadline ? themeColors.primary : 'transparent',
+                      borderColor: hasDeadline ? themeColors.secondary : themeColors.outline,
+                      backgroundColor: hasDeadline ? themeColors.secondary : 'transparent',
                       justifyContent: 'center', alignItems: 'center',
                     }}>
-                      {hasDeadline && <Ionicons name="checkmark" size={16} color="#FFF" />}
+                      {hasDeadline && <Ionicons name="checkmark" size={16} color={themeColors.background} />}
                     </View>
                     <ThemedText type="body" themeColor="text">
                       Establecer fecha límite
@@ -743,19 +799,19 @@ export default function GoalsScreen() {
 
                   {hasDeadline && (
                     <>
-                      <ThemedText type="caption" themeColor="textSecondary" style={{ marginBottom: 8 }}>
+                      <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ marginBottom: 8 }}>
                         Fecha límite (YYYY-MM-DD)
                       </ThemedText>
                       <TextInput
                         value={deadlineDate}
                         onChangeText={setDeadlineDate}
                         placeholder="Ej: 2026-12-31"
-                        placeholderTextColor={themeColors.textSecondary}
+                        placeholderTextColor={themeColors.onSurfaceVariant}
                         keyboardType="numbers-and-punctuation"
                         style={{
-                          backgroundColor: themeColors.surface, borderRadius: 12, padding: 14,
+                          backgroundColor: themeColors.surfaceContainer, borderRadius: 12, padding: 14,
                           fontSize: 15, color: themeColors.text, marginBottom: 24,
-                          borderWidth: 1, borderColor: themeColors.border,
+                          borderWidth: 1, borderColor: themeColors.outlineVariant + '30',
                         }}
                       />
                     </>
@@ -769,11 +825,16 @@ export default function GoalsScreen() {
                 onPress={handleCreate}
                 accessibilityLabel="Crear nueva meta"
                 style={{
-                  backgroundColor: themeColors.primary, borderRadius: 14,
+                  backgroundColor: themeColors.secondary, borderRadius: 14,
                   padding: 16, alignItems: 'center',
+                  shadowColor: themeColors.secondary,
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 8,
+                  elevation: 6,
                 }}
               >
-                <ThemedText style={{ color: '#FFF' }} type="button">
+                <ThemedText style={{ color: themeColors.background }} type="button">
                   Crear Meta
                 </ThemedText>
               </TouchableOpacity>
@@ -795,38 +856,38 @@ export default function GoalsScreen() {
                   Nuevo Ítem
                 </ThemedText>
                 <TouchableOpacity onPress={() => setShowItemModal(false)} accessibilityLabel="Cerrar modal de nuevo ítem">
-                  <Ionicons name="close" size={24} color={themeColors.textSecondary} />
+                  <Ionicons name="close" size={24} color={themeColors.onSurfaceVariant} />
                 </TouchableOpacity>
               </View>
 
-              <ThemedText type="caption" themeColor="textSecondary" style={{ marginBottom: 8 }}>
+              <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ marginBottom: 8 }}>
                 Nombre del ítem
               </ThemedText>
               <TextInput
                 value={itemName}
                 onChangeText={setItemName}
                 placeholder="Ej: Placa base"
-                placeholderTextColor={themeColors.textSecondary}
+                placeholderTextColor={themeColors.onSurfaceVariant}
                 style={{
-                  backgroundColor: themeColors.surface, borderRadius: 12, padding: 14,
+                  backgroundColor: themeColors.surfaceContainer, borderRadius: 12, padding: 14,
                   fontSize: 15, color: themeColors.text, marginBottom: 16,
-                  borderWidth: 1, borderColor: themeColors.border,
+                  borderWidth: 1, borderColor: themeColors.outlineVariant + '30',
                 }}
               />
 
-              <ThemedText type="caption" themeColor="textSecondary" style={{ marginBottom: 8 }}>
+              <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ marginBottom: 8 }}>
                 Monto objetivo
               </ThemedText>
               <TextInput
                 value={itemTarget}
                 onChangeText={setItemTarget}
                 placeholder="Ej: 250.00"
-                placeholderTextColor={themeColors.textSecondary}
+                placeholderTextColor={themeColors.onSurfaceVariant}
                 keyboardType="decimal-pad"
                 style={{
-                  backgroundColor: themeColors.surface, borderRadius: 12, padding: 14,
+                  backgroundColor: themeColors.surfaceContainer, borderRadius: 12, padding: 14,
                   fontSize: 18, fontWeight: '600', color: themeColors.text, marginBottom: 32,
-                  borderWidth: 1, borderColor: themeColors.border,
+                  borderWidth: 1, borderColor: themeColors.outlineVariant + '30',
                 }}
               />
 
@@ -834,11 +895,11 @@ export default function GoalsScreen() {
                 onPress={handleCreateItem}
                 accessibilityLabel="Agregar nuevo ítem a la meta"
                 style={{
-                  backgroundColor: themeColors.primary, borderRadius: 14,
+                  backgroundColor: themeColors.secondary, borderRadius: 14,
                   padding: 16, alignItems: 'center',
                 }}
               >
-                <ThemedText style={{ color: '#FFF' }} type="button">
+                <ThemedText style={{ color: themeColors.background }} type="button">
                   Agregar Ítem
                 </ThemedText>
               </TouchableOpacity>
@@ -860,23 +921,23 @@ export default function GoalsScreen() {
                   Abonar a Meta
                 </ThemedText>
                 <TouchableOpacity onPress={() => setShowDepositModal(false)} accessibilityLabel="Cerrar modal de abono">
-                  <Ionicons name="close" size={24} color={themeColors.textSecondary} />
+                  <Ionicons name="close" size={24} color={themeColors.onSurfaceVariant} />
                 </TouchableOpacity>
               </View>
 
-              <ThemedText type="caption" themeColor="textSecondary" style={{ marginBottom: 8 }}>
+              <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ marginBottom: 8 }}>
                 Monto a abonar
               </ThemedText>
               <TextInput
                 value={depositAmount}
                 onChangeText={setDepositAmount}
                 placeholder="Ej: 100.00"
-                placeholderTextColor={themeColors.textSecondary}
+                placeholderTextColor={themeColors.onSurfaceVariant}
                 keyboardType="decimal-pad"
                 style={{
-                  backgroundColor: themeColors.surface, borderRadius: 12, padding: 14,
+                  backgroundColor: themeColors.surfaceContainer, borderRadius: 12, padding: 14,
                   fontSize: 18, fontWeight: '600', color: themeColors.text, marginBottom: 32,
-                  borderWidth: 1, borderColor: themeColors.border,
+                  borderWidth: 1, borderColor: themeColors.outlineVariant + '30',
                 }}
               />
 
@@ -884,11 +945,11 @@ export default function GoalsScreen() {
                 onPress={handleDeposit}
                 accessibilityLabel="Confirmar abono a meta"
                 style={{
-                  backgroundColor: '#10B981', borderRadius: 14,
+                  backgroundColor: themeColors.secondary, borderRadius: 14,
                   padding: 16, alignItems: 'center',
                 }}
               >
-                <ThemedText style={{ color: '#FFF' }} type="button">
+                <ThemedText style={{ color: themeColors.background }} type="button">
                   Abonar
                 </ThemedText>
               </TouchableOpacity>
@@ -897,5 +958,5 @@ export default function GoalsScreen() {
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
-      );
-    }
+  );
+}

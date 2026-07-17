@@ -25,6 +25,7 @@ interface PieChartInteractiveProps {
   data: PieSlice[];
   size?: number;
   innerRadius?: number; // 0 = pastel, >0 = dona
+  showLegend?: boolean; // mostrar leyenda debajo del gráfico
 }
 
 interface SliceAngles {
@@ -51,12 +52,60 @@ function describeArc(
   cy: number,
   r: number,
   startAngle: number,
-  endAngle: number
+  endAngle: number,
+  innerR: number = 0
 ): string {
+  const angle = endAngle - startAngle;
+
+  // SVG no puede dibujar un arco de 360° con un solo comando A.
+  // Para 360° (círculo completo), partimos en dos arcos de 180°.
+  if (angle >= 359.99) {
+    const mid1 = polarToCartesian(cx, cy, r, startAngle + 180);
+    const end1 = polarToCartesian(cx, cy, r, startAngle + 360);
+
+    if (innerR > 0) {
+      const innerMid1 = polarToCartesian(cx, cy, innerR, startAngle + 180);
+      const innerEnd1 = polarToCartesian(cx, cy, innerR, startAngle + 360);
+      return [
+        `M ${polarToCartesian(cx, cy, r, startAngle).x} ${polarToCartesian(cx, cy, r, startAngle).y}`,
+        `A ${r} ${r} 0 0 0 ${mid1.x} ${mid1.y}`,
+        `A ${r} ${r} 0 0 0 ${end1.x} ${end1.y}`,
+        `L ${innerEnd1.x} ${innerEnd1.y}`,
+        `A ${innerR} ${innerR} 0 0 1 ${innerMid1.x} ${innerMid1.y}`,
+        `A ${innerR} ${innerR} 0 0 1 ${polarToCartesian(cx, cy, innerR, startAngle).x} ${polarToCartesian(cx, cy, innerR, startAngle).y}`,
+        'Z',
+      ].join(' ');
+    }
+    // Pastel sólido 360°
+    const start = polarToCartesian(cx, cy, r, startAngle);
+    return [
+      `M ${cx} ${cy}`,
+      `L ${start.x} ${start.y}`,
+      `A ${r} ${r} 0 0 0 ${mid1.x} ${mid1.y}`,
+      `A ${r} ${r} 0 0 0 ${end1.x} ${end1.y}`,
+      'Z',
+    ].join(' ');
+  }
+
   const start = polarToCartesian(cx, cy, r, endAngle);
   const end = polarToCartesian(cx, cy, r, startAngle);
-  const largeArcFlag = endAngle - startAngle > 180 ? 1 : 0;
+  const largeArcFlag = angle > 180 ? 1 : 0;
 
+  if (innerR > 0) {
+    // Dona: arco exterior + arco interior (invertido)
+    const innerStart = polarToCartesian(cx, cy, innerR, endAngle);
+    const innerEnd = polarToCartesian(cx, cy, innerR, startAngle);
+
+    return [
+      `M ${start.x} ${start.y}`,
+      `A ${r} ${r} 0 ${largeArcFlag} 0 ${end.x} ${end.y}`,
+      `L ${innerEnd.x} ${innerEnd.y}`,
+      `A ${innerR} ${innerR} 0 ${largeArcFlag} 1 ${innerStart.x} ${innerStart.y}`,
+      'Z',
+    ].join(' ');
+  }
+
+  // Pastel sólido (original)
   return [
     `M ${cx} ${cy}`,
     `L ${start.x} ${start.y}`,
@@ -71,6 +120,7 @@ export default function PieChartInteractive({
   data,
   size = SCREEN_WIDTH - 80,
   innerRadius = 0,
+  showLegend = true,
 }: PieChartInteractiveProps) {
   const themeColors = useThemeColors();
   const chartColors = themeColors.chartColors;
@@ -80,6 +130,8 @@ export default function PieChartInteractive({
   const cx = size / 2;
   const cy = size / 2;
   const outerR = size / 2 - 10;
+  // innerRadius se interpreta como porcentaje del outerR si es < outerR
+  const innerR = innerRadius > 0 ? Math.min(innerRadius, outerR * 0.85) : 0;
 
   // Calcular ángulos para cada slice
   const slices: (PieSlice & SliceAngles)[] = [];
@@ -153,7 +205,8 @@ export default function PieChartInteractive({
             cy + dy,
             outerR,
             slice.startAngle,
-            slice.endAngle
+            slice.endAngle,
+            innerR
           );
 
           return (
@@ -252,49 +305,51 @@ export default function PieChartInteractive({
         </View>
       )}
 
-      {/* Leyenda */}
-      <View style={{ marginTop: 16, width: '100%', gap: 6 }}>
-        {slices.slice(0, 8).map((slice) => (
-          <TouchableOpacity
-            key={slice.id}
-            onPress={() => handleSlicePress(slice.id)}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 8,
-              opacity: selectedId && slice.id !== selectedId ? 0.5 : 1,
-            }}
-          >
-            <View
+      {/* Leyenda (opcional) */}
+      {showLegend && (
+        <View style={{ marginTop: 16, width: '100%', gap: 6 }}>
+          {slices.slice(0, 8).map((slice) => (
+            <TouchableOpacity
+              key={slice.id}
+              onPress={() => handleSlicePress(slice.id)}
               style={{
-                width: 10,
-                height: 10,
-                borderRadius: 5,
-                backgroundColor: slice.color,
-              }}
-            />
-            <Text
-              style={{
-                flex: 1,
-                fontSize: 13,
-                color: themeColors.text,
-              }}
-              numberOfLines={1}
-            >
-              {slice.label}
-            </Text>
-            <Text
-              style={{
-                fontSize: 13,
-                fontWeight: '600',
-                color: themeColors.textSecondary,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+                opacity: selectedId && slice.id !== selectedId ? 0.5 : 1,
               }}
             >
-              {slice.percentage.toFixed(1)}%
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+              <View
+                style={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: 5,
+                  backgroundColor: slice.color,
+                }}
+              />
+              <Text
+                style={{
+                  flex: 1,
+                  fontSize: 13,
+                  color: themeColors.text,
+                }}
+                numberOfLines={1}
+              >
+                {slice.label}
+              </Text>
+              <Text
+                style={{
+                  fontSize: 13,
+                  fontWeight: '600',
+                  color: themeColors.textSecondary,
+                }}
+              >
+                {slice.percentage.toFixed(1)}%
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
     </View>
   );
 }

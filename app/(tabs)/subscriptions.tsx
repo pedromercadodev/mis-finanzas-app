@@ -15,6 +15,55 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+
+// ─── Emoji → Ionicons mapping ─────────────────────────────────────────────
+const EMOJI_TO_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
+  '🍔': 'restaurant-outline',
+  '🚗': 'car-outline',
+  '💊': 'medkit-outline',
+  '📚': 'book-outline',
+  '🎮': 'game-controller-outline',
+  '🏠': 'home-outline',
+  '💡': 'bulb-outline',
+  '👕': 'shirt-outline',
+  '💼': 'briefcase-outline',
+  '💻': 'laptop-outline',
+  '📈': 'trending-up-outline',
+  '📦': 'cube-outline',
+  '🎵': 'musical-notes-outline',
+  '🎬': 'film-outline',
+  '✈️': 'airplane-outline',
+  '🐕': 'paw-outline',
+  '💵': 'cash-outline',
+  '🎓': 'school-outline',
+  '🛒': 'cart-outline',
+  '🍕': 'pizza-outline',
+  '☕': 'cafe-outline',
+  '🎂': 'gift-outline',
+  '🍺': 'beer-outline',
+  '🏋️': 'fitness-outline',
+  '💰': 'wallet-outline',
+  '🏦': 'business-outline',
+  '💳': 'card-outline',
+  '📱': 'phone-portrait-outline',
+  '🌐': 'globe-outline',
+  '🏧': 'cash-outline',
+  '🎯': 'locate-outline',
+  '📊': 'bar-chart-outline',
+  '🪙': 'diamond-outline',
+  '💎': 'diamond-outline',
+  '🐷': 'save-outline',
+  '📸': 'camera-outline',
+  '⭐': 'star-outline',
+  '📁': 'folder-outline',
+  '📋': 'clipboard-outline',
+};
+
+function getIcon(icon: string | null | undefined): keyof typeof Ionicons.glyphMap {
+  if (!icon) return 'cube-outline';
+  if (EMOJI_TO_ICON[icon]) return EMOJI_TO_ICON[icon];
+  return icon as keyof typeof Ionicons.glyphMap;
+}
 import { useThemeColors } from '../../src/hooks/useThemeColors';
 import ThemedText from '../../src/components/ThemedText';
 import { formatUSD, formatBS, formatDate } from '../../src/utils/format';
@@ -29,7 +78,6 @@ import {
 } from '../../src/services/subscriptions';
 import { getCategories } from '../../src/services/categories';
 import { getAccounts } from '../../src/services/accounts';
-import { shadows } from '../../src/theme/shadows';
 import type { Subscription, Category, Account, FrequencyType, CurrencyType } from '../../src/utils/types';
 
 const FREQUENCIES: { key: FrequencyType; label: string }[] = [
@@ -37,6 +85,17 @@ const FREQUENCIES: { key: FrequencyType; label: string }[] = [
   { key: 'monthly', label: 'Mensual' },
   { key: 'yearly', label: 'Anual' },
   { key: 'custom', label: 'Personalizado' },
+];
+
+const SUBSCRIPTION_TEMPLATES = [
+  { name: 'Netflix', amountUSD: 17.99, amountBS: null, category: 'Entretenimiento', icon: 'film' as const },
+  { name: 'Spotify', amountUSD: 10.99, amountBS: null, category: 'Entretenimiento', icon: 'musical-notes' as const },
+  { name: 'Disney+', amountUSD: 9.99, amountBS: null, category: 'Entretenimiento', icon: 'tv' as const },
+  { name: 'HBO Max', amountUSD: 9.99, amountBS: null, category: 'Entretenimiento', icon: 'play-circle' as const },
+  { name: 'Amazon Prime', amountUSD: 14.99, amountBS: null, category: 'Compras', icon: 'cube' as const },
+  { name: 'YouTube Premium', amountUSD: 11.99, amountBS: null, category: 'Entretenimiento', icon: 'logo-youtube' as const },
+  { name: 'Internet Hogar', amountUSD: null, amountBS: null, category: 'Servicios', icon: 'wifi' as const },
+  { name: 'Plan Móvil', amountUSD: null, amountBS: null, category: 'Servicios', icon: 'phone-portrait' as const },
 ];
 
 export default function SubscriptionsScreen() {
@@ -141,6 +200,28 @@ export default function SubscriptionsScreen() {
     setFormAutoGenerate(sub.autoGenerate === 1);
     setFormNotes(sub.notes || '');
     setShowModal(true);
+  };
+
+  const selectTemplate = (template: typeof SUBSCRIPTION_TEMPLATES[0]) => {
+    setFormName(template.name);
+    if (template.amountUSD !== null) {
+      setFormAmountUSD(String(template.amountUSD));
+      setFormCurrency('USD');
+    }
+    if (template.amountBS !== null) {
+      setFormAmountBS(String(template.amountBS));
+      setFormCurrency(template.amountUSD !== null ? 'BOTH' : 'BS');
+    }
+    // Buscar categoría por nombre
+    const cat = categories.find(
+      (c) => c.name.toLowerCase() === template.category.toLowerCase()
+    );
+    if (cat) {
+      setFormCategoryId(cat.id);
+    }
+    setFormFrequency('monthly');
+    setFormIntervalDays('30');
+    setFormBillingDay(new Date().getDate().toString());
   };
 
   const handleSave = async () => {
@@ -307,492 +388,701 @@ export default function SubscriptionsScreen() {
     return nextDate <= soon.toISOString().split('T')[0] && !isDue(nextDate);
   };
 
+  // Calcular estadísticas
+  const activeSubs = subscriptions.filter(s => s.isActive === 1);
+  const pausedSubs = subscriptions.filter(s => s.isActive === 0);
+  const monthlyEstimate = activeSubs.reduce((sum, s) => sum + (s.amountUSD || 0), 0);
+
+  const getStatusInfo = (sub: Subscription): { borderColor: string; badgeLabel: string; badgeBg: string; badgeColor: string; statusIcon: string; statusText: string; statusColor: string } => {
+    const due = isDue(sub.nextBillingDate);
+    const soon = isSoon(sub.nextBillingDate);
+
+    if (!sub.isActive) {
+      return {
+        borderColor: themeColors.outlineVariant,
+        badgeLabel: 'Pausado',
+        badgeBg: themeColors.surfaceContainerHigh,
+        badgeColor: themeColors.outline,
+        statusIcon: 'pause-circle-outline',
+        statusText: 'Pausado indefinidamente',
+        statusColor: themeColors.onSurfaceVariant,
+      };
+    }
+    if (due) {
+      return {
+        borderColor: themeColors.danger,
+        badgeLabel: 'VENCIDA',
+        badgeBg: themeColors.danger + '20',
+        badgeColor: themeColors.danger,
+        statusIcon: 'warning-outline',
+        statusText: 'Pago fallido hace 2 días',
+        statusColor: themeColors.danger,
+      };
+    }
+    if (soon) {
+      return {
+        borderColor: themeColors.tertiary,
+        badgeLabel: 'PRONTO',
+        badgeBg: themeColors.tertiary + '30',
+        badgeColor: themeColors.tertiary,
+        statusIcon: 'time-outline',
+        statusText: `Mañana (Queda 1 día)`,
+        statusColor: themeColors.tertiary,
+      };
+    }
+    return {
+      borderColor: themeColors.secondary,
+      badgeLabel: 'Activo',
+      badgeBg: themeColors.secondary + '20',
+      badgeColor: themeColors.secondary,
+      statusIcon: 'calendar-outline',
+      statusText: `${formatDate(sub.nextBillingDate)}`,
+      statusColor: themeColors.onSurfaceVariant,
+    };
+  };
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
-        <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
-          {/* Header */}
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-            <ThemedText type="h1" themeColor="text">
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: 100 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header estilo Kinetic Ledger */}
+        <View style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          paddingHorizontal: 24,
+          paddingTop: 8,
+          paddingBottom: 8,
+        }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              overflow: 'hidden',
+              borderWidth: 1,
+              borderColor: themeColors.outlineVariant,
+              justifyContent: 'center',
+              alignItems: 'center',
+              backgroundColor: themeColors.surfaceVariant,
+            }}>
+              <Ionicons name="person" size={20} color={themeColors.textSecondary} />
+            </View>
+            <ThemedText
+              type="h2"
+              themeColor="text"
+              style={{ fontWeight: '600', letterSpacing: -0.5 }}
+            >
               Suscripciones
             </ThemedText>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <TouchableOpacity
-                onPress={handleProcessNow}
-                disabled={processing}
-                accessibilityLabel={processing ? 'Procesando suscripciones' : 'Procesar suscripciones vencidas'}
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 22,
-                  backgroundColor: themeColors.surface,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}>
-                {processing ? (
-                  <ActivityIndicator size="small" color={themeColors.primary} />
-                ) : (
-                  <Ionicons name="refresh" size={22} color={themeColors.primary} />
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={openNewModal}
-                accessibilityLabel="Crear nueva suscripción"
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 22,
-                  backgroundColor: themeColors.primary,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}>
-                <Ionicons name="add" size={24} color="#FFFFFF" />
-              </TouchableOpacity>
-            </View>
           </View>
+          <TouchableOpacity
+            onPress={openNewModal}
+            accessibilityLabel="Crear nueva suscripción"
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            <Ionicons name="add-circle" size={28} color={themeColors.secondary} />
+          </TouchableOpacity>
+        </View>
 
-          {loading ? (
-            <View style={{ alignItems: 'center', paddingVertical: 60 }}>
-              <ActivityIndicator size="large" color={themeColors.primary} />
+        {loading ? (
+          <View style={{ alignItems: 'center', paddingVertical: 60 }}>
+            <ActivityIndicator size="large" color={themeColors.secondary} />
+          </View>
+        ) : subscriptions.length === 0 ? (
+          <View style={{ alignItems: 'center', paddingVertical: 60, paddingHorizontal: 24 }}>
+            <Ionicons name="repeat-outline" size={64} color={themeColors.onSurfaceVariant} />
+            <ThemedText type="body" themeColor="onSurfaceVariant" style={{ marginTop: 16, textAlign: 'center' }}>
+              No tienes suscripciones registradas
+            </ThemedText>
+            <ThemedText type="small" themeColor="onSurfaceVariant" style={{ marginTop: 8, textAlign: 'center' }}>
+              Agrega Netflix, internet, alquiler y otros pagos recurrentes
+            </ThemedText>
+          </View>
+        ) : (
+          <>
+            {/* Summary Dashboard - Glass card */}
+            <View style={{
+              paddingHorizontal: 24,
+              marginBottom: 24,
+              marginTop: 8,
+            }}>
+              <View style={{
+                backgroundColor: themeColors.surfaceContainer,
+                borderRadius: 16,
+                padding: 24,
+                borderWidth: 1,
+                borderColor: themeColors.outlineVariant + '30',
+              }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <View>
+                    <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ textTransform: 'uppercase', letterSpacing: 0.5, fontSize: 11 }}>
+                      Gasto Mensual Estimado
+                    </ThemedText>
+                    <ThemedText type="h2" themeColor="secondary" style={{ fontWeight: '700', letterSpacing: -0.5, marginTop: 8 }}>
+                      {formatUSD(monthlyEstimate)}
+                    </ThemedText>
+                  </View>
+                  <View style={{ flexDirection: 'row', gap: 12 }}>
+                    <View style={{
+                      backgroundColor: themeColors.surfaceContainerHigh,
+                      borderRadius: 8,
+                      paddingHorizontal: 16,
+                      paddingVertical: 12,
+                      borderWidth: 1,
+                      borderColor: themeColors.outlineVariant + '50',
+                    }}>
+                      <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ textTransform: 'uppercase', letterSpacing: 0.5, fontSize: 10 }}>
+                        Activas
+                      </ThemedText>
+                      <ThemedText type="h4" themeColor="text" style={{ textAlign: 'center', marginTop: 2 }}>
+                        {activeSubs.length}
+                      </ThemedText>
+                    </View>
+                    <View style={{
+                      backgroundColor: themeColors.surfaceContainerHigh,
+                      borderRadius: 8,
+                      paddingHorizontal: 16,
+                      paddingVertical: 12,
+                      borderWidth: 1,
+                      borderColor: themeColors.outlineVariant + '50',
+                    }}>
+                      <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ textTransform: 'uppercase', letterSpacing: 0.5, fontSize: 10 }}>
+                        Pausadas
+                      </ThemedText>
+                      <ThemedText type="h4" themeColor="text" style={{ textAlign: 'center', marginTop: 2 }}>
+                        {pausedSubs.length}
+                      </ThemedText>
+                    </View>
+                  </View>
+                </View>
+              </View>
             </View>
-          ) : subscriptions.length === 0 ? (
-            <View style={{ alignItems: 'center', paddingVertical: 60 }}>
-              <Ionicons name="repeat-outline" size={64} color={themeColors.textSecondary} />
-              <ThemedText type="body" themeColor="textSecondary" style={{ marginTop: 16, textAlign: 'center' }}>
-                No tienes suscripciones registradas
-              </ThemedText>
-              <ThemedText type="small" themeColor="textSecondary" style={{ marginTop: 8, textAlign: 'center' }}>
-                Agrega Netflix, internet, alquiler y otros pagos recurrentes
-              </ThemedText>
-            </View>
-          ) : (
-            subscriptions.map((sub) => {
-              const due = isDue(sub.nextBillingDate);
-              const soon = isSoon(sub.nextBillingDate);
 
-              return (
-                <TouchableOpacity
-                  key={sub.id}
-                  onPress={() => openEditModal(sub.id)}
-                  onLongPress={() => handleDelete(sub)}
-                  accessibilityLabel={`Suscripción: ${sub.name}`}
-                  style={{
-                    backgroundColor: themeColors.surface,
-                    borderRadius: 16,
-                    padding: 16,
-                    marginBottom: 12,
-                    ...shadows.sm,
-                    opacity: sub.isActive ? 1 : 0.5,
-                  }}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <ThemedText type="body" themeColor="text" style={{ fontWeight: '600' }}>
-                          {sub.name}
-                        </ThemedText>
-                        {due && (
-                          <View style={{ backgroundColor: themeColors.dangerLight, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 }}>
-                            <ThemedText type="badge" themeColor="danger">VENCIDA</ThemedText>
-                          </View>
-                        )}
-                        {soon && !due && (
-                          <View style={{ backgroundColor: themeColors.warningLight, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 }}>
-                            <ThemedText type="badge" themeColor="warning">PRONTO</ThemedText>
-                          </View>
-                        )}
-                      </View>
-                      {sub.description && (
-                        <ThemedText type="caption" themeColor="textSecondary" style={{ marginTop: 2 }}>
-                          {sub.description}
-                        </ThemedText>
-                      )}
-                    </View>
-                    <Switch
-                      value={sub.isActive === 1}
-                      onValueChange={() => handleToggleActive(sub)}
-                      trackColor={{ false: themeColors.border, true: themeColors.primary + '60' }}
-                      thumbColor={sub.isActive ? themeColors.primary : '#999'}
-                    />
-                  </View>
-
-                  <View style={{ flexDirection: 'row', marginTop: 12, gap: 16 }}>
-                    <View style={{ flex: 1 }}>
-                      <ThemedText type="badge" themeColor="textSecondary">Monto</ThemedText>
-                      <ThemedText type="amountSmall" themeColor="text">
-                        {sub.amountUSD ? formatUSD(sub.amountUSD) : ''}
-                        {sub.amountUSD && sub.amountBS ? ' / ' : ''}
-                        {sub.amountBS ? formatBS(sub.amountBS) : ''}
-                      </ThemedText>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <ThemedText type="badge" themeColor="textSecondary">Frecuencia</ThemedText>
-                      <ThemedText type="caption" themeColor="text" style={{ fontWeight: '500' }}>
-                        {getFrequencyLabel(sub.frequency)}
-                      </ThemedText>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <ThemedText type="badge" themeColor="textSecondary">Próximo cobro</ThemedText>
-                      <ThemedText
-                        type="caption"
-                        color={due ? themeColors.danger : (soon ? themeColors.warning : themeColors.text)}
-                        style={{ fontWeight: '500' }}
-                      >
-                        {formatDate(sub.nextBillingDate)}
-                      </ThemedText>
-                    </View>
-                  </View>
-
-                  <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
-                    <ThemedText type="badge" themeColor="textSecondary">
-                      {getCategoryName(sub.categoryId)}
-                    </ThemedText>
-                    <ThemedText type="badge" themeColor="textSecondary">
-                      {getAccountName(sub.accountId)}
-                    </ThemedText>
-                    {sub.autoGenerate === 1 && (
-                      <ThemedText type="badge" themeColor="success">Auto</ThemedText>
-                    )}
-                  </View>
-                </TouchableOpacity>
-              );
-            })
-          )}
-        </ScrollView>
-
-        {/* Modal de creación/edición */}
-        <Modal visible={showModal} animationType="slide" presentationStyle="pageSheet">
-          <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
-            <KeyboardAvoidingView
-              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-              style={{ flex: 1 }}>
-              <ScrollView contentContainerStyle={{ padding: 20 }}>
-                {/* Header del modal */}
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                  <ThemedText type="h2" themeColor="text">
-                    {editingId ? 'Editar suscripción' : 'Nueva suscripción'}
-                  </ThemedText>
-                  <TouchableOpacity onPress={() => setShowModal(false)} accessibilityLabel="Cerrar modal">
-                    <Ionicons name="close" size={28} color={themeColors.textSecondary} />
-                  </TouchableOpacity>
-                </View>
-
-                {/* Nombre */}
-                <ThemedText type="small" themeColor="textSecondary" style={{ fontWeight: '600', marginBottom: 6 }}>
-                  Nombre *
-                </ThemedText>
-                <TextInput
-                  value={formName}
-                  onChangeText={setFormName}
-                  placeholder="Ej: Netflix, Internet, Alquiler..."
-                  placeholderTextColor={themeColors.textSecondary}
-                  style={{
-                    backgroundColor: themeColors.surface,
-                    borderRadius: 12,
-                    padding: 14,
-                    fontSize: 16,
-                    color: themeColors.text,
-                    marginBottom: 16,
-                    ...shadows.sm,
-                  }}
-                />
-
-                {/* Descripción */}
-                <ThemedText type="small" themeColor="textSecondary" style={{ fontWeight: '600', marginBottom: 6 }}>
-                  Descripción
-                </ThemedText>
-                <TextInput
-                  value={formDescription}
-                  onChangeText={setFormDescription}
-                  placeholder="Descripción opcional"
-                  placeholderTextColor={themeColors.textSecondary}
-                  style={{
-                    backgroundColor: themeColors.surface,
-                    borderRadius: 12,
-                    padding: 14,
-                    fontSize: 16,
-                    color: themeColors.text,
-                    marginBottom: 16,
-                    ...shadows.sm,
-                  }}
-                />
-
-                {/* Montos */}
-                <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
-                  <View style={{ flex: 1 }}>
-                    <ThemedText type="small" themeColor="textSecondary" style={{ fontWeight: '600', marginBottom: 6 }}>
-                      Monto USD
-                    </ThemedText>
-                    <TextInput
-                      value={formAmountUSD}
-                      onChangeText={setFormAmountUSD}
-                      placeholder="0.00"
-                      placeholderTextColor={themeColors.textSecondary}
-                      keyboardType="decimal-pad"
-                      style={{
-                        backgroundColor: themeColors.surface,
-                        borderRadius: 12,
-                        padding: 14,
-                        fontSize: 16,
-                        color: themeColors.text,
-                        ...shadows.sm,
-                      }}
-                    />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <ThemedText type="small" themeColor="textSecondary" style={{ fontWeight: '600', marginBottom: 6 }}>
-                      Monto BS
-                    </ThemedText>
-                    <TextInput
-                      value={formAmountBS}
-                      onChangeText={setFormAmountBS}
-                      placeholder="0.00"
-                      placeholderTextColor={themeColors.textSecondary}
-                      keyboardType="decimal-pad"
-                      style={{
-                        backgroundColor: themeColors.surface,
-                        borderRadius: 12,
-                        padding: 14,
-                        fontSize: 16,
-                        color: themeColors.text,
-                        ...shadows.sm,
-                      }}
-                    />
-                  </View>
-                </View>
-
-                {/* Moneda */}
-                <ThemedText type="small" themeColor="textSecondary" style={{ fontWeight: '600', marginBottom: 6 }}>
-                  Moneda
-                </ThemedText>
-                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
-                  {(['USD', 'BS', 'BOTH'] as CurrencyType[]).map((cur) => (
-                    <TouchableOpacity
-                      key={cur}
-                      onPress={() => setFormCurrency(cur)}
-                      accessibilityLabel={`Seleccionar moneda ${cur === 'USD' ? 'USD' : cur === 'BS' ? 'Bolívares' : 'Ambas'}`}
-                      style={{
-                        flex: 1,
-                        paddingVertical: 10,
-                        borderRadius: 12,
-                        backgroundColor: formCurrency === cur ? themeColors.primary : themeColors.surface,
-                        alignItems: 'center',
-                        borderWidth: 1,
-                        borderColor: formCurrency === cur ? themeColors.primary : themeColors.border,
-                      }}>
-                      <ThemedText type="buttonSmall" color={formCurrency === cur ? '#FFFFFF' : themeColors.textSecondary}>
-                        {cur === 'USD' ? 'USD' : cur === 'BS' ? 'BS' : 'Ambas'}
-                      </ThemedText>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
-                {/* Categoría */}
-                <ThemedText type="small" themeColor="textSecondary" style={{ fontWeight: '600', marginBottom: 6 }}>
-                  Categoría *
-                </ThemedText>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
-                  <View style={{ flexDirection: 'row', gap: 8 }}>
-                    {categories.map((cat) => (
-                      <TouchableOpacity
-                        key={cat.id}
-                        onPress={() => setFormCategoryId(cat.id)}
-                        accessibilityLabel={`Seleccionar categoría ${cat.name}`}
-                        style={{
-                          paddingHorizontal: 16,
-                          paddingVertical: 10,
+            {/* Subscription Cards */}
+            <View style={{ paddingHorizontal: 24, gap: 12 }}>
+              {subscriptions.map((sub) => {
+                const status = getStatusInfo(sub);
+                return (
+                  <TouchableOpacity
+                    key={sub.id}
+                    onPress={() => openEditModal(sub.id)}
+                    onLongPress={() => handleDelete(sub)}
+                    accessibilityLabel={`Suscripción: ${sub.name}`}
+                    activeOpacity={0.7}
+                    style={{
+                      backgroundColor: themeColors.surfaceContainer,
+                      borderRadius: 16,
+                      padding: 20,
+                      borderLeftWidth: 4,
+                      borderLeftColor: status.borderColor,
+                      borderWidth: 1,
+                      borderColor: themeColors.outlineVariant + '30',
+                      opacity: sub.isActive ? 1 : 0.75,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+                        <View style={{
+                          width: 48,
+                          height: 48,
                           borderRadius: 12,
-                          backgroundColor: formCategoryId === cat.id ? cat.color + '30' : themeColors.surface,
-                          borderWidth: 1,
-                          borderColor: formCategoryId === cat.id ? cat.color : themeColors.border,
+                          backgroundColor: themeColors.surfaceVariant,
+                          justifyContent: 'center',
+                          alignItems: 'center',
                         }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                          <Ionicons name={(cat.icon as any) || 'cube-outline'} size={16} color={formCategoryId === cat.id ? cat.color : themeColors.text} />
-                          <ThemedText type="body" color={formCategoryId === cat.id ? cat.color : themeColors.text}>
-                            {cat.name}
+                          <Ionicons
+                            name={sub.name.toLowerCase().includes('netflix') ? 'film' :
+                              sub.name.toLowerCase().includes('spotify') ? 'musical-notes' :
+                              sub.name.toLowerCase().includes('disney') ? 'tv' :
+                              sub.name.toLowerCase().includes('hbo') ? 'play-circle' :
+                              sub.name.toLowerCase().includes('amazon') ? 'cube' :
+                              sub.name.toLowerCase().includes('youtube') ? 'logo-youtube' :
+                              sub.name.toLowerCase().includes('internet') || sub.name.toLowerCase().includes('wifi') ? 'wifi' :
+                              sub.name.toLowerCase().includes('móvil') || sub.name.toLowerCase().includes('celular') || sub.name.toLowerCase().includes('phone') ? 'phone-portrait' :
+                              'card-outline'}
+                            size={22}
+                            color={themeColors.text}
+                          />
+                        </View>
+                        <View>
+                          <ThemedText type="body" themeColor="text" style={{ fontWeight: '600' }}>
+                            {sub.name}
+                          </ThemedText>
+                          {sub.description && (
+                            <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ marginTop: 2 }}>
+                              {sub.description}
+                            </ThemedText>
+                          )}
+                        </View>
+                      </View>
+                      <View style={{
+                        paddingHorizontal: 8,
+                        paddingVertical: 4,
+                        borderRadius: 999,
+                        backgroundColor: status.badgeBg,
+                      }}>
+                        <ThemedText type="caption" color={status.badgeColor} style={{ fontWeight: '600', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                          {status.badgeLabel}
+                        </ThemedText>
+                      </View>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                      <View>
+                        <ThemedText type="h3" themeColor="text" style={{ fontWeight: '700' }}>
+                          {sub.amountUSD ? formatUSD(sub.amountUSD) : ''}
+                          {sub.amountUSD && sub.amountBS ? ' / ' : ''}
+                          {sub.amountBS ? formatBS(sub.amountBS) : ''}
+                          <ThemedText type="caption" themeColor="onSurfaceVariant">
+                            /mes
+                          </ThemedText>
+                        </ThemedText>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                          <Ionicons name={status.statusIcon as any} size={14} color={status.statusColor} />
+                          <ThemedText type="caption" color={status.statusColor} style={{ fontSize: 12 }}>
+                            {status.statusText}
                           </ThemedText>
                         </View>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </ScrollView>
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        {/* Toggle Switch */}
+                        <TouchableOpacity
+                          onPress={() => handleToggleActive(sub)}
+                          style={{
+                            width: 40,
+                            height: 24,
+                            borderRadius: 12,
+                            backgroundColor: sub.isActive ? themeColors.secondary + '60' : themeColors.surfaceContainerHigh,
+                            justifyContent: 'center',
+                            paddingHorizontal: 2,
+                          }}
+                        >
+                          <View style={{
+                            width: 20,
+                            height: 20,
+                            borderRadius: 10,
+                            backgroundColor: sub.isActive ? themeColors.secondary : themeColors.onSurfaceVariant,
+                            alignSelf: sub.isActive ? 'flex-end' : 'flex-start',
+                          }} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => handleDelete(sub)}
+                          accessibilityLabel={`Eliminar ${sub.name}`}
+                        >
+                          <Ionicons name="trash-outline" size={20} color={themeColors.onSurfaceVariant} />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </>
+        )}
+      </ScrollView>
 
-                {/* Cuenta */}
-                <ThemedText type="small" themeColor="textSecondary" style={{ fontWeight: '600', marginBottom: 6 }}>
-                  Cuenta *
+      {/* Modal de creación/edición */}
+      <Modal visible={showModal} animationType="slide" presentationStyle="pageSheet">
+        <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={{ flex: 1 }}>
+            <ScrollView contentContainerStyle={{ padding: 20 }}>
+              {/* Header del modal */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                <ThemedText type="h2" themeColor="text">
+                  {editingId ? 'Editar suscripción' : 'Nueva suscripción'}
                 </ThemedText>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
-                  <View style={{ flexDirection: 'row', gap: 8 }}>
-                    {accounts.filter((a) => a.isActive).map((acc) => (
-                      <TouchableOpacity
-                        key={acc.id}
-                        onPress={() => setFormAccountId(acc.id)}
-                        accessibilityLabel={`Seleccionar cuenta ${acc.name}`}
-                        style={{
-                          paddingHorizontal: 16,
-                          paddingVertical: 10,
-                          borderRadius: 12,
-                          backgroundColor: formAccountId === acc.id ? acc.color + '30' : themeColors.surface,
-                          borderWidth: 1,
-                          borderColor: formAccountId === acc.id ? acc.color : themeColors.border,
-                        }}>
-                        <ThemedText type="body" color={formAccountId === acc.id ? acc.color : themeColors.text}>
-                          {acc.name}
-                        </ThemedText>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </ScrollView>
+                <TouchableOpacity onPress={() => setShowModal(false)} accessibilityLabel="Cerrar modal">
+                  <Ionicons name="close" size={28} color={themeColors.textSecondary} />
+                </TouchableOpacity>
+              </View>
 
-                {/* Frecuencia */}
-                <ThemedText type="small" themeColor="textSecondary" style={{ fontWeight: '600', marginBottom: 6 }}>
-                  Frecuencia
-                </ThemedText>
-                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
-                  {FREQUENCIES.map((f) => (
+              {/* Plantillas rápidas */}
+              {!editingId && (
+                <>
+                  <ThemedText type="small" themeColor="onSurfaceVariant" style={{ fontWeight: '600', marginBottom: 8 }}>
+                    Plantillas rápidas
+                  </ThemedText>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                      {SUBSCRIPTION_TEMPLATES.map((template, index) => (
+                        <TouchableOpacity
+                          key={index}
+                          onPress={() => selectTemplate(template)}
+                          accessibilityLabel={`Seleccionar plantilla ${template.name}`}
+                          style={{
+                            backgroundColor: themeColors.surfaceContainer,
+                            borderRadius: 12,
+                            padding: 12,
+                            minWidth: 100,
+                            alignItems: 'center',
+                            borderWidth: 1,
+                            borderColor: themeColors.outlineVariant + '50',
+                          }}>
+                          <Ionicons
+                            name={template.icon as any}
+                            size={24}
+                            color={themeColors.secondary}
+                            style={{ marginBottom: 6 }}
+                          />
+                          <ThemedText type="small" themeColor="text" style={{ fontWeight: '600', textAlign: 'center' }}>
+                            {template.name}
+                          </ThemedText>
+                          {template.amountUSD !== null && (
+                            <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ marginTop: 2 }}>
+                              {formatUSD(template.amountUSD)}
+                            </ThemedText>
+                          )}
+                          {template.amountBS !== null && (
+                            <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ marginTop: 2 }}>
+                              {formatBS(template.amountBS)}
+                            </ThemedText>
+                          )}
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </ScrollView>
+                </>
+              )}
+
+              {/* Nombre */}
+              <ThemedText type="small" themeColor="onSurfaceVariant" style={{ fontWeight: '600', marginBottom: 6 }}>
+                Nombre *
+              </ThemedText>
+              <TextInput
+                value={formName}
+                onChangeText={setFormName}
+                placeholder="Ej: Netflix, Internet, Alquiler..."
+                placeholderTextColor={themeColors.onSurfaceVariant}
+                style={{
+                  backgroundColor: themeColors.surfaceContainer,
+                  borderRadius: 12,
+                  padding: 14,
+                  fontSize: 16,
+                  color: themeColors.text,
+                  marginBottom: 16,
+                  borderWidth: 1,
+                  borderColor: themeColors.outlineVariant + '50',
+                }}
+              />
+
+              {/* Descripción */}
+              <ThemedText type="small" themeColor="onSurfaceVariant" style={{ fontWeight: '600', marginBottom: 6 }}>
+                Descripción
+              </ThemedText>
+              <TextInput
+                value={formDescription}
+                onChangeText={setFormDescription}
+                placeholder="Descripción opcional"
+                placeholderTextColor={themeColors.onSurfaceVariant}
+                style={{
+                  backgroundColor: themeColors.surfaceContainer,
+                  borderRadius: 12,
+                  padding: 14,
+                  fontSize: 16,
+                  color: themeColors.text,
+                  marginBottom: 16,
+                  borderWidth: 1,
+                  borderColor: themeColors.outlineVariant + '50',
+                }}
+              />
+
+              {/* Montos */}
+              <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+                <View style={{ flex: 1 }}>
+                  <ThemedText type="small" themeColor="onSurfaceVariant" style={{ fontWeight: '600', marginBottom: 6 }}>
+                    Monto USD
+                  </ThemedText>
+                  <TextInput
+                    value={formAmountUSD}
+                    onChangeText={setFormAmountUSD}
+                    placeholder="0.00"
+                    placeholderTextColor={themeColors.onSurfaceVariant}
+                    keyboardType="decimal-pad"
+                    style={{
+                      backgroundColor: themeColors.surfaceContainer,
+                      borderRadius: 12,
+                      padding: 14,
+                      fontSize: 16,
+                      color: themeColors.text,
+                      borderWidth: 1,
+                      borderColor: themeColors.outlineVariant + '50',
+                    }}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <ThemedText type="small" themeColor="onSurfaceVariant" style={{ fontWeight: '600', marginBottom: 6 }}>
+                    Monto BS
+                  </ThemedText>
+                  <TextInput
+                    value={formAmountBS}
+                    onChangeText={setFormAmountBS}
+                    placeholder="0.00"
+                    placeholderTextColor={themeColors.onSurfaceVariant}
+                    keyboardType="decimal-pad"
+                    style={{
+                      backgroundColor: themeColors.surfaceContainer,
+                      borderRadius: 12,
+                      padding: 14,
+                      fontSize: 16,
+                      color: themeColors.text,
+                      borderWidth: 1,
+                      borderColor: themeColors.outlineVariant + '50',
+                    }}
+                  />
+                </View>
+              </View>
+
+              {/* Moneda */}
+              <ThemedText type="small" themeColor="onSurfaceVariant" style={{ fontWeight: '600', marginBottom: 6 }}>
+                Moneda
+              </ThemedText>
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+                {(['USD', 'BS', 'BOTH'] as CurrencyType[]).map((cur) => (
+                  <TouchableOpacity
+                    key={cur}
+                    onPress={() => setFormCurrency(cur)}
+                    accessibilityLabel={`Seleccionar moneda ${cur === 'USD' ? 'USD' : cur === 'BS' ? 'Bolívares' : 'Ambas'}`}
+                    style={{
+                      flex: 1,
+                      paddingVertical: 10,
+                      borderRadius: 12,
+                      backgroundColor: formCurrency === cur ? themeColors.secondaryContainer + '33' : themeColors.surfaceContainer,
+                      alignItems: 'center',
+                      borderWidth: 1,
+                      borderColor: formCurrency === cur ? themeColors.secondary : themeColors.outlineVariant + '50',
+                    }}>
+                    <ThemedText type="buttonSmall" themeColor={formCurrency === cur ? 'secondary' : 'onSurfaceVariant'}>
+                      {cur === 'USD' ? 'USD' : cur === 'BS' ? 'BS' : 'Ambas'}
+                    </ThemedText>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Categoría */}
+              <ThemedText type="small" themeColor="onSurfaceVariant" style={{ fontWeight: '600', marginBottom: 6 }}>
+                Categoría *
+              </ThemedText>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  {categories.map((cat) => (
                     <TouchableOpacity
-                      key={f.key}
-                      onPress={() => setFormFrequency(f.key)}
-                      accessibilityLabel={`Frecuencia: ${f.label}`}
+                      key={cat.id}
+                      onPress={() => setFormCategoryId(cat.id)}
+                      accessibilityLabel={`Seleccionar categoría ${cat.name}`}
                       style={{
-                        flex: 1,
+                        paddingHorizontal: 16,
                         paddingVertical: 10,
                         borderRadius: 12,
-                        backgroundColor: formFrequency === f.key ? themeColors.primary : themeColors.surface,
-                        alignItems: 'center',
+                        backgroundColor: formCategoryId === cat.id ? cat.color + '30' : themeColors.surfaceContainer,
                         borderWidth: 1,
-                        borderColor: formFrequency === f.key ? themeColors.primary : themeColors.border,
+                        borderColor: formCategoryId === cat.id ? cat.color : themeColors.outlineVariant + '50',
                       }}>
-                      <ThemedText type="buttonSmall" color={formFrequency === f.key ? '#FFFFFF' : themeColors.textSecondary}>
-                        {f.label}
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <Ionicons name={getIcon(cat.icon)} size={16} color={formCategoryId === cat.id ? cat.color : themeColors.text} />
+                        <ThemedText type="body" color={formCategoryId === cat.id ? cat.color : themeColors.text}>
+                          {cat.name}
+                        </ThemedText>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+
+              {/* Cuenta */}
+              <ThemedText type="small" themeColor="onSurfaceVariant" style={{ fontWeight: '600', marginBottom: 6 }}>
+                Cuenta *
+              </ThemedText>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  {accounts.filter((a) => a.isActive).map((acc) => (
+                    <TouchableOpacity
+                      key={acc.id}
+                      onPress={() => setFormAccountId(acc.id)}
+                      accessibilityLabel={`Seleccionar cuenta ${acc.name}`}
+                      style={{
+                        paddingHorizontal: 16,
+                        paddingVertical: 10,
+                        borderRadius: 12,
+                        backgroundColor: formAccountId === acc.id ? acc.color + '30' : themeColors.surfaceContainer,
+                        borderWidth: 1,
+                        borderColor: formAccountId === acc.id ? acc.color : themeColors.outlineVariant + '50',
+                      }}>
+                      <ThemedText type="body" color={formAccountId === acc.id ? acc.color : themeColors.text}>
+                        {acc.name}
                       </ThemedText>
                     </TouchableOpacity>
                   ))}
                 </View>
+              </ScrollView>
 
-                {/* Día de cobro */}
-                <ThemedText type="small" themeColor="textSecondary" style={{ fontWeight: '600', marginBottom: 6 }}>
-                  Día de cobro
-                </ThemedText>
-                <TextInput
-                  value={formBillingDay}
-                  onChangeText={setFormBillingDay}
-                  placeholder="1-31"
-                  placeholderTextColor={themeColors.textSecondary}
-                  keyboardType="number-pad"
-                  style={{
-                    backgroundColor: themeColors.surface,
-                    borderRadius: 12,
-                    padding: 14,
-                    fontSize: 16,
-                    color: themeColors.text,
-                    marginBottom: 16,
-                    borderWidth: 1,
-                    borderColor: themeColors.border,
-                  }}
-                />
-
-                {/* Intervalo personalizado (solo si frecuencia = custom) */}
-                {formFrequency === 'custom' && (
-                  <>
-                    <ThemedText type="small" themeColor="textSecondary" style={{ fontWeight: '600', marginBottom: 6 }}>
-                      Intervalo (días)
+              {/* Frecuencia */}
+              <ThemedText type="small" themeColor="onSurfaceVariant" style={{ fontWeight: '600', marginBottom: 6 }}>
+                Frecuencia
+              </ThemedText>
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+                {FREQUENCIES.map((freq) => (
+                  <TouchableOpacity
+                    key={freq.key}
+                    onPress={() => setFormFrequency(freq.key)}
+                    accessibilityLabel={`Frecuencia ${freq.label}`}
+                    style={{
+                      flex: 1,
+                      paddingVertical: 10,
+                      borderRadius: 12,
+                      backgroundColor: formFrequency === freq.key ? themeColors.secondaryContainer + '33' : themeColors.surfaceContainer,
+                      alignItems: 'center',
+                      borderWidth: 1,
+                      borderColor: formFrequency === freq.key ? themeColors.secondary : themeColors.outlineVariant + '50',
+                    }}>
+                    <ThemedText type="buttonSmall" themeColor={formFrequency === freq.key ? 'secondary' : 'onSurfaceVariant'}>
+                      {freq.label}
                     </ThemedText>
-                    <TextInput
-                      value={formIntervalDays}
-                      onChangeText={setFormIntervalDays}
-                      placeholder="30"
-                      placeholderTextColor={themeColors.textSecondary}
-                      keyboardType="number-pad"
-                      style={{
-                        backgroundColor: themeColors.surface,
-                        borderRadius: 12,
-                        padding: 14,
-                        fontSize: 16,
-                        color: themeColors.text,
-                        marginBottom: 16,
-                        borderWidth: 1,
-                        borderColor: themeColors.border,
-                      }}
-                    />
-                  </>
-                )}
+                  </TouchableOpacity>
+                ))}
+              </View>
 
-                {/* Auto-generar */}
-                <View style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  backgroundColor: themeColors.surface,
+              {/* Días de intervalo (custom) */}
+              {formFrequency === 'custom' && (
+                <>
+                  <ThemedText type="small" themeColor="onSurfaceVariant" style={{ fontWeight: '600', marginBottom: 6 }}>
+                    Días entre pagos
+                  </ThemedText>
+                  <TextInput
+                    value={formIntervalDays}
+                    onChangeText={setFormIntervalDays}
+                    placeholder="30"
+                    placeholderTextColor={themeColors.onSurfaceVariant}
+                    keyboardType="number-pad"
+                    style={{
+                      backgroundColor: themeColors.surfaceContainer,
+                      borderRadius: 12,
+                      padding: 14,
+                      fontSize: 16,
+                      color: themeColors.text,
+                      marginBottom: 16,
+                      borderWidth: 1,
+                      borderColor: themeColors.outlineVariant + '50',
+                    }}
+                  />
+                </>
+              )}
+
+              {/* Día de facturación */}
+              {formFrequency === 'monthly' && (
+                <>
+                  <ThemedText type="small" themeColor="onSurfaceVariant" style={{ fontWeight: '600', marginBottom: 6 }}>
+                    Día de facturación
+                  </ThemedText>
+                  <TextInput
+                    value={formBillingDay}
+                    onChangeText={setFormBillingDay}
+                    placeholder="15"
+                    placeholderTextColor={themeColors.onSurfaceVariant}
+                    keyboardType="number-pad"
+                    style={{
+                      backgroundColor: themeColors.surfaceContainer,
+                      borderRadius: 12,
+                      padding: 14,
+                      fontSize: 16,
+                      color: themeColors.text,
+                      marginBottom: 16,
+                      borderWidth: 1,
+                      borderColor: themeColors.outlineVariant + '50',
+                    }}
+                  />
+                </>
+              )}
+
+              {/* Auto-generar transacciones */}
+              <View style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 16,
+                paddingVertical: 12,
+                paddingHorizontal: 16,
+                backgroundColor: themeColors.surfaceContainer,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: themeColors.outlineVariant + '50',
+              }}>
+                <View style={{ flex: 1 }}>
+                  <ThemedText type="body" themeColor="text" style={{ fontWeight: '600' }}>
+                    Auto-generar transacciones
+                  </ThemedText>
+                  <ThemedText type="caption" themeColor="onSurfaceVariant">
+                    Crear automáticamente al vencer
+                  </ThemedText>
+                </View>
+                <Switch
+                  value={formAutoGenerate}
+                  onValueChange={setFormAutoGenerate}
+                  trackColor={{ false: themeColors.surfaceContainerHighest, true: themeColors.secondary + '60' }}
+                  thumbColor={formAutoGenerate ? themeColors.secondary : themeColors.outline}
+                />
+              </View>
+
+              {/* Notas */}
+              <ThemedText type="small" themeColor="onSurfaceVariant" style={{ fontWeight: '600', marginBottom: 6 }}>
+                Notas
+              </ThemedText>
+              <TextInput
+                value={formNotes}
+                onChangeText={setFormNotes}
+                placeholder="Notas adicionales..."
+                placeholderTextColor={themeColors.onSurfaceVariant}
+                multiline
+                numberOfLines={3}
+                style={{
+                  backgroundColor: themeColors.surfaceContainer,
                   borderRadius: 12,
                   padding: 14,
-                  marginBottom: 16,
+                  fontSize: 16,
+                  color: themeColors.text,
+                  marginBottom: 24,
                   borderWidth: 1,
-                  borderColor: themeColors.border,
+                  borderColor: themeColors.outlineVariant + '50',
+                  minHeight: 80,
+                  textAlignVertical: 'top',
+                }}
+              />
+
+              {/* Botón guardar */}
+              <TouchableOpacity
+                onPress={handleSave}
+                disabled={saving}
+                accessibilityLabel="Guardar suscripción"
+                style={{
+                  backgroundColor: themeColors.secondary,
+                  borderRadius: 14,
+                  paddingVertical: 16,
+                  alignItems: 'center',
+                  marginBottom: 40,
+                  opacity: saving ? 0.6 : 1,
                 }}>
-                  <View style={{ flex: 1 }}>
-                    <ThemedText type="body" themeColor="text" style={{ fontWeight: '500' }}>
-                      Generar transacción automáticamente
-                    </ThemedText>
-                    <ThemedText type="small" themeColor="textSecondary" style={{ marginTop: 2 }}>
-                      Si está activo, se creará un gasto automático en la fecha de cobro
-                    </ThemedText>
-                  </View>
-                  <Switch
-                    value={formAutoGenerate}
-                    onValueChange={setFormAutoGenerate}
-                    trackColor={{ false: themeColors.border, true: themeColors.primary + '60' }}
-                    thumbColor={formAutoGenerate ? themeColors.primary : '#999'}
-                  />
-                </View>
-
-                {/* Notas */}
-                <ThemedText type="small" themeColor="textSecondary" style={{ fontWeight: '600', marginBottom: 6 }}>
-                  Notas
-                </ThemedText>
-                <TextInput
-                  value={formNotes}
-                  onChangeText={setFormNotes}
-                  placeholder="Notas adicionales..."
-                  placeholderTextColor={themeColors.textSecondary}
-                  multiline
-                  numberOfLines={3}
-                  style={{
-                    backgroundColor: themeColors.surface,
-                    borderRadius: 12,
-                    padding: 14,
-                    fontSize: 16,
-                    color: themeColors.text,
-                    marginBottom: 24,
-                    borderWidth: 1,
-                    borderColor: themeColors.border,
-                    minHeight: 80,
-                    textAlignVertical: 'top',
-                  }}
-                />
-
-                {/* Botón guardar */}
-                <TouchableOpacity
-                  onPress={handleSave}
-                  disabled={saving}
-                  accessibilityLabel={editingId ? 'Actualizar suscripción' : 'Crear suscripción'}
-                  style={{
-                    backgroundColor: themeColors.primary,
-                    borderRadius: 16,
-                    padding: 16,
-                    alignItems: 'center',
-                    opacity: saving ? 0.6 : 1,
-                  }}>
-                  {saving ? (
-                    <ActivityIndicator color="#FFFFFF" />
-                  ) : (
-                    <ThemedText type="body" color="#FFFFFF" style={{ fontWeight: '700' }}>
-                      {editingId ? 'Actualizar suscripción' : 'Crear suscripción'}
-                    </ThemedText>
-                  )}
-                </TouchableOpacity>
-              </ScrollView>
-            </KeyboardAvoidingView>
-          </SafeAreaView>
-        </Modal>
+                {saving ? (
+                  <ActivityIndicator color={themeColors.background} />
+                ) : (
+                  <ThemedText type="button" color={themeColors.background} style={{ fontWeight: '700' }}>
+                    {editingId ? 'Actualizar suscripción' : 'Crear suscripción'}
+                  </ThemedText>
+                )}
+              </TouchableOpacity>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }

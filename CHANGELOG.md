@@ -1,5 +1,31 @@
 # Changelog
 
+## v2.5.0 (2026-07-17)
+
+### 🐛 Fase 6 — Correcciones y Mejoras en Reportes
+
+#### Corrección: Gráfico de torta (donut) no renderizaba correctamente
+- **Archivo:** [`src/components/PieChartInteractive.tsx`](src/components/PieChartInteractive.tsx)
+- Se corrigió la función `describeArc` para manejar ángulos de 360° (círculo completo). SVG no puede dibujar un arco completo con un solo comando `A`, por lo que se partió en dos arcos de 180°.
+- Se agregó la prop `showLegend` (default `true`) para ocultar la leyenda del componente cuando el consumidor tiene su propia lista.
+- Se agregó protección `innerR = Math.min(innerRadius, outerR * 0.85)` para evitar que el agujero de la dona sea más grande que el gráfico.
+
+#### Corrección: Duplicación de leyenda en gráfico de torta
+- **Archivo:** [`app/(tabs)/reports.tsx`](app/(tabs)/reports.tsx)
+- Se pasó `showLegend={false}` al `PieChartInteractive` para evitar duplicación con la lista "Top 8 Categorías".
+
+#### Corrección: Cálculo de porcentajes mezclando USD y BS
+- **Archivo:** [`app/(tabs)/reports.tsx`](app/(tabs)/reports.tsx)
+- Se corrigió el cálculo de `pieSlices` para usar `cat.percentage` del servicio (que ya convierte BS→USD) en lugar de recalcularlo mezclando valores sin conversión.
+
+#### Corrección: Tarjetas de resumen no mostraban valores en BS
+- **Archivo:** [`app/(tabs)/reports.tsx`](app/(tabs)/reports.tsx)
+- Las tarjetas de Ingresos, Gastos y Neto ahora muestran el valor combinado: si hay USD muestra USD, si no convierte BS/100 como tasa aproximada.
+
+#### Corrección: Iconos emoji no válidos para Ionicons
+- **Archivos:** `app/(tabs)/reports.tsx`, `app/(tabs)/transactions.tsx`, `app/(tabs)/budgets.tsx`, `app/(tabs)/subscriptions.tsx`
+- Se agregó mapeo `EMOJI_TO_ICON` (40+ emojis → Ionicons) y función `getIcon()` en los 4 archivos para evitar warnings `"🍔" is not a valid icon name`.
+
 ## v2.3.0 (2026-07-09)
 
 ### 🤖 Fase 4 — Agente Inteligente (Valor Agregado)

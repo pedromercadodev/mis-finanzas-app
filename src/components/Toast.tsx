@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { Text, TouchableOpacity, Platform } from 'react-native';
+import { Text, TouchableOpacity, Platform, View } from 'react-native';
 import Animated, {
   useSharedValue,
   withTiming,
@@ -9,6 +9,7 @@ import Animated, {
   Easing,
   interpolate,
   Extrapolation,
+  useDerivedValue,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,7 +17,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { shadows } from '../theme/shadows';
 
-type ToastType = 'success' | 'error' | 'info';
+export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
 interface ToastProps {
   message: string;
@@ -26,7 +27,7 @@ interface ToastProps {
   onDismiss: () => void;
 }
 
-const TOAST_HEIGHT = 60;
+const TOAST_HEIGHT = 64;
 
 /**
  * Curva custom cubic-bezier(0.16, 1, 0.3, 1) — "emphasized ease"
@@ -37,16 +38,18 @@ const ICON_MAP: Record<ToastType, keyof typeof Ionicons.glyphMap> = {
   success: 'checkmark-circle',
   error: 'alert-circle',
   info: 'information-circle',
+  warning: 'warning',
 };
 
 const BG_MAP: Record<ToastType, string> = {
   success: '#059669',
   error: '#DC2626',
   info: '#2563EB',
+  warning: '#D97706',
 };
 
 /**
- * Toast — notificación con gesto de swipe-to-dismiss.
+ * Toast — notificación con gesto de swipe-to-dismiss y barra de progreso.
  *
  * Principios aplicados:
  * - Emil §3: multi-layer shadow (shadows.xl + shadow tintada), sin bordes
@@ -67,10 +70,17 @@ export default function Toast({
   const translateY = useSharedValue(120);
   const opacity = useSharedValue(0);
   const scale = useSharedValue(0.85);
+  const progress = useSharedValue(1);
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const progressStart = useRef<number>(0);
 
   const startDismissTimer = useCallback(() => {
     if (dismissTimer.current) clearTimeout(dismissTimer.current);
+    progressStart.current = Date.now();
+    progress.value = withTiming(0, {
+      duration,
+      easing: Easing.linear,
+    });
     dismissTimer.current = setTimeout(() => {
       translateY.value = withTiming(120, {
         duration: 200,
@@ -80,17 +90,45 @@ export default function Toast({
         runOnJS(onDismiss)();
       });
     }, duration);
-  }, [duration, onDismiss, translateY, opacity]);
+  }, [duration, onDismiss, translateY, opacity, progress]);
 
   const cancelDismissTimer = useCallback(() => {
     if (dismissTimer.current) {
       clearTimeout(dismissTimer.current);
       dismissTimer.current = null;
     }
-  }, []);
+    // Pausar la barra de progreso
+    const elapsed = Date.now() - progressStart.current;
+    const remaining = Math.max(0, 1 - elapsed / duration);
+    progress.value = remaining;
+  }, [duration, progress]);
+
+  const resumeDismissTimer = useCallback(() => {
+    if (dismissTimer.current) return;
+    const elapsed = Date.now() - progressStart.current;
+    const remaining = Math.max(0, duration - elapsed);
+    if (remaining <= 0) {
+      runOnJS(onDismiss)();
+      return;
+    }
+    progress.value = withTiming(0, {
+      duration: remaining,
+      easing: Easing.linear,
+    });
+    dismissTimer.current = setTimeout(() => {
+      translateY.value = withTiming(120, {
+        duration: 200,
+        easing: CUSTOM_EASING,
+      }, () => {
+        opacity.value = 0;
+        runOnJS(onDismiss)();
+      });
+    }, remaining);
+  }, [duration, onDismiss, translateY, opacity, progress]);
 
   useEffect(() => {
     if (visible) {
+      progress.value = 1;
       if (reducedMotion) {
         translateY.value = 0;
         opacity.value = 1;
@@ -110,6 +148,7 @@ export default function Toast({
       translateY.value = 120;
       opacity.value = 0;
       scale.value = 0.85;
+      progress.value = 1;
       cancelDismissTimer();
     }
     return () => cancelDismissTimer();
@@ -152,6 +191,16 @@ export default function Toast({
       }
     });
 
+  const tapGesture = Gesture.Tap()
+    .onBegin(() => {
+      runOnJS(cancelDismissTimer)();
+    })
+    .onEnd(() => {
+      runOnJS(resumeDismissTimer)();
+    });
+
+  const composedGesture = Gesture.Exclusive(panGesture, tapGesture);
+
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
       { translateY: translateY.value },
@@ -160,10 +209,14 @@ export default function Toast({
     opacity: opacity.value,
   }));
 
+  const progressBarStyle = useAnimatedStyle(() => ({
+    width: `${progress.value * 100}%`,
+  }));
+
   if (!visible) return null;
 
   return (
-    <GestureDetector gesture={panGesture}>
+    <GestureDetector gesture={composedGesture}>
       <Animated.View
         style={[
           {
@@ -171,13 +224,16 @@ export default function Toast({
             bottom: 100,
             left: 16,
             right: 16,
-            height: TOAST_HEIGHT,
+            minHeight: TOAST_HEIGHT,
             backgroundColor: BG_MAP[type],
             borderRadius: 16,
             flexDirection: 'row',
             alignItems: 'center',
             paddingHorizontal: 16,
+            paddingTop: 14,
+            paddingBottom: 18,
             gap: 10,
+            overflow: 'hidden',
             // Multi-layer shadow: sombra base + tintada
             ...shadows.xl,
             // Sombra tintada adicional para profundidad extra
@@ -214,6 +270,21 @@ export default function Toast({
         >
           <Ionicons name="close" size={20} color="rgba(255,255,255,0.8)" />
         </TouchableOpacity>
+
+        {/* Barra de progreso */}
+        <Animated.View
+          style={[
+            {
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              height: 3,
+              backgroundColor: 'rgba(255,255,255,0.35)',
+              borderBottomLeftRadius: 16,
+            },
+            progressBarStyle,
+          ]}
+        />
       </Animated.View>
     </GestureDetector>
   );

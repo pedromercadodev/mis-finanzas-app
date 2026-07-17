@@ -94,7 +94,7 @@ export default function SegmentedControl<T extends string>({
             top: 3,
             bottom: 3,
             borderRadius: 10,
-            backgroundColor: themeColors.primary,
+            backgroundColor: themeColors.secondary,
             ...shadows.inner,
           },
           indicatorStyle,
@@ -129,7 +129,7 @@ export default function SegmentedControl<T extends string>({
               style={{
                 fontSize: 13,
                 fontWeight: isSelected ? '700' : '500',
-                color: isSelected ? '#FFF' : themeColors.textSecondary,
+                color: isSelected ? themeColors.background : themeColors.textSecondary,
               }}
               numberOfLines={1}
             >
