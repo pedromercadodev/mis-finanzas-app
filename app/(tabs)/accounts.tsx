@@ -87,7 +87,7 @@ export default function AccountsScreen() {
     }
     // Mapear emojis a Ionicons
     const emojiMap: Record<string, string> = {
-      '🏦': 'account-balance-outline',
+      '🏦': 'business-outline',
       '💳': 'card-outline',
       '💵': 'cash-outline',
       '🌐': 'globe-outline',
@@ -122,7 +122,7 @@ export default function AccountsScreen() {
     };
     if (icon && emojiMap[icon]) return emojiMap[icon] as any;
     // Fallback por tipo de cuenta
-    if (account.type === 'bank') return 'account-balance-outline' as any;
+    if (account.type === 'bank') return 'business-outline' as any;
     if (account.type === 'virtual_card') return 'card-outline' as any;
     if (account.type === 'cash') return 'cash-outline' as any;
     if (account.type === 'exchange') return 'globe-outline' as any;
