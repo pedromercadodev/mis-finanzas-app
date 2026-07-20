@@ -454,13 +454,17 @@ export default function DebtsScreen() {
             }}>
               <View style={{
                 position: 'absolute',
-                right: -50,
-                top: -50,
-                width: 150,
-                height: 150,
-                borderRadius: 75,
-                backgroundColor: themeColors.secondary + '1A',
-                zIndex: 0,
+                right: -40,
+                top: -40,
+                width: 120,
+                height: 120,
+                borderRadius: 60,
+                backgroundColor: themeColors.secondary + '18',
+                shadowColor: themeColors.secondary,
+                shadowOffset: { width: 0, height: 0 },
+                shadowOpacity: 0.3,
+                shadowRadius: 45,
+                elevation: 0,
               }} />
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 }}>
                 <Ionicons name="arrow-down" size={16} color={themeColors.secondary} />
@@ -493,13 +497,17 @@ export default function DebtsScreen() {
             }}>
               <View style={{
                 position: 'absolute',
-                right: -50,
-                top: -50,
-                width: 150,
-                height: 150,
-                borderRadius: 75,
-                backgroundColor: themeColors.danger + '1A',
-                zIndex: 0,
+                right: -40,
+                top: -40,
+                width: 120,
+                height: 120,
+                borderRadius: 60,
+                backgroundColor: themeColors.danger + '18',
+                shadowColor: themeColors.danger,
+                shadowOffset: { width: 0, height: 0 },
+                shadowOpacity: 0.3,
+                shadowRadius: 45,
+                elevation: 0,
               }} />
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 }}>
                 <Ionicons name="arrow-up" size={16} color={themeColors.danger} />

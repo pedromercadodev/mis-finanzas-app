@@ -81,23 +81,51 @@ export default function AccountsScreen() {
 
   const getIconName = (account: any): keyof typeof Ionicons.glyphMap => {
     const icon = account.icon || 'wallet-outline';
-    // Mapear emojis/icons a Ionicons
-    if (icon === '🏦' || account.type === 'bank') return 'account-balance-outline' as any;
-    if (icon === '💳' || account.type === 'virtual_card') return 'card' as any;
-    if (icon === '💵' || account.type === 'cash') return 'cash' as any;
-    if (icon === '🌐' || account.type === 'exchange') return 'globe' as any;
-    if (icon === '🐷') return 'piggy-bank' as any;
-    if (icon === '💰') return 'wallet' as any;
-    if (icon === '🏠') return 'home' as any;
-    if (icon === '📱') return 'phone-portrait' as any;
-    if (icon === '💼') return 'briefcase' as any;
-    if (icon === '⭐') return 'star' as any;
-    if (icon === '🔵') return 'ellipse' as any;
-    if (icon === '🟣') return 'ellipse' as any;
-    if (icon === '🟢') return 'ellipse' as any;
-    if (icon === '🔴') return 'ellipse' as any;
-    if (icon === '🟡') return 'ellipse' as any;
-    if (icon === '🟠') return 'ellipse' as any;
+    // Si ya es un nombre de Ionicons válido, usarlo directamente
+    if (icon && !icon.match(/[\u{1F600}-\u{1F9FF}]|[\u{2600}-\u{27BF}]|[\u{1F000}-\u{1FFFF}]/u)) {
+      return icon as any;
+    }
+    // Mapear emojis a Ionicons
+    const emojiMap: Record<string, string> = {
+      '🏦': 'account-balance-outline',
+      '💳': 'card-outline',
+      '💵': 'cash-outline',
+      '🌐': 'globe-outline',
+      '🐷': 'piggy-bank-outline',
+      '💰': 'wallet-outline',
+      '🏠': 'home-outline',
+      '📱': 'phone-portrait-outline',
+      '💼': 'briefcase-outline',
+      '⭐': 'star-outline',
+      '🔵': 'ellipse',
+      '🟣': 'ellipse',
+      '🟢': 'ellipse',
+      '🔴': 'ellipse',
+      '🟡': 'ellipse',
+      '🟠': 'ellipse',
+      '🏧': 'card-outline',
+      '🎯': 'bulb-outline',
+      '📊': 'bar-chart-outline',
+      '🪙': 'cash-outline',
+      '💎': 'diamond-outline',
+      '🚗': 'car-outline',
+      '✈️': 'airplane-outline',
+      '🎓': 'school-outline',
+      '🛒': 'cart-outline',
+      '🍔': 'fast-food-outline',
+      '🎮': 'game-controller-outline',
+      '👕': 'shirt-outline',
+      '💊': 'medical-outline',
+      '🐕': 'paw-outline',
+      '🎵': 'musical-notes-outline',
+      '📸': 'camera-outline',
+    };
+    if (icon && emojiMap[icon]) return emojiMap[icon] as any;
+    // Fallback por tipo de cuenta
+    if (account.type === 'bank') return 'account-balance-outline' as any;
+    if (account.type === 'virtual_card') return 'card-outline' as any;
+    if (account.type === 'cash') return 'cash-outline' as any;
+    if (account.type === 'exchange') return 'globe-outline' as any;
     return 'wallet-outline' as any;
   };
 

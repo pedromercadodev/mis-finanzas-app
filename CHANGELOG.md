@@ -26,6 +26,26 @@
 - **Archivos:** `app/(tabs)/reports.tsx`, `app/(tabs)/transactions.tsx`, `app/(tabs)/budgets.tsx`, `app/(tabs)/subscriptions.tsx`
 - Se agregó mapeo `EMOJI_TO_ICON` (40+ emojis → Ionicons) y función `getIcon()` en los 4 archivos para evitar warnings `"🍔" is not a valid icon name`.
 
+#### Corrección: Iconos de cuentas mostrando "?" en Mis Cuentas
+- **Archivo:** [`app/(tabs)/accounts.tsx`](app/(tabs)/accounts.tsx)
+- Se reescribió `getIconName()` para detectar automáticamente si el icono es un nombre Ionicons válido o un emoji, con mapeo completo de todos los emojis disponibles en el selector de iconos (24 emojis mapeados a Ionicons).
+
+#### Mejora: Círculos decorativos convertidos a glows en Detalle de Cuenta
+- **Archivo:** [`app/account/[id].tsx`](app/account/[id].tsx)
+- Se reemplazaron los círculos decorativos estáticos por glows con `shadowColor`, `shadowRadius` y opacidad para un efecto de brillo más moderno y coherente con el diseño Kinetic Ledger.
+
+#### Corrección: Botones de tipo de transacción con color incorrecto
+- **Archivo:** [`app/(tabs)/transactions.tsx`](app/(tabs)/transactions.tsx)
+- Se cambió el `backgroundColor` de los botones Gasto/Ingreso/Transferencia no seleccionados de `themeColors.surface` (gris) a `themeColors.secondary + '18'` (verde translúcido) para mantener la coherencia visual.
+
+#### Mejora: Etiqueta dinámica de comparación de periodos en Reportes
+- **Archivo:** [`app/(tabs)/reports.tsx`](app/(tabs)/reports.tsx)
+- Se reemplazó el texto fijo "vs. trim ant." por una etiqueta dinámica `getPeriodLabel(period)` que muestra "vs. mes ant.", "vs. trim. ant.", "vs. año ant." o "vs. periodo ant." según el periodo seleccionado.
+
+#### Mejora: Círculos decorativos convertidos a glows en Deudas
+- **Archivo:** [`app/(tabs)/debts.tsx`](app/(tabs)/debts.tsx)
+- Se reemplazaron los círculos decorativos estáticos de las tarjetas de resumen por glows con efecto de sombra y brillo, usando los colores secondary (me deben) y danger (yo debo).
+
 ## v2.3.0 (2026-07-09)
 
 ### 🤖 Fase 4 — Agente Inteligente (Valor Agregado)

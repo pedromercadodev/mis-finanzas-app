@@ -140,6 +140,16 @@ const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   'Sin categoría': 'help-outline',
 };
 
+function getPeriodLabel(period: PeriodOption): string {
+  switch (period) {
+    case 'month': return 'vs. mes ant.';
+    case 'quarter': return 'vs. trim. ant.';
+    case 'year': return 'vs. año ant.';
+    case 'all': return 'vs. periodo ant.';
+    default: return 'vs. ant.';
+  }
+}
+
 function getCategoryIcon(iconOrName: string): keyof typeof Ionicons.glyphMap {
   // First try emoji mapping
   if (EMOJI_TO_ICON[iconOrName]) return EMOJI_TO_ICON[iconOrName];
@@ -462,7 +472,7 @@ export default function ReportsScreen() {
                         </Text>
                       </View>
                       <Text style={{ fontSize: 10, color: themeColors.onSurfaceVariant }}>
-                        vs. trim ant.
+                        {getPeriodLabel(period)}
                       </Text>
                     </View>
                   )}
@@ -527,7 +537,7 @@ export default function ReportsScreen() {
                         </Text>
                       </View>
                       <Text style={{ fontSize: 10, color: themeColors.onSurfaceVariant }}>
-                        vs. trim ant.
+                        {getPeriodLabel(period)}
                       </Text>
                     </View>
                   )}
@@ -605,7 +615,7 @@ export default function ReportsScreen() {
                         </Text>
                       </View>
                       <Text style={{ fontSize: 10, color: themeColors.onSurfaceVariant }}>
-                        vs. trim ant.
+                        {getPeriodLabel(period)}
                       </Text>
                     </View>
                   )}

@@ -824,7 +824,7 @@ export default function TransactionsScreen() {
                         flex: 1,
                         paddingVertical: 10,
                         borderRadius: 10,
-                        backgroundColor: txType === type ? themeColors.primary : themeColors.surface,
+                        backgroundColor: txType === type ? themeColors.secondary : themeColors.secondary + '18',
                         alignItems: 'center',
                         opacity: isDisabled ? 0.4 : 1,
                       }}

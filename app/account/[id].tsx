@@ -190,17 +190,38 @@ export default function AccountDetailScreen() {
   return (
     <AnimatedScreen>
       <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
-        {/* Ambient Background */}
+        {/* Ambient Glows */}
         <View
           style={{
             position: 'absolute',
-            top: -80,
-            right: -80,
-            width: 200,
-            height: 200,
-            borderRadius: 100,
-            backgroundColor: themeColors.surfaceVariant + '30',
-            opacity: 0.3,
+            top: -60,
+            right: -40,
+            width: 160,
+            height: 160,
+            borderRadius: 80,
+            backgroundColor: themeColors.secondary + '25',
+            shadowColor: themeColors.secondary,
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.4,
+            shadowRadius: 60,
+            elevation: 0,
+          }}
+          pointerEvents="none"
+        />
+        <View
+          style={{
+            position: 'absolute',
+            bottom: -40,
+            left: -40,
+            width: 140,
+            height: 140,
+            borderRadius: 70,
+            backgroundColor: themeColors.primary + '20',
+            shadowColor: themeColors.primary,
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.3,
+            shadowRadius: 50,
+            elevation: 0,
           }}
           pointerEvents="none"
         />
@@ -242,30 +263,38 @@ export default function AccountDetailScreen() {
           {/* Balance Card */}
           <View style={{ paddingHorizontal: 24, marginTop: 16, marginBottom: 24 }}>
             <GlassCard padding={20} style={{ position: 'relative', overflow: 'hidden' }}>
-              {/* Blur circles */}
+              {/* Glow effects */}
               <View
                 style={{
                   position: 'absolute',
-                  top: -50,
-                  right: -50,
-                  width: 150,
-                  height: 150,
-                  borderRadius: 75,
-                  backgroundColor: themeColors.primary + '1A',
-                  zIndex: 0,
+                  top: -40,
+                  right: -40,
+                  width: 120,
+                  height: 120,
+                  borderRadius: 60,
+                  backgroundColor: themeColors.secondary + '20',
+                  shadowColor: themeColors.secondary,
+                  shadowOffset: { width: 0, height: 0 },
+                  shadowOpacity: 0.35,
+                  shadowRadius: 50,
+                  elevation: 0,
                 }}
                 pointerEvents="none"
               />
               <View
                 style={{
                   position: 'absolute',
-                  bottom: -50,
-                  left: -50,
-                  width: 150,
-                  height: 150,
-                  borderRadius: 75,
-                  backgroundColor: themeColors.secondary + '1A',
-                  zIndex: 0,
+                  bottom: -40,
+                  left: -40,
+                  width: 120,
+                  height: 120,
+                  borderRadius: 60,
+                  backgroundColor: themeColors.primary + '18',
+                  shadowColor: themeColors.primary,
+                  shadowOffset: { width: 0, height: 0 },
+                  shadowOpacity: 0.25,
+                  shadowRadius: 45,
+                  elevation: 0,
                 }}
                 pointerEvents="none"
               />
