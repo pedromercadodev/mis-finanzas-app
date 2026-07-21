@@ -190,7 +190,7 @@ export default function AccountDetailScreen() {
   return (
     <AnimatedScreen>
       <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
-        {/* Ambient Glows */}
+        {/* Ambient Glows - efecto blur como bg-emerald-400/10 blur-[50px] */}
         <View
           style={{
             position: 'absolute',
@@ -199,10 +199,10 @@ export default function AccountDetailScreen() {
             width: 160,
             height: 160,
             borderRadius: 80,
-            backgroundColor: themeColors.secondary + '25',
+            backgroundColor: 'transparent',
             shadowColor: themeColors.secondary,
             shadowOffset: { width: 0, height: 0 },
-            shadowOpacity: 0.4,
+            shadowOpacity: 0.35,
             shadowRadius: 60,
             elevation: 0,
           }}
@@ -216,10 +216,10 @@ export default function AccountDetailScreen() {
             width: 140,
             height: 140,
             borderRadius: 70,
-            backgroundColor: themeColors.primary + '20',
+            backgroundColor: 'transparent',
             shadowColor: themeColors.primary,
             shadowOffset: { width: 0, height: 0 },
-            shadowOpacity: 0.3,
+            shadowOpacity: 0.25,
             shadowRadius: 50,
             elevation: 0,
           }}
@@ -263,20 +263,20 @@ export default function AccountDetailScreen() {
           {/* Balance Card */}
           <View style={{ paddingHorizontal: 24, marginTop: 16, marginBottom: 24 }}>
             <GlassCard padding={20} style={{ position: 'relative', overflow: 'hidden' }}>
-              {/* Glow effects */}
+              {/* Glow effects - como bg-emerald-400/10 blur-[50px] */}
               <View
                 style={{
                   position: 'absolute',
                   top: -40,
                   right: -40,
-                  width: 120,
-                  height: 120,
-                  borderRadius: 60,
-                  backgroundColor: themeColors.secondary + '20',
+                  width: 130,
+                  height: 130,
+                  borderRadius: 65,
+                  backgroundColor: 'transparent',
                   shadowColor: themeColors.secondary,
                   shadowOffset: { width: 0, height: 0 },
-                  shadowOpacity: 0.35,
-                  shadowRadius: 50,
+                  shadowOpacity: 0.3,
+                  shadowRadius: 55,
                   elevation: 0,
                 }}
                 pointerEvents="none"
@@ -286,13 +286,13 @@ export default function AccountDetailScreen() {
                   position: 'absolute',
                   bottom: -40,
                   left: -40,
-                  width: 120,
-                  height: 120,
-                  borderRadius: 60,
-                  backgroundColor: themeColors.primary + '18',
+                  width: 130,
+                  height: 130,
+                  borderRadius: 65,
+                  backgroundColor: 'transparent',
                   shadowColor: themeColors.primary,
                   shadowOffset: { width: 0, height: 0 },
-                  shadowOpacity: 0.25,
+                  shadowOpacity: 0.2,
                   shadowRadius: 45,
                   elevation: 0,
                 }}

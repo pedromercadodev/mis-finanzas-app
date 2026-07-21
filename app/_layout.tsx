@@ -10,6 +10,17 @@ import { ensureDatabaseInitialized } from '../src/services/database';
 import ThemedText from '../src/components/ThemedText';
 import { Ionicons } from '@expo/vector-icons';
 
+// Silenciar error de keep-awake que no afecta funcionalidad
+if (typeof ErrorUtils !== 'undefined') {
+  const originalHandler = ErrorUtils.getGlobalHandler();
+  ErrorUtils.setGlobalHandler((error: any, isFatal?: boolean) => {
+    if (error?.message?.includes?.('Unable to activate keep awake')) {
+      return; // Ignorar este error inofensivo
+    }
+    originalHandler(error, isFatal);
+  });
+}
+
 export default function RootLayout() {
   const loadAccounts = useAccounts((state) => state.loadAccounts);
   const useDarkMode = useSettings((state) => state.useDarkMode);
