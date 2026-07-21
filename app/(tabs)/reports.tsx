@@ -167,11 +167,19 @@ function GlowIcon({ color, iconName, iconSize = 16 }: {
   iconSize?: number;
 }) {
   return (
-    <View style={{ width: 36, height: 36, position: 'relative', justifyContent: 'center', alignItems: 'center' }}>
+    <View style={{
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: color + '15',
+      justifyContent: 'center',
+      alignItems: 'center',
+      overflow: 'hidden',
+    }}>
       <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} pointerEvents="none">
         <Canvas style={{ flex: 1 }}>
-          <Circle cx={18} cy={18} r={18} color={color} opacity={0.08}>
-            <BlurMask blur={20} style="normal" />
+          <Circle cx={18} cy={18} r={16} color={color} opacity={0.25}>
+            <BlurMask blur={15} style="normal" />
           </Circle>
         </Canvas>
       </View>
@@ -413,19 +421,30 @@ export default function ReportsScreen() {
             {summary && (
               <View style={{ paddingHorizontal: 24, marginBottom: 32, gap: 12 }}>
                 {/* Ingresos */}
-                <View style={{
-                  backgroundColor: themeColors.surfaceContainer + '99',
-                  borderRadius: 16,
-                  padding: 16,
-                  borderWidth: 1,
-                  borderColor: themeColors.outlineVariant + '30',
-                  overflow: 'hidden',
-                  shadowColor: '#0A1E3D',
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.5,
-                  shadowRadius: 16,
-                  elevation: 6,
-                }}>
+                <LinearGradient
+                  colors={[themeColors.surfaceContainer + '99', themeColors.surfaceContainer + '80']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={{
+                    borderRadius: 16,
+                    padding: 16,
+                    borderWidth: 1,
+                    borderColor: themeColors.outlineVariant + '30',
+                    overflow: 'hidden',
+                    shadowColor: '#0A1E3D',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.5,
+                    shadowRadius: 16,
+                    elevation: 6,
+                  }}
+                >
+                  <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} pointerEvents="none">
+                    <Canvas style={{ flex: 1 }}>
+                      <Circle cx={120} cy={10} r={70} color={themeColors.secondary} opacity={0.1}>
+                        <BlurMask blur={50} style="normal" />
+                      </Circle>
+                    </Canvas>
+                  </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                     <Text style={{
                       fontSize: 11,
@@ -472,22 +491,33 @@ export default function ReportsScreen() {
                       </Text>
                     </View>
                   )}
-                </View>
+                </LinearGradient>
 
                 {/* Gastos */}
-                <View style={{
-                  backgroundColor: themeColors.surfaceContainer + '99',
-                  borderRadius: 16,
-                  padding: 16,
-                  borderWidth: 1,
-                  borderColor: themeColors.outlineVariant + '30',
-                  overflow: 'hidden',
-                  shadowColor: '#0A1E3D',
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.5,
-                  shadowRadius: 16,
-                  elevation: 6,
-                }}>
+                <LinearGradient
+                  colors={[themeColors.surfaceContainer + '99', themeColors.surfaceContainer + '80']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={{
+                    borderRadius: 16,
+                    padding: 16,
+                    borderWidth: 1,
+                    borderColor: themeColors.outlineVariant + '30',
+                    overflow: 'hidden',
+                    shadowColor: '#0A1E3D',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.5,
+                    shadowRadius: 16,
+                    elevation: 6,
+                  }}
+                >
+                  <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} pointerEvents="none">
+                    <Canvas style={{ flex: 1 }}>
+                      <Circle cx={120} cy={10} r={70} color={themeColors.danger} opacity={0.1}>
+                        <BlurMask blur={50} style="normal" />
+                      </Circle>
+                    </Canvas>
+                  </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                     <Text style={{
                       fontSize: 11,
@@ -534,7 +564,7 @@ export default function ReportsScreen() {
                       </Text>
                     </View>
                   )}
-                </View>
+                </LinearGradient>
 
                 {/* Neto */}
                 <LinearGradient
