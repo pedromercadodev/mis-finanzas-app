@@ -10,9 +10,11 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  Dimensions,
 } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Canvas, Circle, BlurMask } from '@shopify/react-native-skia';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../../src/hooks/useThemeColors';
@@ -452,20 +454,14 @@ export default function DebtsScreen() {
               borderColor: themeColors.outlineVariant + '30',
               overflow: 'hidden',
             }}>
-              <View style={{
-                position: 'absolute',
-                right: -40,
-                top: -40,
-                width: 120,
-                height: 120,
-                borderRadius: 60,
-                backgroundColor: themeColors.secondary + '18',
-                shadowColor: themeColors.secondary,
-                shadowOffset: { width: 0, height: 0 },
-                shadowOpacity: 0.3,
-                shadowRadius: 45,
-                elevation: 0,
-              }} />
+              {/* Glow con blur REAL usando Skia */}
+              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} pointerEvents="none">
+                <Canvas style={{ flex: 1 }}>
+                  <Circle cx={100} cy={30} r={60} color={themeColors.secondary} opacity={0.08}>
+                    <BlurMask blur={45} style="normal" />
+                  </Circle>
+                </Canvas>
+              </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 }}>
                 <Ionicons name="arrow-down" size={16} color={themeColors.secondary} />
                 <ThemedText type="small" themeColor="onSurfaceVariant" style={{ fontWeight: '600', letterSpacing: 0.5 }}>
@@ -495,20 +491,14 @@ export default function DebtsScreen() {
               borderColor: themeColors.outlineVariant + '30',
               overflow: 'hidden',
             }}>
-              <View style={{
-                position: 'absolute',
-                right: -40,
-                top: -40,
-                width: 120,
-                height: 120,
-                borderRadius: 60,
-                backgroundColor: themeColors.danger + '18',
-                shadowColor: themeColors.danger,
-                shadowOffset: { width: 0, height: 0 },
-                shadowOpacity: 0.3,
-                shadowRadius: 45,
-                elevation: 0,
-              }} />
+              {/* Glow con blur REAL usando Skia */}
+              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} pointerEvents="none">
+                <Canvas style={{ flex: 1 }}>
+                  <Circle cx={100} cy={30} r={60} color={themeColors.danger} opacity={0.08}>
+                    <BlurMask blur={45} style="normal" />
+                  </Circle>
+                </Canvas>
+              </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 }}>
                 <Ionicons name="arrow-up" size={16} color={themeColors.danger} />
                 <ThemedText type="small" themeColor="onSurfaceVariant" style={{ fontWeight: '600', letterSpacing: 0.5 }}>

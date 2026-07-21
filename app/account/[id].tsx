@@ -10,9 +10,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   Modal,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { Canvas, Circle, BlurMask } from '@shopify/react-native-skia';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { accountColors } from '../../src/theme/colors';
 import { useThemeColors } from '../../src/hooks/useThemeColors';
@@ -190,41 +192,17 @@ export default function AccountDetailScreen() {
   return (
     <AnimatedScreen>
       <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
-        {/* Ambient Glows - efecto blur como bg-emerald-400/10 blur-[50px] */}
-        <View
-          style={{
-            position: 'absolute',
-            top: -60,
-            right: -40,
-            width: 160,
-            height: 160,
-            borderRadius: 80,
-            backgroundColor: 'transparent',
-            shadowColor: themeColors.secondary,
-            shadowOffset: { width: 0, height: 0 },
-            shadowOpacity: 0.35,
-            shadowRadius: 60,
-            elevation: 0,
-          }}
-          pointerEvents="none"
-        />
-        <View
-          style={{
-            position: 'absolute',
-            bottom: -40,
-            left: -40,
-            width: 140,
-            height: 140,
-            borderRadius: 70,
-            backgroundColor: 'transparent',
-            shadowColor: themeColors.primary,
-            shadowOffset: { width: 0, height: 0 },
-            shadowOpacity: 0.25,
-            shadowRadius: 50,
-            elevation: 0,
-          }}
-          pointerEvents="none"
-        />
+        {/* Ambient Glows con blur REAL usando Skia */}
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} pointerEvents="none">
+          <Canvas style={{ flex: 1 }}>
+            <Circle cx={160} cy={40} r={80} color={themeColors.secondary} opacity={0.08}>
+              <BlurMask blur={50} style="normal" />
+            </Circle>
+            <Circle cx={40} cy={700} r={70} color={themeColors.primary} opacity={0.06}>
+              <BlurMask blur={45} style="normal" />
+            </Circle>
+          </Canvas>
+        </View>
 
         <ScrollView
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -263,41 +241,17 @@ export default function AccountDetailScreen() {
           {/* Balance Card */}
           <View style={{ paddingHorizontal: 24, marginTop: 16, marginBottom: 24 }}>
             <GlassCard padding={20} style={{ position: 'relative', overflow: 'hidden' }}>
-              {/* Glow effects - como bg-emerald-400/10 blur-[50px] */}
-              <View
-                style={{
-                  position: 'absolute',
-                  top: -40,
-                  right: -40,
-                  width: 130,
-                  height: 130,
-                  borderRadius: 65,
-                  backgroundColor: 'transparent',
-                  shadowColor: themeColors.secondary,
-                  shadowOffset: { width: 0, height: 0 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 55,
-                  elevation: 0,
-                }}
-                pointerEvents="none"
-              />
-              <View
-                style={{
-                  position: 'absolute',
-                  bottom: -40,
-                  left: -40,
-                  width: 130,
-                  height: 130,
-                  borderRadius: 65,
-                  backgroundColor: 'transparent',
-                  shadowColor: themeColors.primary,
-                  shadowOffset: { width: 0, height: 0 },
-                  shadowOpacity: 0.2,
-                  shadowRadius: 45,
-                  elevation: 0,
-                }}
-                pointerEvents="none"
-              />
+              {/* Glow con blur REAL usando Skia */}
+              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} pointerEvents="none">
+                <Canvas style={{ flex: 1 }}>
+                  <Circle cx={120} cy={40} r={65} color={themeColors.secondary} opacity={0.08}>
+                    <BlurMask blur={50} style="normal" />
+                  </Circle>
+                  <Circle cx={40} cy={120} r={65} color={themeColors.primary} opacity={0.06}>
+                    <BlurMask blur={45} style="normal" />
+                  </Circle>
+                </Canvas>
+              </View>
 
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 }}>
                 <View style={{

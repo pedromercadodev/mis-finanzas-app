@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Canvas, Circle, BlurMask } from '@shopify/react-native-skia';
 import CashFlowChart from '../../src/components/CashFlowChart';
 import PieChartInteractive from '../../src/components/PieChartInteractive';
 import type { PieSlice } from '../../src/components/PieChartInteractive';
@@ -159,25 +160,23 @@ function getCategoryIcon(iconOrName: string): keyof typeof Ionicons.glyphMap {
   return 'ellipse-outline';
 }
 
-// ─── Blur Circle Component ─────────────────────────────────────────────────
-function BlurCircle({ color, top, right, size }: {
+// ─── Glow Icon Wrapper ────────────────────────────────────────────────────
+function GlowIcon({ color, iconName, iconSize = 16 }: {
   color: string;
-  top: number;
-  right: number;
-  size: number;
+  iconName: keyof typeof Ionicons.glyphMap;
+  iconSize?: number;
 }) {
   return (
-    <View
-      style={{
-        position: 'absolute',
-        top,
-        right,
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        backgroundColor: color,
-      }}
-    />
+    <View style={{ width: 36, height: 36, position: 'relative', justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} pointerEvents="none">
+        <Canvas style={{ flex: 1 }}>
+          <Circle cx={18} cy={18} r={18} color={color} opacity={0.08}>
+            <BlurMask blur={20} style="normal" />
+          </Circle>
+        </Canvas>
+      </View>
+      <Ionicons name={iconName} size={iconSize} color={color} />
+    </View>
   );
 }
 
@@ -437,10 +436,7 @@ export default function ReportsScreen() {
                     }}>
                       Ingresos
                     </Text>
-                    <View style={{ position: 'relative', justifyContent: 'center', alignItems: 'center' }}>
-                      <BlurCircle color={themeColors.secondary + '1A'} top={-10} right={-10} size={36} />
-                      <Ionicons name="arrow-up" size={16} color={themeColors.secondary} />
-                    </View>
+                    <GlowIcon color={themeColors.secondary} iconName="arrow-up" />
                   </View>
                   <Text style={{
                     fontSize: 28,
@@ -502,10 +498,7 @@ export default function ReportsScreen() {
                     }}>
                       Gastos
                     </Text>
-                    <View style={{ position: 'relative', justifyContent: 'center', alignItems: 'center' }}>
-                      <BlurCircle color={themeColors.danger + '1A'} top={-10} right={-10} size={36} />
-                      <Ionicons name="arrow-down" size={16} color={themeColors.danger} />
-                    </View>
+                    <GlowIcon color={themeColors.danger} iconName="arrow-down" />
                   </View>
                   <Text style={{
                     fontSize: 28,
@@ -571,10 +564,7 @@ export default function ReportsScreen() {
                     }}>
                       Neto
                     </Text>
-                    <View style={{ position: 'relative', justifyContent: 'center', alignItems: 'center' }}>
-                      <BlurCircle color={themeColors.tertiary + '1A'} top={-10} right={-10} size={36} />
-                      <Ionicons name="wallet-outline" size={16} color={themeColors.tertiary} />
-                    </View>
+                    <GlowIcon color={themeColors.tertiary} iconName="wallet-outline" />
                   </View>
                   <Text
                     style={{
