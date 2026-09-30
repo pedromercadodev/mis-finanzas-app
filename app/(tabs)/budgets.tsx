@@ -11,7 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 // ─── Emoji → Ionicons mapping ─────────────────────────────────────────────
@@ -76,6 +76,7 @@ const MONTH_NAMES = [
 
 export default function BudgetsScreen() {
   const themeColors = useThemeColors();
+  const insets = useSafeAreaInsets();
   const [groups, setGroups] = useState<GroupWithCategories[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Set<number>>(new Set());
@@ -492,10 +493,23 @@ export default function BudgetsScreen() {
       </ScrollView>
 
       {/* Modal de Asignación Mensual */}
-      <Modal visible={showAllocationModal} animationType="slide" presentationStyle="pageSheet">
-        <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
+      <Modal
+        visible={showAllocationModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowAllocationModal(false)}
+        onDismiss={() => setShowAllocationModal(false)}
+      >
+        <SafeAreaView
+          edges={['left', 'right', 'bottom']}
+          style={{ flex: 1, backgroundColor: themeColors.background }}
+        >
+          {/* El modal es un pageSheet: su borde superior arranca en el inset
+              superior y el layout del KeyboardAvoidingView es relativo al
+              modal, no a la ventana. */}
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
             style={{ flex: 1 }}
           >
             <ScrollView contentContainerStyle={{ padding: 20 }}>

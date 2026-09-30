@@ -4,7 +4,7 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  Dimensions,
+  useWindowDimensions,
   LayoutChangeEvent,
 } from 'react-native';
 import { Canvas, Circle, BlurMask } from '@shopify/react-native-skia';
@@ -26,15 +26,18 @@ import { getDueSubscriptions, getSubscriptions } from '../../src/services/subscr
 import { formatUSD, formatBS, formatDateShort, getCurrentMonthRange } from '../../src/utils/format';
 import type { Account, Goal, Subscription } from '../../src/utils/types';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_HORIZONTAL_MARGIN = 24;
-const CARD_WIDTH = SCREEN_WIDTH - CARD_HORIZONTAL_MARGIN * 2;
 
 export default function DashboardScreen() {
   const router = useRouter();
   const { accounts, loadAccounts } = useAccounts();
   const { transactions, loadTransactions } = useTransactions();
   const themeColors = useThemeColors();
+
+  // Ancho real de la ventana en cada render (rotación / iPad): antes se
+  // congelaba al arrancar y el glow Skia quedaba desalineado.
+  const { width: SCREEN_WIDTH } = useWindowDimensions();
+  const CARD_WIDTH = SCREEN_WIDTH - CARD_HORIZONTAL_MARGIN * 2;
   const { preferredRateType, manualRate, manualRateType, setPreferredRateType, expectedMonthlyIncome } = useSettings();
   const {
     bcv: bcvRate,

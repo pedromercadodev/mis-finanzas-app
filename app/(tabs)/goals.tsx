@@ -11,7 +11,7 @@ import {
   Platform,
   KeyboardAvoidingView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import { useThemeColors } from '../../src/hooks/useThemeColors';
@@ -39,6 +39,7 @@ const NO_PROGRESS_MESSAGES = [
 
 export default function GoalsScreen() {
   const themeColors = useThemeColors();
+  const insets = useSafeAreaInsets();
   const [goals, setGoals] = useState<GoalWithItems[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -675,10 +676,23 @@ export default function GoalsScreen() {
       </Modal>
 
       {/* Modal Nueva Meta */}
-      <Modal visible={showModal} animationType="slide" presentationStyle="pageSheet">
-        <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
+      <Modal
+        visible={showModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowModal(false)}
+        onDismiss={() => setShowModal(false)}
+      >
+        <SafeAreaView
+          edges={['left', 'right', 'bottom']}
+          style={{ flex: 1, backgroundColor: themeColors.background }}
+        >
+          {/* El modal es un pageSheet: su borde superior arranca en el inset
+              superior y el layout del KeyboardAvoidingView es relativo al
+              modal, no a la ventana. */}
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
             style={{ flex: 1 }}
           >
             <ScrollView contentContainerStyle={{ padding: 20 }}>
@@ -844,10 +858,23 @@ export default function GoalsScreen() {
       </Modal>
 
       {/* Modal Nuevo Ítem */}
-      <Modal visible={showItemModal} animationType="slide" presentationStyle="pageSheet">
-        <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
+      <Modal
+        visible={showItemModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowItemModal(false)}
+        onDismiss={() => setShowItemModal(false)}
+      >
+        <SafeAreaView
+          edges={['left', 'right', 'bottom']}
+          style={{ flex: 1, backgroundColor: themeColors.background }}
+        >
+          {/* El modal es un pageSheet: su borde superior arranca en el inset
+              superior y el layout del KeyboardAvoidingView es relativo al
+              modal, no a la ventana. */}
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
             style={{ flex: 1 }}
           >
             <ScrollView contentContainerStyle={{ padding: 20 }}>
@@ -909,10 +936,23 @@ export default function GoalsScreen() {
       </Modal>
 
       {/* Modal Abonar a Meta */}
-      <Modal visible={showDepositModal} animationType="slide" presentationStyle="pageSheet">
-        <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
+      <Modal
+        visible={showDepositModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowDepositModal(false)}
+        onDismiss={() => setShowDepositModal(false)}
+      >
+        <SafeAreaView
+          edges={['left', 'right', 'bottom']}
+          style={{ flex: 1, backgroundColor: themeColors.background }}
+        >
+          {/* El modal es un pageSheet: su borde superior arranca en el inset
+              superior y el layout del KeyboardAvoidingView es relativo al
+              modal, no a la ventana. */}
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
             style={{ flex: 1 }}
           >
             <ScrollView contentContainerStyle={{ padding: 20 }}>

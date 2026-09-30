@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
+import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { useAccounts } from '../src/store/useAccounts';
 import { useSettings } from '../src/store/useSettings';
 import { colors } from '../src/theme/colors';
@@ -86,43 +87,45 @@ export default function RootLayout() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <View style={{ flex: 1, backgroundColor: themeColors.background }}>
-        <StatusBar style={useDarkMode ? 'light' : 'dark'} />
-        <Stack screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: themeColors.background },
-          animation: 'slide_from_right',
-        }}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen
-            name="account/new"
-            options={{
-              presentation: 'modal',
-              headerShown: true,
-              title: 'Nueva Cuenta',
-              headerStyle: { backgroundColor: themeColors.surface },
-              headerTintColor: themeColors.text,
-              contentStyle: { backgroundColor: themeColors.background },
-            }}
-          />
-          <Stack.Screen
-            name="account/[id]"
-            options={{
-              presentation: 'modal',
-              headerShown: true,
-              title: 'Detalle de Cuenta',
-              headerStyle: { backgroundColor: themeColors.surface },
-              headerTintColor: themeColors.text,
-              contentStyle: { backgroundColor: themeColors.background },
-            }}
-          />
-          <Stack.Screen
-            name="ai-chat"
-            options={{ presentation: 'modal', headerShown: false }}
-          />
-        </Stack>
-      </View>
-    </GestureHandlerRootView>
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <View style={{ flex: 1, backgroundColor: themeColors.background }}>
+          <StatusBar style={useDarkMode ? 'light' : 'dark'} />
+          <Stack screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: themeColors.background },
+            animation: 'slide_from_right',
+          }}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen
+              name="account/new"
+              options={{
+                presentation: 'modal',
+                headerShown: true,
+                title: 'Nueva Cuenta',
+                headerStyle: { backgroundColor: themeColors.surface },
+                headerTintColor: themeColors.text,
+                contentStyle: { backgroundColor: themeColors.background },
+              }}
+            />
+            <Stack.Screen
+              name="account/[id]"
+              options={{
+                presentation: 'modal',
+                headerShown: true,
+                title: 'Detalle de Cuenta',
+                headerStyle: { backgroundColor: themeColors.surface },
+                headerTintColor: themeColors.text,
+                contentStyle: { backgroundColor: themeColors.background },
+              }}
+            />
+            <Stack.Screen
+              name="ai-chat"
+              options={{ presentation: 'modal', headerShown: false }}
+            />
+          </Stack>
+        </View>
+      </GestureHandlerRootView>
+    </SafeAreaProvider>
   );
 }

@@ -13,7 +13,7 @@ import {
   KeyboardAvoidingView,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Swipeable } from 'react-native-gesture-handler';
 import { useAccounts } from '../../src/store/useAccounts';
@@ -118,6 +118,7 @@ function getPeriodDates(filter: PeriodFilter): { start: string; end: string; lab
 
 export default function TransactionsScreen() {
   const params = useLocalSearchParams<{ presetAccountId?: string; presetType?: string }>();
+  const insets = useSafeAreaInsets();
   const themeColors = useThemeColors();
   const { accounts, loadAccounts } = useAccounts();
   const { transactions, loadTransactions, addTransaction, removeTransaction } = useTransactions();
@@ -786,10 +787,23 @@ export default function TransactionsScreen() {
       />
 
       {/* Modal Nueva Transacción */}
-      <Modal visible={showModal} animationType="slide" presentationStyle="pageSheet">
-        <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
+      <Modal
+        visible={showModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowModal(false)}
+        onDismiss={() => setShowModal(false)}
+      >
+        <SafeAreaView
+          edges={['left', 'right', 'bottom']}
+          style={{ flex: 1, backgroundColor: themeColors.background }}
+        >
+          {/* El modal es un pageSheet: su borde superior arranca en el inset
+              superior y el layout del KeyboardAvoidingView es relativo al
+              modal, no a la ventana. */}
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
             style={{ flex: 1 }}
           >
             <ScrollView

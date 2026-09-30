@@ -3,7 +3,7 @@ import {
   View,
   ScrollView,
   TouchableOpacity,
-  Dimensions,
+  useWindowDimensions,
   ActivityIndicator,
   Text,
 } from 'react-native';
@@ -37,8 +37,6 @@ import {
   ExpenseAnalysis,
 } from '../../src/services/reports';
 import { getGoals } from '../../src/services/goals';
-
-const SCREEN_WIDTH = Dimensions.get('window').width;
 
 type PeriodOption = 'month' | 'quarter' | 'year' | 'all';
 type ReportTab = 'expense' | 'income' | 'cashflow' | 'trends';
@@ -191,6 +189,9 @@ function GlowIcon({ color, iconName, iconSize = 16 }: {
 // ─── Main Screen ───────────────────────────────────────────────────────────
 export default function ReportsScreen() {
   const themeColors = useThemeColors();
+
+  // Ancho real de la ventana (rotación / iPad): antes quedaba congelado.
+  const { width: SCREEN_WIDTH } = useWindowDimensions();
   const [period, setPeriod] = useState<PeriodOption>('quarter');
   const [activeTab, setActiveTab] = useState<ReportTab>('expense');
   const [loading, setLoading] = useState(true);

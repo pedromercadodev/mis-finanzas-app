@@ -963,14 +963,22 @@ export default function AIChatScreen() {
   // Reconocimiento de voz (SpeechRecognition API)
   // ============================================================
   const startListening = useCallback(() => {
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      Alert.alert('No soportado', 'El reconocimiento de voz no está disponible en este dispositivo.');
+    // La Web Speech API solo existe en web. En iOS/Android `window` no está
+    // definido y evaluarlo dentro del bundle nativo lanza ReferenceError.
+    const speechGlobal = globalThis as any;
+    const SpeechRecognitionCtor =
+      speechGlobal?.SpeechRecognition || speechGlobal?.webkitSpeechRecognition;
+
+    if (!SpeechRecognitionCtor) {
+      Alert.alert(
+        'No disponible',
+        'El dictado por voz solo funciona en la versión web. En el iPhone puedes usar el micrófono del teclado del sistema.'
+      );
       return;
     }
 
     try {
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      const recognition = new SpeechRecognition();
+      const recognition = new SpeechRecognitionCtor();
       recognition.lang = 'es-ES';
       recognition.interimResults = false;
       recognition.maxAlternatives = 1;
@@ -1658,8 +1666,17 @@ export default function AIChatScreen() {
         </View>
 
         {/* History Modal */}
-        <Modal visible={showHistory} animationType="slide" presentationStyle="pageSheet">
-          <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
+        <Modal
+          visible={showHistory}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={() => setShowHistory(false)}
+          onDismiss={() => setShowHistory(false)}
+        >
+          <SafeAreaView
+            edges={['left', 'right', 'bottom']}
+            style={{ flex: 1, backgroundColor: themeColors.background }}
+          >
             <View style={{
               flexDirection: 'row',
               justifyContent: 'space-between',

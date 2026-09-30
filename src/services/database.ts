@@ -91,3 +91,26 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
 export async function ensureDatabaseInitialized(): Promise<void> {
   await getDatabase();
 }
+
+/**
+ * Cierra la conexión SQLite activa y libera el archivo en disco.
+ *
+ * Es necesario antes de reemplazar el archivo .db (restauración de un
+ * respaldo): con la conexión abierta iOS/Android mantienen handles y
+ * journal (WAL) que dejarían la base restaurada inconsistente.
+ * El siguiente getDatabase() vuelve a abrirla de forma transparente.
+ */
+export async function closeDatabase(): Promise<void> {
+  const current = db;
+  db = null;
+  initPromise = null;
+  initLock = false;
+
+  if (!current) return;
+
+  try {
+    await current.closeAsync();
+  } catch (e) {
+    console.warn('No se pudo cerrar la base de datos limpiamente:', e);
+  }
+}

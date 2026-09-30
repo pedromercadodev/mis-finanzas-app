@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useRef } from 'react';
-import { Dimensions } from 'react-native';
+import { useWindowDimensions } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -10,8 +10,6 @@ import Animated, {
 import { usePathname } from 'expo-router';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useReducedMotion } from '../hooks/useReducedMotion';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 /**
  * Curva custom cubic-bezier(0.16, 1, 0.3, 1) — "emphasized ease"
@@ -42,6 +40,9 @@ export default function AnimatedTransition({ children }: AnimatedTransitionProps
   const themeColors = useThemeColors();
   const pathname = usePathname();
   const reducedMotion = useReducedMotion();
+
+  // Ancho real de la ventana en cada render (rotación, iPad, ventana dividida)
+  const { width: SCREEN_WIDTH } = useWindowDimensions();
 
   const slideAnim = useSharedValue(0);
   const fadeAnim = useSharedValue(1);
@@ -99,7 +100,7 @@ export default function AnimatedTransition({ children }: AnimatedTransitionProps
     prevPath.current = pathname;
 
     return () => clearTimeout(timer);
-  }, [pathname, reducedMotion]);
+  }, [pathname, reducedMotion, SCREEN_WIDTH]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     flex: 1,

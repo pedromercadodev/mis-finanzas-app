@@ -10,7 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useThemeColors } from '../../src/hooks/useThemeColors';
@@ -35,6 +35,7 @@ const GROUP_ICONS = ['📁', '📋', '🎯', '💰', '🏠', '🛒', '💼', '�
 
 export default function CategoriesScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const themeColors = useThemeColors();
   const [categories, setCategories] = useState<CategoryWithGroup[]>([]);
   const [groups, setGroups] = useState<CategoryGroup[]>([]);
@@ -573,10 +574,23 @@ export default function CategoriesScreen() {
       )}
 
       {/* Modal crear/editar CATEGORÍA */}
-      <Modal visible={showCatModal} animationType="slide" presentationStyle="pageSheet">
-        <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
+      <Modal
+        visible={showCatModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowCatModal(false)}
+        onDismiss={() => setShowCatModal(false)}
+      >
+        <SafeAreaView
+          edges={['left', 'right', 'bottom']}
+          style={{ flex: 1, backgroundColor: themeColors.background }}
+        >
+          {/* El modal es un pageSheet: su borde superior arranca en el inset
+              superior y el layout del KeyboardAvoidingView es relativo al
+              modal, no a la ventana. */}
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
             style={{ flex: 1 }}
           >
             <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 40 }}>
@@ -839,10 +853,23 @@ export default function CategoriesScreen() {
       </Modal>
 
       {/* Modal crear/editar GRUPO */}
-      <Modal visible={showGroupModal} animationType="slide" presentationStyle="pageSheet">
-        <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
+      <Modal
+        visible={showGroupModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowGroupModal(false)}
+        onDismiss={() => setShowGroupModal(false)}
+      >
+        <SafeAreaView
+          edges={['left', 'right', 'bottom']}
+          style={{ flex: 1, backgroundColor: themeColors.background }}
+        >
+          {/* El modal es un pageSheet: su borde superior arranca en el inset
+              superior y el layout del KeyboardAvoidingView es relativo al
+              modal, no a la ventana. */}
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
             style={{ flex: 1 }}
           >
             <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 40 }}>

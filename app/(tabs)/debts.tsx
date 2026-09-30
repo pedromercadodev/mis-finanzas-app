@@ -13,7 +13,7 @@ import {
   Dimensions,
 } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Canvas, Circle, BlurMask } from '@shopify/react-native-skia';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -36,6 +36,7 @@ type FilterTab = 'all' | 'lent' | 'borrowed';
 
 export default function DebtsScreen() {
   const themeColors = useThemeColors();
+  const insets = useSafeAreaInsets();
   const [debts, setDebts] = useState<Debt[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterTab, setFilterTab] = useState<FilterTab>('all');
@@ -234,7 +235,12 @@ export default function DebtsScreen() {
   };
 
   const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
-    setShowDatePicker(Platform.OS === 'ios');
+    // En iOS con display="spinner" el picker es un control embebido, no un
+    // diálogo: no se cierra solo. Se mantiene montado hasta pulsar "Listo"
+    // (en Android el diálogo nativo sí se cierra al confirmar).
+    if (Platform.OS !== 'ios') {
+      setShowDatePicker(false);
+    }
     if (selectedDate) {
       setDatePickerDate(selectedDate);
       setFormDueDate(selectedDate.toISOString().split('T')[0]);
@@ -762,10 +768,23 @@ export default function DebtsScreen() {
       </ScrollView>
 
       {/* Create/Edit Modal */}
-      <Modal visible={showModal} animationType="slide" presentationStyle="pageSheet">
-        <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
+      <Modal
+        visible={showModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowModal(false)}
+        onDismiss={() => setShowModal(false)}
+      >
+        <SafeAreaView
+          edges={['left', 'right', 'bottom']}
+          style={{ flex: 1, backgroundColor: themeColors.background }}
+        >
+          {/* El modal es un pageSheet: su borde superior arranca en el inset
+              superior y el layout del KeyboardAvoidingView es relativo al
+              modal, no a la ventana. */}
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
             style={{ flex: 1 }}
           >
             <ScrollView contentContainerStyle={{ padding: 20 }}>
@@ -985,12 +1004,47 @@ export default function DebtsScreen() {
               </TouchableOpacity>
 
               {showDatePicker && (
-                <DateTimePicker
-                  value={datePickerDate}
-                  mode="date"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  onChange={onDateChange}
-                />
+                Platform.OS === 'ios' ? (
+                  <View
+                    style={{
+                      backgroundColor: themeColors.surface,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: themeColors.outlineVariant + '50',
+                      marginBottom: 4,
+                      paddingBottom: 4,
+                    }}
+                  >
+                    <DateTimePicker
+                      value={datePickerDate}
+                      mode="date"
+                      display="spinner"
+                      onChange={onDateChange}
+                    />
+                    <TouchableOpacity
+                      onPress={() => setShowDatePicker(false)}
+                      accessibilityRole="button"
+                      accessibilityLabel="Confirmar fecha"
+                      style={{
+                        alignSelf: 'flex-end',
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
+                        marginRight: 8,
+                      }}
+                    >
+                      <ThemedText themeColor="primary" style={{ fontWeight: '600' }}>
+                        Listo
+                      </ThemedText>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <DateTimePicker
+                    value={datePickerDate}
+                    mode="date"
+                    display="default"
+                    onChange={onDateChange}
+                  />
+                )
               )}
 
               {/* Notes */}
@@ -1045,10 +1099,23 @@ export default function DebtsScreen() {
       </Modal>
 
       {/* Payment Modal */}
-      <Modal visible={showPaymentModal} animationType="slide" presentationStyle="pageSheet">
-        <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
+      <Modal
+        visible={showPaymentModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowPaymentModal(false)}
+        onDismiss={() => setShowPaymentModal(false)}
+      >
+        <SafeAreaView
+          edges={['left', 'right', 'bottom']}
+          style={{ flex: 1, backgroundColor: themeColors.background }}
+        >
+          {/* El modal es un pageSheet: su borde superior arranca en el inset
+              superior y el layout del KeyboardAvoidingView es relativo al
+              modal, no a la ventana. */}
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
             style={{ flex: 1 }}
           >
             <ScrollView contentContainerStyle={{ padding: 20 }}>
@@ -1164,8 +1231,17 @@ export default function DebtsScreen() {
       </Modal>
 
       {/* Payments List Modal */}
-      <Modal visible={showPaymentsList} animationType="slide" presentationStyle="pageSheet">
-        <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
+      <Modal
+        visible={showPaymentsList}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowPaymentsList(false)}
+        onDismiss={() => setShowPaymentsList(false)}
+      >
+        <SafeAreaView
+          edges={['left', 'right', 'bottom']}
+          style={{ flex: 1, backgroundColor: themeColors.background }}
+        >
           <View style={{ padding: 20 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <ThemedText type="h2" themeColor="text">

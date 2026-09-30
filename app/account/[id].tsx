@@ -12,7 +12,7 @@ import {
   Modal,
   Dimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Canvas, Circle, BlurMask } from '@shopify/react-native-skia';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
@@ -53,6 +53,7 @@ const accountIcons = [
 
 export default function AccountDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const themeColors = useThemeColors();
   const accountId = parseInt(id, 10);
@@ -148,7 +149,10 @@ export default function AccountDetailScreen() {
   if (!account) {
     return (
       <AnimatedScreen>
-        <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
+        <SafeAreaView
+          edges={['left', 'right', 'bottom']}
+          style={{ flex: 1, backgroundColor: themeColors.background }}
+        >
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
             <View style={{
               width: 80,
@@ -191,7 +195,11 @@ export default function AccountDetailScreen() {
 
   return (
     <AnimatedScreen>
-      <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
+      {/* El header nativo del modal ya cubre el área superior */}
+      <SafeAreaView
+        edges={['left', 'right', 'bottom']}
+        style={{ flex: 1, backgroundColor: themeColors.background }}
+      >
         {/* Ambient Glows con blur REAL usando Skia */}
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} pointerEvents="none">
           <Canvas style={{ flex: 1 }}>
@@ -587,10 +595,23 @@ export default function AccountDetailScreen() {
         </ScrollView>
 
         {/* Edit Modal */}
-        <Modal visible={showEditModal} animationType="slide" presentationStyle="pageSheet">
-          <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
+        <Modal
+          visible={showEditModal}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={() => setShowEditModal(false)}
+          onDismiss={() => setShowEditModal(false)}
+        >
+          <SafeAreaView
+            edges={['left', 'right', 'bottom']}
+            style={{ flex: 1, backgroundColor: themeColors.background }}
+          >
+            {/* El modal es un pageSheet: su borde superior arranca en el inset
+                superior y el layout del KeyboardAvoidingView es relativo al
+                modal, no a la ventana. */}
             <KeyboardAvoidingView
               behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+              keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
               style={{ flex: 1 }}
             >
               <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">

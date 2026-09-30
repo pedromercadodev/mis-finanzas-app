@@ -8,7 +8,7 @@ import {
   Platform,
   KeyboardAvoidingView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { accountColors } from '../../src/theme/colors';
@@ -46,6 +46,7 @@ const colorOptions = [
 export default function NewAccountScreen() {
   const router = useRouter();
   const themeColors = useThemeColors();
+  const insets = useSafeAreaInsets();
   const { addAccount, loadAccounts } = useAccounts();
   const [name, setName] = useState('');
   const [type, setType] = useState<AccountType>('bank');
@@ -98,7 +99,11 @@ export default function NewAccountScreen() {
 
   return (
     <AnimatedScreen>
-      <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
+      {/* El header nativo del modal ya cubre el área superior */}
+      <SafeAreaView
+        edges={['left', 'right', 'bottom']}
+        style={{ flex: 1, backgroundColor: themeColors.background }}
+      >
         {/* Ambient Background Gradient */}
         <View
           style={{
@@ -114,8 +119,12 @@ export default function NewAccountScreen() {
           pointerEvents="none"
         />
 
+        {/* Esta pantalla se presenta como modal con header nativo: el contenido
+            arranca en insets.top + 44 y el layout del KeyboardAvoidingView es
+            relativo a su padre, así que ese alto hay que sumarlo a mano. */}
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 44 : 0}
           style={{ flex: 1 }}
         >
           <ScrollView

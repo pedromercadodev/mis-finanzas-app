@@ -1,6 +1,7 @@
 {
   "expo": {
     "name": "Mis Finanzas",
+    "newArchEnabled": true,
     "slug": "finanzas-app",
     "version": "2.5.0",
     "orientation": "portrait",
@@ -10,8 +11,19 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.tufinanzas.app",
+      "buildNumber": "1",
       "infoPlist": {
-        "UIStatusBarHidden": false
+        "UIStatusBarHidden": false,
+        "ITSAppUsesNonExemptEncryption": false,
+        "UISupportedInterfaceOrientations": [
+          "UIInterfaceOrientationPortrait"
+        ],
+        "UISupportedInterfaceOrientations~ipad": [
+          "UIInterfaceOrientationPortrait",
+          "UIInterfaceOrientationPortraitUpsideDown",
+          "UIInterfaceOrientationLandscapeLeft",
+          "UIInterfaceOrientationLandscapeRight"
+        ]
       }
     },
     "android": {
@@ -22,7 +34,8 @@
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-font"
     ],
     "extra": {
       "router": {},

@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, Dimensions, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, Platform, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useReducedMotion } from '../hooks/useReducedMotion';
@@ -24,9 +24,6 @@ const TABS = [
   { name: 'settings', title: 'Ajustes', icon: 'settings-outline', iconActive: 'settings' },
 ] as const;
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const TAB_WIDTH = SCREEN_WIDTH / TABS.length;
-
 // Custom easing curves — Emil Kowalski style
 const EASE_OUT_STRONG = { damping: 18, stiffness: 220, mass: 0.7 };
 const EASE_OUT_SPRING = { damping: 14, stiffness: 250, mass: 0.6 };
@@ -37,6 +34,12 @@ export default function AnimatedTabBar() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const reducedMotion = useReducedMotion();
+
+  // Ancho real de la ventana en cada render. Con Dimensions.get a nivel de
+  // módulo el ancho queda congelado al valor del arranque (rotación, iPad,
+  // ventana dividida → indicador desalineado).
+  const { width: SCREEN_WIDTH } = useWindowDimensions();
+  const TAB_WIDTH = SCREEN_WIDTH / TABS.length;
 
   const activeIndex = TABS.findIndex((t) => {
     const tabPath = t.name === 'index' ? '/(tabs)' : `/(tabs)/${t.name}`;
@@ -99,7 +102,7 @@ export default function AnimatedTabBar() {
 
     haptic('light');
     prevIndex.value = currentIndex;
-  }, [currentIndex, reducedMotion]);
+  }, [currentIndex, reducedMotion, TAB_WIDTH]);
 
   const indicatorStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: slideOffset.value }],

@@ -1,0 +1,79 @@
+name: Build iOS IPA sin firmar
+
+# Solo manual: cada ejecucion en runner macOS consume minutos de la cuenta,
+# asi que el build se lanza a proposito cuando se quiere generar un .ipa nuevo.
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Compilar IPA sin firma
+    runs-on: macos-15
+    timeout-minutes: 90
+
+    env:
+      EXPO_NO_TELEMETRY: 1
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Generar el proyecto iOS (prebuild)
+        # En Windows este paso no es posible: Expo CLI solo genera ios/ en macOS o Linux.
+        run: npx expo prebuild --platform ios --no-install
+
+      - name: Instalar pods
+        working-directory: ios
+        run: pod install
+
+      - name: Compilar Release sin firma
+        working-directory: ios
+        run: |
+          set -euo pipefail
+          APP_NAME=$(basename -s .xcodeproj *.xcodeproj | head -n 1)
+          echo "Esquema detectado: $APP_NAME"
+          xcodebuild \
+            -workspace "$APP_NAME.xcworkspace" \
+            -scheme "$APP_NAME" \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: Empaquetar el IPA
+        working-directory: ios
+        run: |
+          set -euo pipefail
+          APP_PATH=$(find build/Build/Products/Release-iphoneos -maxdepth 1 -name '*.app' | head -n 1)
+          if [ -z "$APP_PATH" ]; then
+            echo "No se genero ningun .app; revisa la salida de xcodebuild."
+            exit 1
+          fi
+          echo "App empaquetada: $APP_PATH"
+          rm -rf Payload
+          mkdir -p Payload
+          cp -R "$APP_PATH" Payload/
+          rm -f MisFinanzas-unsigned.ipa
+          zip -qry MisFinanzas-unsigned.ipa Payload
+          ls -lh MisFinanzas-unsigned.ipa
+
+      - name: Publicar el artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: MisFinanzas-unsigned-ipa
+          path: ios/MisFinanzas-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 14

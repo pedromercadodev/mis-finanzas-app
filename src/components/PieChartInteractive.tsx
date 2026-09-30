@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, useWindowDimensions } from 'react-native';
 import Svg, { G, Path, Text as SvgText } from 'react-native-svg';
 import Animated, {
   useSharedValue,
@@ -114,16 +114,19 @@ function describeArc(
   ].join(' ');
 }
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
-
 export default function PieChartInteractive({
   data,
-  size = SCREEN_WIDTH - 80,
+  size: sizeProp,
   innerRadius = 0,
   showLegend = true,
 }: PieChartInteractiveProps) {
   const themeColors = useThemeColors();
   const chartColors = themeColors.chartColors;
+
+  // Tamaño por defecto derivado del ancho real de la ventana en cada render.
+  // Con Dimensions.get a nivel de módulo el gráfico no se reajustaba.
+  const { width: windowWidth } = useWindowDimensions();
+  const size = sizeProp ?? Math.min(windowWidth - 80, 360);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [animDone, setAnimDone] = useState(false);
 
