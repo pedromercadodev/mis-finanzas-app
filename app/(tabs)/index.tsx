@@ -4,10 +4,7 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  useWindowDimensions,
-  LayoutChangeEvent,
 } from 'react-native';
-import { Canvas, Circle, BlurMask } from '@shopify/react-native-skia';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -34,11 +31,7 @@ export default function DashboardScreen() {
   const { transactions, loadTransactions } = useTransactions();
   const themeColors = useThemeColors();
 
-  // Ancho real de la ventana en cada render (rotación / iPad): antes se
-  // congelaba al arrancar y el glow Skia quedaba desalineado.
-  const { width: SCREEN_WIDTH } = useWindowDimensions();
-  const CARD_WIDTH = SCREEN_WIDTH - CARD_HORIZONTAL_MARGIN * 2;
-  const { preferredRateType, manualRate, manualRateType, setPreferredRateType, expectedMonthlyIncome } = useSettings();
+  const { preferredRateType, manualRate, manualRateType, setPreferredRateType, expectedMonthlyIncome, userName } = useSettings();
   const {
     bcv: bcvRate,
     parallel: parallelRate,
@@ -179,7 +172,7 @@ export default function DashboardScreen() {
                 {new Date().getHours() < 12 ? 'Buenos días' : new Date().getHours() < 18 ? 'Buenas tardes' : 'Buenas noches'}
               </ThemedText>
               <ThemedText type="h2" themeColor="text" style={{ fontSize: 22 }}>
-                {accounts.length > 0 ? 'User' : 'Bienvenido'}
+                {userName.trim() ? userName : accounts.length > 0 ? 'User' : 'Bienvenido'}
               </ThemedText>
             </View>
             <TouchableOpacity
@@ -226,26 +219,41 @@ export default function DashboardScreen() {
               position: 'relative',
               overflow: 'hidden',
               shadowColor: '#0A1E3D',
-              shadowOffset: { width: 0, height: 10 },
-              shadowOpacity: 0.4,
-              shadowRadius: 32,
-              elevation: 8,
+              shadowOffset: { width: 0, height: 6 },
+              shadowOpacity: 0.22,
+              shadowRadius: 18,
+              elevation: 6,
             }}
           >
-            {/* Glow con blur REAL usando Skia */}
-            <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} pointerEvents="none">
-              <Canvas style={{ flex: 1 }}>
-                <Circle
-                  cx={CARD_WIDTH - 48}
-                  cy={48}
-                  r={80}
-                  color={themeColors.secondary}
-                  opacity={0.08}
-                >
-                  <BlurMask blur={50} style="normal" />
-                </Circle>
-              </Canvas>
-            </View>
+            {/* Glow decorativo nativo (sin Skia): círculos suaves superpuestos.
+                Antes se usaba un Canvas con BlurMask que en iOS se dibujaba por
+                encima del contenido y tapaba el número del balance. */}
+            <View
+              pointerEvents="none"
+              style={{
+                position: 'absolute',
+                top: -70,
+                right: -60,
+                width: 220,
+                height: 220,
+                borderRadius: 110,
+                backgroundColor: themeColors.secondary,
+                opacity: 0.06,
+              }}
+            />
+            <View
+              pointerEvents="none"
+              style={{
+                position: 'absolute',
+                top: -30,
+                right: -20,
+                width: 120,
+                height: 120,
+                borderRadius: 60,
+                backgroundColor: themeColors.secondary,
+                opacity: 0.05,
+              }}
+            />
 
             {/* Encabezado: Etiqueta y filtros */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', position: 'relative', zIndex: 1 }}>

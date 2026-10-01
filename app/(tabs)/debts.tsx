@@ -405,14 +405,13 @@ export default function DebtsScreen() {
               width: 40,
               height: 40,
               borderRadius: 20,
-              overflow: 'hidden',
               borderWidth: 1,
-              borderColor: themeColors.outlineVariant,
+              borderColor: themeColors.outlineVariant + '50',
               justifyContent: 'center',
               alignItems: 'center',
-              backgroundColor: themeColors.surfaceVariant,
+              backgroundColor: themeColors.primaryContainer,
             }}>
-              <Ionicons name="person" size={20} color={themeColors.textSecondary} />
+              <Ionicons name="person" size={20} color={themeColors.secondary} />
             </View>
             <ThemedText
               type="h2"
@@ -787,7 +786,11 @@ export default function DebtsScreen() {
             keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
             style={{ flex: 1 }}
           >
-            <ScrollView contentContainerStyle={{ padding: 20 }}>
+            <ScrollView
+              contentContainerStyle={{ padding: 20 }}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
+            >
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
                 <ThemedText type="h2" themeColor="text">
                   {editId ? 'Editar' : 'Nueva'} deuda
@@ -1118,7 +1121,11 @@ export default function DebtsScreen() {
             keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
             style={{ flex: 1 }}
           >
-            <ScrollView contentContainerStyle={{ padding: 20 }}>
+            <ScrollView
+              contentContainerStyle={{ padding: 20 }}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
+            >
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
                 <ThemedText type="h2" themeColor="text">
                   Registrar abono

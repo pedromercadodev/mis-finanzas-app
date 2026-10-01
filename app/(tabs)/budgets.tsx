@@ -512,7 +512,11 @@ export default function BudgetsScreen() {
             keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
             style={{ flex: 1 }}
           >
-            <ScrollView contentContainerStyle={{ padding: 20 }}>
+            <ScrollView
+              contentContainerStyle={{ padding: 20 }}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
+            >
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
                 <ThemedText type="h2" themeColor="text">
                   Asignar Presupuesto

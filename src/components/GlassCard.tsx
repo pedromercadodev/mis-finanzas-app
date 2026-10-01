@@ -61,7 +61,9 @@ export default function GlassCard({
     borderColor: themeColors.outlineVariant + '30',
   };
 
-  // iOS: shadowRadius produce blur REAL (como box-shadow blur-radius en CSS)
+  // iOS: shadowRadius produce blur REAL (como box-shadow blur-radius en CSS).
+  // Se limita radius y opacidad para que la sombra subtienda la tarjeta y no
+  // invada las tarjetas vecinas (el blur nativo se desborda por todo el frame).
   if (Platform.OS === 'ios') {
     return (
       <View
@@ -69,9 +71,9 @@ export default function GlassCard({
           {
             ...glassStyle,
             shadowColor,
-            shadowOffset: { width: 0, height: elev.offsetY },
-            shadowOpacity: 0.5,
-            shadowRadius: elev.blurRadius,
+            shadowOffset: { width: 0, height: Math.max(1, elev.offsetY * 0.75) },
+            shadowOpacity: 0.18,
+            shadowRadius: Math.max(6, elev.blurRadius * 0.6),
           },
           !noPadding && { padding: padding ?? 20 },
           style,

@@ -7,6 +7,35 @@ import { closeDatabase, getDatabase } from './database';
 const AUTO_BACKUP_FILENAME = 'finanzas-auto-backup-before-import.db';
 
 /**
+ * Cabecera de un archivo SQLite ("SQLite format 3\0" + terminador) codificada
+ * en base64. Es la única comprobación fiable: en iOS/Android el MIME de los
+ * .db es inconsistente, así que validamos los bytes reales antes de pisar la BD.
+ */
+const SQLITE_BASE64_PREFIX = 'U1FMaXRlIGZvcm1hdCAz';
+
+/** Error específico para archivos que no son un respaldo válido. */
+export class InvalidBackupError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'InvalidBackupError';
+  }
+}
+
+/**
+ * Comprueba que el contenido base64 corresponde a un archivo SQLite.
+ * Se hace ANTES de tocar la base de datos actual para no destruirla si el
+ * usuario elige por error un CSV, una foto o un .db corrupto.
+ */
+function assertIsSqlite(content: string): void {
+  if (!content || !content.startsWith(SQLITE_BASE64_PREFIX)) {
+    throw new InvalidBackupError(
+      'El archivo seleccionado no es un respaldo válido de Mis Finanzas. ' +
+        'Elige un archivo .db generado con la opción "Respaldar".'
+    );
+  }
+}
+
+/**
  * Devuelve el archivo real de la base de datos.
  *
  * expo-sqlite abre la base en su directorio por defecto
@@ -122,9 +151,13 @@ export async function shareBackup(): Promise<void> {
  * @returns true si la importación fue exitosa
  */
 export async function importBackup(): Promise<boolean> {
-  // Abrir selector de archivos
+  // Abrir selector de archivos.
+  // No restringimos con MIME concretos porque ni iOS ni Android reportan un
+  // tipo fiable para los .db (muchos solo exponen public.data u
+  // application/octet-stream, y restringir dejaría el archivo en gris).
+  // El filtro real es la validación de la cabecera SQLite más abajo.
   const result = await DocumentPicker.getDocumentAsync({
-    type: '*/*',
+    type: ['application/octet-stream', 'application/vnd.sqlite3', 'application/x-sqlite3', '*/*'],
     copyToCacheDirectory: true,
   });
 
@@ -134,16 +167,19 @@ export async function importBackup(): Promise<boolean> {
 
   const file = result.assets[0];
   if (!file?.uri) {
-    throw new Error('No se seleccionó ningún archivo');
+    throw new InvalidBackupError('No se seleccionó ningún archivo');
   }
 
   // Leer el contenido del archivo seleccionado en base64
   const selectedFile = new File(file.uri);
   if (!selectedFile.exists) {
-    throw new Error('El archivo seleccionado no existe');
+    throw new InvalidBackupError('El archivo seleccionado no existe o no se pudo acceder a él');
   }
 
   const content = await selectedFile.base64();
+
+  // Validar la cabecera ANTES de cerrar/borrar la base de datos actual.
+  assertIsSqlite(content);
 
   await checkpointWal();
   const dbFile = await getDatabaseFile();

@@ -3,7 +3,7 @@
     "name": "Mis Finanzas",
     "newArchEnabled": true,
     "slug": "finanzas-app",
-    "version": "2.5.0",
+    "version": "2.6.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -11,7 +11,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.tufinanzas.app",
-      "buildNumber": "1",
+      "buildNumber": "2",
       "infoPlist": {
         "UIStatusBarHidden": false,
         "ITSAppUsesNonExemptEncryption": false,
@@ -35,7 +35,17 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Mis Finanzas necesita acceso al microfono para que dictes tus movimientos por voz.",
+          "speechRecognitionPermission": "Mis Finanzas usa el reconocimiento de voz para convertir tu dictado en texto.",
+          "androidSpeechServicePackages": [
+            "com.google.android.googlequicksearchbox"
+          ]
+        }
+      ]
     ],
     "extra": {
       "router": {},

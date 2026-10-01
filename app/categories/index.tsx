@@ -475,6 +475,9 @@ export default function CategoriesScreen() {
       <ScrollView
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         contentContainerStyle={{ paddingBottom: 100 }}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        automaticallyAdjustKeyboardInsets
       >
         {/* Search Bar */}
         <View style={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: 8 }}>
@@ -593,7 +596,11 @@ export default function CategoriesScreen() {
             keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
             style={{ flex: 1 }}
           >
-            <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 40 }}>
+            <ScrollView
+              contentContainerStyle={{ padding: 24, paddingBottom: 40 }}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
+            >
               {/* Header */}
               <View
                 style={{
@@ -872,7 +879,11 @@ export default function CategoriesScreen() {
             keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
             style={{ flex: 1 }}
           >
-            <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 40 }}>
+            <ScrollView
+              contentContainerStyle={{ padding: 24, paddingBottom: 40 }}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
+            >
               {/* Header */}
               <View
                 style={{

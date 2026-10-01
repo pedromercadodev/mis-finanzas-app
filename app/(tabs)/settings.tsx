@@ -30,6 +30,7 @@ export default function SettingsScreen() {
   const themeColors = useThemeColors();
   const systemColorScheme = useColorScheme();
   const {
+    userName, setUserName,
     deepseekKey, setDeepseekKey,
     manualRate, setManualRate,
     manualRateType, setManualRateType,
@@ -49,6 +50,7 @@ export default function SettingsScreen() {
   const [showRate, setShowRate] = useState(false);
   const [rateInput, setRateInput] = useState(manualRate?.toString() || '');
   const [incomeInput, setIncomeInput] = useState(expectedMonthlyIncome > 0 ? expectedMonthlyIncome.toString() : '');
+  const [nameInput, setNameInput] = useState(userName || '');
   const [backupInfo, setBackupInfo] = useState<{ exists: boolean; fileName: string | null; fileSize: string | null; fileDate: string | null }>({ exists: false, fileName: null, fileSize: null, fileDate: null });
   const [importing, setImporting] = useState(false);
 
@@ -139,7 +141,12 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: 100 }}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        automaticallyAdjustKeyboardInsets
+      >
         {/* Header */}
         <View style={{ paddingHorizontal: 24, paddingTop: 8, paddingBottom: 8 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -189,7 +196,58 @@ export default function SettingsScreen() {
           </ThemedText>
         </View>
 
-        <View style={{ paddingHorizontal: 24, gap: 16 }}>
+        <View style={{ paddingHorizontal: 24, gap: 20 }}>
+          {/* User Name */}
+          <GlassCard padding={20}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <Ionicons name="person" size={20} color={themeColors.secondary} />
+              <ThemedText type="h3" themeColor="text" style={{ fontSize: 18 }}>
+                Tu nombre
+              </ThemedText>
+            </View>
+            <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ marginBottom: 12 }}>
+              Lo usamos para saludarte y personalizar las respuestas de FinBot
+            </ThemedText>
+            <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+              <TextInput
+                style={[inputStyle, { flex: 1, fontSize: 16 }]}
+                placeholder="Escribe tu nombre"
+                placeholderTextColor={themeColors.outline}
+                value={nameInput}
+                onChangeText={setNameInput}
+                maxLength={40}
+                autoCapitalize="words"
+                returnKeyType="done"
+                onSubmitEditing={() => setUserName(nameInput)}
+                accessibilityLabel="Tu nombre"
+              />
+              <TouchableOpacity
+                accessibilityLabel="Guardar nombre"
+                onPress={() => setUserName(nameInput)}
+                style={{
+                  backgroundColor: themeColors.secondary,
+                  paddingVertical: 12,
+                  paddingHorizontal: 16,
+                  borderRadius: 10,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  shadowColor: themeColors.secondary,
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 12,
+                  elevation: 6,
+                }}
+              >
+                <Ionicons name="checkmark" size={20} color={themeColors.background} />
+              </TouchableOpacity>
+            </View>
+            {userName ? (
+              <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ marginTop: 8 }}>
+                Actual: {userName}
+              </ThemedText>
+            ) : null}
+          </GlassCard>
+
           {/* Expected Monthly Income */}
           <GlassCard padding={20}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
@@ -311,7 +369,7 @@ export default function SettingsScreen() {
                   </View>
                 </View>
 
-                <View style={{ height: 1, backgroundColor: themeColors.outlineVariant + '30' }} />
+                <View style={{ height: 1, marginVertical: 6, backgroundColor: themeColors.outlineVariant + '30' }} />
 
                 {/* Exchange Rates */}
                 <View style={{ gap: 12 }}>
@@ -708,7 +766,7 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             </View>
 
-            <View style={{ height: 1, backgroundColor: themeColors.outlineVariant + '30' }} />
+            <View style={{ height: 1, marginVertical: 6, backgroundColor: themeColors.outlineVariant + '30' }} />
 
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <TouchableOpacity
@@ -749,12 +807,19 @@ export default function SettingsScreen() {
                     if (success) {
                       Alert.alert(
                         'Restaurado',
-                        'Base de datos restaurada correctamente. La app se cerrará para aplicar los cambios.',
+                        'Los datos se restauraron correctamente. Cierra y vuelve a abrir la app para verlos en todas las pantallas.',
                         [{ text: 'OK' }]
                       );
                     }
                   } catch (error: any) {
-                    Alert.alert('Error', error.message || 'No se pudo restaurar el respaldo');
+                    if (error?.name === 'InvalidBackupError') {
+                      Alert.alert('Archivo no válido', error.message);
+                    } else {
+                      Alert.alert(
+                        'Error al restaurar',
+                        error?.message || 'No se pudo restaurar el respaldo. Tus datos actuales no se modificaron.'
+                      );
+                    }
                   } finally {
                     setImporting(false);
                   }

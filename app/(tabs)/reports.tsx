@@ -329,12 +329,13 @@ export default function ReportsScreen() {
               width: 40,
               height: 40,
               borderRadius: 20,
-              backgroundColor: themeColors.surfaceVariant,
-              overflow: 'hidden',
+              backgroundColor: themeColors.primaryContainer,
+              borderWidth: 1,
+              borderColor: themeColors.outlineVariant + '50',
               justifyContent: 'center',
               alignItems: 'center',
             }}>
-              <Ionicons name="person" size={22} color={themeColors.textSecondary} />
+              <Ionicons name="person" size={20} color={themeColors.secondary} />
             </View>
             <Text
               style={{

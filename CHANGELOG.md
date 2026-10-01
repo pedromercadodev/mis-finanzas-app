@@ -1,5 +1,42 @@
 # Changelog
 
+## v2.6.0 (2026-10-01)
+
+### 🎤 Micrófono y dictado en iOS
+- **Archivos:** [`app.json`](app.json), [`src/hooks/useSpeechToText.ts`](src/hooks/useSpeechToText.ts), [`app/ai-chat.tsx`](app/ai-chat.tsx)
+- Se sustituyó la **Web Speech API** (`SpeechRecognition` / `webkitSpeechRecognition`), que no existe en React Native nativo, por `expo-speech-recognition`.
+- Nuevo hook `useSpeechToText` que encapsula permisos (micrófono y reconocimiento de voz), `start()` / `stop()`, los eventos `result`, `end` y `error`, y el estado `isListening`.
+- El botón de micrófono del chat ahora muestra estado activo/inactivo, anima el pulso respetando `useReducedMotion`, expone `accessibilityLabel` y se deshabilita mientras la IA responde.
+- Plugin registrado en `app.json` con `NSMicrophoneUsageDescription` y `NSSpeechRecognitionUsageDescription` en español.
+
+### ⌨️ Teclado: auditoría y arreglo en toda la app
+- **Archivos:** [`app/ai-chat.tsx`](app/ai-chat.tsx), [`app/(tabs)/settings.tsx`](app/(tabs)/settings.tsx), [`app/(tabs)/transactions.tsx`](app/(tabs)/transactions.tsx), [`app/(tabs)/subscriptions.tsx`](app/(tabs)/subscriptions.tsx), [`app/(tabs)/debts.tsx`](app/(tabs)/debts.tsx), [`app/(tabs)/goals.tsx`](app/(tabs)/goals.tsx), [`app/(tabs)/budgets.tsx`](app/(tabs)/budgets.tsx), [`app/categories/index.tsx`](app/categories/index.tsx)
+- **ai-chat:** el `KeyboardAvoidingView` estaba importado pero nunca se usaba y la barra de entrada era `position: 'absolute'`, por lo que el teclado la tapaba. Ahora envuelve contenido y barra, con `keyboardVerticalOffset={insets.top}`, `FlatList` con `flex: 1` y auto-scroll al abrir el teclado.
+- **settings:** era la única pantalla con inputs sin ningún manejo de teclado; se añadió `automaticallyAdjustKeyboardInsets`, `keyboardShouldPersistTaps="handled"` y `keyboardDismissMode="interactive"`.
+- **Modales de suscripciones, deudas, metas, presupuestos y categorías:** se añadieron `keyboardShouldPersistTaps="handled"` y `keyboardDismissMode="interactive"`, lo que elimina el doble toque al pulsar Guardar con el teclado abierto.
+- **Buscadores de movimientos y categorías:** misma protección para que los taps en los resultados funcionen con el teclado visible.
+
+### 👤 Nombre del usuario
+- **Archivos:** [`src/store/useSettings.ts`](src/store/useSettings.ts), [`app/(tabs)/settings.tsx`](app/(tabs)/settings.tsx), [`app/(tabs)/index.tsx`](app/(tabs)/index.tsx), [`src/services/deepseek.ts`](src/services/deepseek.ts), [`app/ai-chat.tsx`](app/ai-chat.tsx)
+- Nuevo `userName` en `useSettings` con setter `setUserName` (recorta espacios y limita a 40 caracteres) y persistencia automática en AsyncStorage.
+- Nuevo campo "Tu nombre" en Ajustes, dentro de una tarjeta, con botón de confirmación y línea "Actual: {nombre}".
+- El saludo del resumen usa el nombre configurado y conserva el saludo por hora como fallback.
+- `buildSystemPrompt()` añade un bloque `## NOMBRE DEL USUARIO` y FinBot saluda por nombre en las respuestas del chat.
+
+### 🎨 Bordes, sombras y encabezados
+- **Archivos:** [`src/components/GlassCard.tsx`](src/components/GlassCard.tsx), [`app/(tabs)/settings.tsx`](app/(tabs)/settings.tsx), [`app/(tabs)/index.tsx`](app/(tabs)/index.tsx), [`app/(tabs)/reports.tsx`](app/(tabs)/reports.tsx), [`app/(tabs)/debts.tsx`](app/(tabs)/debts.tsx), [`app/(tabs)/subscriptions.tsx`](app/(tabs)/subscriptions.tsx)
+- **GlassCard (iOS):** la sombra invadía las tarjetas vecinas en Ajustes. Se bajó `shadowOpacity` de 0.5 a 0.18 y se limitó `shadowRadius` a `Math.max(6, blurRadius * 0.6)` con `shadowOffset.height` al 75%; la rama Android (Skia) no se tocó.
+- **Ajustes:** el espacio entre tarjetas subió de 16 a 20 y los divisores ganaron `marginVertical: 6`.
+- **Balance Total (Resumen):** el glow con Skia `Canvas` + `BlurMask` podía rasterizarse como un parche translúcido encima del monto. Se eliminó y se reemplazó por sombra nativa más dos círculos decorativos (`opacity` 0.06 y 0.05) con `pointerEvents="none"`.
+- **Encabezados de Reportes, Deudas y Suscripciones:** el círculo con icono `person` sobre fondo gris parecía un hueco para foto. Se alinearon al estilo de Ajustes: `primaryContainer`, borde `outlineVariant + '50'` e icono `secondary` de tamaño 20, sin `overflow: hidden`.
+
+### 💾 Restauración de datos más segura
+- **Archivos:** [`src/services/backup.ts`](src/services/backup.ts), [`app/(tabs)/settings.tsx`](app/(tabs)/settings.tsx)
+- Se valida la **cabecera SQLite** (`SQLite format 3\0`, en base64 `U1FMaXRlIGZvcm1hdCAz`) inmediatamente después de leer el archivo y **antes** de cerrar o borrar la base de datos, de modo que elegir por error un CSV, una foto o un `.db` corrupto ya no puede destruir los datos actuales.
+- Nueva clase `InvalidBackupError` para distinguir un archivo no válido de un fallo real; Ajustes muestra "Archivo no válido" en ese caso y "Error al restaurar" (aclarando que los datos actuales no se modificaron) en cualquier otro.
+- El `DocumentPicker` declara los tipos SQLite conocidos y mantiene `*/*` porque iOS/Android informan tipos poco fiables para los `.db`.
+- El mensaje de éxito ya no promete que la app se cierra: ahora indica que hay que cerrar y reabrir la app para ver los datos en todas las pantallas.
+
 ## v2.5.0 (2026-07-17)
 
 ### 🐛 Fase 6 — Correcciones y Mejoras en Reportes

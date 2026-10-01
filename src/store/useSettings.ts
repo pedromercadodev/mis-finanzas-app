@@ -23,6 +23,8 @@ interface SettingsState {
   themeMode: ThemeMode;
   preferredRateType: RateType;
   expectedMonthlyIncome: number;
+  /** Nombre del usuario para el saludo y el asistente. Vacio = sin configurar */
+  userName: string;
   setDeepseekKey: (key: string) => void;
   setManualRate: (rate: number | null) => void;
   setManualRateType: (type: RateType) => void;
@@ -30,6 +32,7 @@ interface SettingsState {
   setThemeMode: (mode: ThemeMode) => void;
   setPreferredRateType: (type: RateType) => void;
   setExpectedMonthlyIncome: (income: number) => void;
+  setUserName: (name: string) => void;
   /** Carga la API Key desde SecureStore al iniciar */
   loadDeepseekKey: () => Promise<void>;
 }
@@ -44,6 +47,7 @@ export const useSettings = create<SettingsState>()(
       themeMode: 'system',
       preferredRateType: 'PARALLEL',
       expectedMonthlyIncome: 0,
+      userName: '',
       setDeepseekKey: async (key: string) => {
         // Guardar en SecureStore (cifrado) si está disponible
         if (SecureStoreModule) {
@@ -61,6 +65,7 @@ export const useSettings = create<SettingsState>()(
       setThemeMode: (mode) => set({ themeMode: mode }),
       setPreferredRateType: (type) => set({ preferredRateType: type }),
       setExpectedMonthlyIncome: (income) => set({ expectedMonthlyIncome: income }),
+      setUserName: (name) => set({ userName: name.trim().slice(0, 40) }),
       loadDeepseekKey: async () => {
         if (SecureStoreModule) {
           try {

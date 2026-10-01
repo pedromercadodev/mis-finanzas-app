@@ -367,6 +367,9 @@ export default function TransactionsScreen() {
       <ScrollView
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.secondary} colors={[themeColors.secondary]} />}
         contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 8, paddingBottom: 100 }}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        automaticallyAdjustKeyboardInsets
       >
         {/* Header con botón de filtros */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
@@ -809,6 +812,7 @@ export default function TransactionsScreen() {
             <ScrollView
               contentContainerStyle={{ padding: 20 }}
               keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
             >
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
                 <ThemedText type="h2" themeColor="text">

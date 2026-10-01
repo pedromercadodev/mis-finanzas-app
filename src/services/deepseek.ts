@@ -939,7 +939,7 @@ async function executeQueryTool(
 // ============================================================
 // ============================================================
 
-function buildSystemPrompt(accounts: Account[], categories: Category[]): string {
+function buildSystemPrompt(accounts: Account[], categories: Category[], userName?: string): string {
   const accountsSummary = accounts.map((a) => ({
     id: a.id,
     name: a.name,
@@ -954,6 +954,17 @@ function buildSystemPrompt(accounts: Account[], categories: Category[]): string 
     name: c.name,
     type: c.type,
   }));
+
+  const name = (userName || '').trim();
+  const nameInstruction = name
+    ? `
+## NOMBRE DEL USUARIO
+El usuario se llama ${name}. Dirígete a él por su nombre de forma natural y cálida (por ejemplo al saludar o al cerrar una ayuda), sin abusar ni repetirlo en cada frase.
+`
+    : `
+## NOMBRE DEL USUARIO
+Aún no conoces el nombre del usuario. No lo inventes; si es el saludo inicial, puedes preguntarle cómo prefiere que lo llames.
+`;
 
   let accountsInstruction = '';
   if (accounts.length === 0) {
@@ -974,7 +985,7 @@ Si el usuario no especifica una cuenta, INFIÉRELA automáticamente de la lista 
   }
 
   return `Eres FinBot 🤖, un asistente financiero inteligente y conversacional. Tu personalidad es profesional pero amigable, como un asesor financiero de confianza. Hablas de forma clara y directa, usando emojis con moderación para hacer la conversación más amena.
-
+${nameInstruction}
 ## 🧠 TUS CAPACIDADES
 Tienes dos tipos de herramientas a tu disposición:
 
@@ -1204,7 +1215,8 @@ export async function chatWithDeepSeek(
   messages: DeepSeekMessage[],
   accounts: Account[],
   categories: Category[],
-  apiKey: string
+  apiKey: string,
+  userName?: string
 ): Promise<DeepSeekResponse> {
   if (!apiKey) {
     console.log('[DEEPSEEK DEBUG] No hay API Key configurada');
@@ -1214,7 +1226,7 @@ export async function chatWithDeepSeek(
     };
   }
 
-  const systemPrompt = buildSystemPrompt(accounts, categories);
+  const systemPrompt = buildSystemPrompt(accounts, categories, userName);
 
   const apiMessages: { role: string; content: string }[] = [
     { role: 'system', content: systemPrompt },

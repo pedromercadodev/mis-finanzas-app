@@ -695,7 +695,11 @@ export default function GoalsScreen() {
             keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
             style={{ flex: 1 }}
           >
-            <ScrollView contentContainerStyle={{ padding: 20 }}>
+            <ScrollView
+              contentContainerStyle={{ padding: 20 }}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
+            >
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
                 <ThemedText type="h2" themeColor="text">
                   Nueva Meta
@@ -877,7 +881,11 @@ export default function GoalsScreen() {
             keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
             style={{ flex: 1 }}
           >
-            <ScrollView contentContainerStyle={{ padding: 20 }}>
+            <ScrollView
+              contentContainerStyle={{ padding: 20 }}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
+            >
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
                 <ThemedText type="h2" themeColor="text">
                   Nuevo Ítem
@@ -955,7 +963,11 @@ export default function GoalsScreen() {
             keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
             style={{ flex: 1 }}
           >
-            <ScrollView contentContainerStyle={{ padding: 20 }}>
+            <ScrollView
+              contentContainerStyle={{ padding: 20 }}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
+            >
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
                 <ThemedText type="h2" themeColor="text">
                   Abonar a Meta

@@ -8,11 +8,13 @@ import {
   Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
+  Keyboard,
   Platform,
   ScrollView,
   Modal,
+  Animated,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Markdown from 'react-native-markdown-display';
@@ -41,6 +43,8 @@ import AnimatedScreen from '../src/components/AnimatedScreen';
 import ThemedText from '../src/components/ThemedText';
 import type { DeepSeekMessage, DeepSeekAction, TransactionAction, CreateAccountAction, UpdateAccountAction, TransferAction, CreateGoalAction, UpdateGoalProgressAction, DeleteGoalAction, CreateSubscriptionAction, UpdateSubscriptionAction, DeleteSubscriptionAction, SetBudgetAction, CreateDebtAction, PayDebtAction, DeleteDebtAction, UpdateTransactionAction, DeleteTransactionAction, DeleteAccountAction } from '../src/services/deepseek';
 import type { Category } from '../src/utils/types';
+import useSpeechToText from '../src/hooks/useSpeechToText';
+import { useReducedMotion } from '../src/hooks/useReducedMotion';
 
 // ============================================================
 // Funciones helper (fuera del componente para ser reutilizables)
@@ -151,7 +155,9 @@ async function generarResumenAsync(
 export default function AIChatScreen() {
   const router = useRouter();
   const themeColors = useThemeColors();
-  const { deepseekKey, useDarkMode } = useSettings();
+  const insets = useSafeAreaInsets();
+  const reducedMotion = useReducedMotion();
+  const { deepseekKey, useDarkMode, userName } = useSettings();
   const accounts = useAccounts((s) => s.accounts);
   const loadAccounts = useAccounts((s) => s.loadAccounts);
   const loadTransactions = useTransactions((s) => s.loadTransactions);
@@ -160,8 +166,11 @@ export default function AIChatScreen() {
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [isListening, setIsListening] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  // Texto ya presente en el input al iniciar el dictado (para concatenar).
+  const dictationBaseRef = useRef('');
+  // Escala del pulso del boton de microfono mientras escucha.
+  const micPulse = useRef(new Animated.Value(1)).current;
   const [chatSessions, setChatSessions] = useState<{ id: string; preview: string; date: string; count: number }[]>([]);
   const flatListRef = useRef<FlatList>(null);
 
@@ -451,7 +460,7 @@ export default function AIChatScreen() {
         }
       }
 
-      const response = await chatWithDeepSeek(history, accounts, categories, deepseekKey);
+      const response = await chatWithDeepSeek(history, accounts, categories, deepseekKey, userName);
 
       if (response.type === 'action' && response.action) {
         const msgId = (Date.now() + 1).toString();
@@ -960,51 +969,59 @@ export default function AIChatScreen() {
   }, [addMessage]);
 
   // ============================================================
-  // Reconocimiento de voz (SpeechRecognition API)
+  // Dictado por voz (expo-speech-recognition)
   // ============================================================
-  const startListening = useCallback(() => {
-    // La Web Speech API solo existe en web. En iOS/Android `window` no está
-    // definido y evaluarlo dentro del bundle nativo lanza ReferenceError.
-    const speechGlobal = globalThis as any;
-    const SpeechRecognitionCtor =
-      speechGlobal?.SpeechRecognition || speechGlobal?.webkitSpeechRecognition;
+  const handleTranscript = useCallback((text: string) => {
+    if (!text) return;
+    setInputText(() => {
+      const base = dictationBaseRef.current;
+      return base ? `${base} ${text}` : text;
+    });
+  }, []);
 
-    if (!SpeechRecognitionCtor) {
-      Alert.alert(
-        'No disponible',
-        'El dictado por voz solo funciona en la versión web. En el iPhone puedes usar el micrófono del teclado del sistema.'
+  const handleSpeechError = useCallback((message: string) => {
+    Alert.alert('Dictado por voz', message);
+  }, []);
+
+  const { isListening, toggle: toggleDictation } = useSpeechToText({
+    lang: 'es-VE',
+    onTranscript: handleTranscript,
+    onError: handleSpeechError,
+  });
+
+  const handleMicPress = useCallback(() => {
+    if (isLoading) return;
+    if (!isListening) {
+      // Guardamos lo escrito para no perderlo al concatenar el dictado.
+      dictationBaseRef.current = inputText.trim();
+    }
+    toggleDictation();
+  }, [isLoading, isListening, inputText, toggleDictation]);
+
+  // Pulso sutil del boton de microfono mientras escucha (respeta reduced motion).
+  useEffect(() => {
+    if (isListening && !reducedMotion) {
+      const loop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(micPulse, { toValue: 1.12, duration: 600, useNativeDriver: true }),
+          Animated.timing(micPulse, { toValue: 1, duration: 600, useNativeDriver: true }),
+        ])
       );
-      return;
+      loop.start();
+      return () => loop.stop();
     }
+    micPulse.setValue(1);
+    return undefined;
+  }, [isListening, reducedMotion, micPulse]);
 
-    try {
-      const recognition = new SpeechRecognitionCtor();
-      recognition.lang = 'es-ES';
-      recognition.interimResults = false;
-      recognition.maxAlternatives = 1;
-
-      setIsListening(true);
-
-      recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        setInputText((prev) => (prev ? prev + ' ' + transcript : transcript));
-        setIsListening(false);
-      };
-
-      recognition.onerror = () => {
-        setIsListening(false);
-        Alert.alert('Error', 'No se pudo reconocer tu voz. Intenta de nuevo.');
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
-      recognition.start();
-    } catch {
-      setIsListening(false);
-      Alert.alert('Error', 'No se pudo iniciar el reconocimiento de voz.');
-    }
+  // Al abrir el teclado, asegurar que el ultimo mensaje siga visible.
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', () => {
+      requestAnimationFrame(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      });
+    });
+    return () => showSub.remove();
   }, []);
 
   // ============================================================
@@ -1495,7 +1512,12 @@ export default function AIChatScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Contenido principal */}
+        {/* Contenido principal (envuelto para que el teclado no tape el input) */}
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
+        >
         {!hasMessages ? (
           /* Welcome State */
           <View style={{
@@ -1527,13 +1549,16 @@ export default function AIChatScreen() {
           /* Lista de mensajes */
           <FlatList
             ref={flatListRef}
+            style={{ flex: 1 }}
             data={messages}
             keyExtractor={(item) => item.id}
             renderItem={renderMessage}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
             contentContainerStyle={{
               paddingHorizontal: 20,
               paddingTop: 16,
-              paddingBottom: 120,
+              paddingBottom: 24,
             }}
             onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
             ListFooterComponent={
@@ -1580,14 +1605,10 @@ export default function AIChatScreen() {
           />
         )}
 
-        {/* Bottom Input Bar */}
+        {/* Bottom Input Bar (en flujo normal, dentro del KeyboardAvoidingView) */}
         <View style={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
           paddingHorizontal: 16,
-          paddingBottom: Platform.OS === 'ios' ? 28 : 16,
+          paddingBottom: Math.max(insets.bottom, 12),
           paddingTop: 8,
           backgroundColor: themeColors.surface + '99',
           borderTopWidth: 1,
@@ -1604,23 +1625,30 @@ export default function AIChatScreen() {
             borderColor: themeColors.outlineVariant + '30',
           }}>
             {/* Mic button */}
-            <TouchableOpacity
-              onPress={startListening}
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
-                backgroundColor: isListening ? themeColors.danger + '20' : themeColors.surfaceVariant + '60',
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}
-            >
-              <Ionicons
-                name={isListening ? "mic" : "mic-outline"}
-                size={20}
-                color={isListening ? themeColors.danger : themeColors.onSurfaceVariant}
-              />
-            </TouchableOpacity>
+            <Animated.View style={{ transform: [{ scale: micPulse }] }}>
+              <TouchableOpacity
+                onPress={handleMicPress}
+                disabled={isLoading}
+                accessibilityRole="button"
+                accessibilityLabel={isListening ? 'Detener dictado por voz' : 'Dictar por voz'}
+                accessibilityState={{ disabled: isLoading, selected: isListening }}
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: isListening ? themeColors.danger + '20' : themeColors.surfaceVariant + '60',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  opacity: isLoading ? 0.5 : 1,
+                }}
+              >
+                <Ionicons
+                  name={isListening ? "mic" : "mic-outline"}
+                  size={20}
+                  color={isListening ? themeColors.danger : themeColors.onSurfaceVariant}
+                />
+              </TouchableOpacity>
+            </Animated.View>
 
             {/* Text input */}
             <TextInput
@@ -1664,6 +1692,7 @@ export default function AIChatScreen() {
             </TouchableOpacity>
           </View>
         </View>
+        </KeyboardAvoidingView>
 
         {/* History Modal */}
         <Modal
