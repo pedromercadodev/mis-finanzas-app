@@ -63,21 +63,57 @@ export interface UseSpeechToTextResult {
   toggle: () => void;
 }
 
-function describeError(errorCode: string | undefined): string {
+/**
+ * Opciones de arranque del motor de reconocimiento. Se extraen a una funcion
+ * para poder reintentar con otro idioma sin duplicar la configuracion.
+ */
+function buildStartOptions(lang: string) {
+  return {
+    lang,
+    interimResults: true,
+    continuous: false,
+    maxAlternatives: 1,
+    addsPunctuation: true,
+  };
+}
+
+/** Errores que representan silencio o corte: no ameritan un Alert modal. */
+const BENIGN_ERROR_CODES = new Set(['no-speech', 'speech-timeout', 'aborted']);
+
+/**
+ * Traduce el codigo de error del motor a un mensaje claro en espanol.
+ * Se incluye el codigo crudo (y el code nativo si existe) para poder
+ * diagnosticar en el dispositivo cuando el motivo no esta contemplado.
+ */
+function describeError(errorCode: string | undefined, nativeCode?: number): string {
+  const detail = errorCode
+    ? ` (codigo: ${errorCode}${typeof nativeCode === 'number' && nativeCode !== 0 ? `/${nativeCode}` : ''})`
+    : '';
   switch (errorCode) {
     case 'not-allowed':
     case 'service-not-allowed':
-      return 'No hay permiso para usar el microfono. Activalo en Ajustes del sistema.';
+      return `No hay permiso para usar el microfono. Activalo en Ajustes del sistema.${detail}`;
     case 'no-speech':
-      return 'No escuche nada. Acercate al microfono e intenta de nuevo.';
+    case 'speech-timeout':
+      return `No escuche nada. Acercate al microfono e intenta de nuevo.${detail}`;
     case 'audio-capture':
-      return 'No se encontro un microfono disponible.';
+      return `No se encontro un microfono disponible.${detail}`;
     case 'network':
-      return 'El reconocimiento necesita conexion a internet en este dispositivo.';
+      return `El reconocimiento necesita conexion a internet en este dispositivo.${detail}`;
+    case 'interrupted':
+      return `El dictado se interrumpio por otra app (llamada, Siri o alarma). Intenta de nuevo.${detail}`;
+    case 'language-not-supported':
+      return `El idioma configurado no esta disponible para el reconocimiento de voz.${detail}`;
+    case 'busy':
+      return `El reconocedor esta ocupado. Espera un momento e intenta de nuevo.${detail}`;
+    case 'bad-grammar':
+      return `Hubo un problema de configuracion del reconocimiento.${detail}`;
+    case 'client':
+      return `Ocurrio un error del reconocedor en el dispositivo.${detail}`;
     case 'aborted':
-      return 'El dictado se interrumpio.';
+      return `El dictado se detuvo.${detail}`;
     default:
-      return 'No se pudo reconocer tu voz. Intenta de nuevo.';
+      return `No se pudo reconocer tu voz. Intenta de nuevo.${detail}`;
   }
 }
 
@@ -101,6 +137,9 @@ export function useSpeechToText(
   // Refs para evitar closures obsoletos en los eventos.
   const onTranscriptRef = useRef(options.onTranscript);
   const onErrorRef = useRef(options.onError);
+  // Idioma vigente y bandera del reintento por locale no soportado.
+  const langRef = useRef(lang);
+  const hasRetriedLangRef = useRef(false);
 
   useEffect(() => {
     onTranscriptRef.current = options.onTranscript;
@@ -109,6 +148,10 @@ export function useSpeechToText(
   useEffect(() => {
     onErrorRef.current = options.onError;
   }, [options.onError]);
+
+  useEffect(() => {
+    langRef.current = lang;
+  }, [lang]);
 
   useEffect(() => {
     const pkg = loadSpeechPackage();
@@ -158,7 +201,32 @@ export function useSpeechToText(
       subscriptions.push(
         module.addListener('error', (event) => {
           setIsListening(false);
-          onErrorRef.current?.(describeError(event?.error));
+          const code = event?.error;
+
+          // Silencio o corte: caso benigno, detenemos sin Alert modal.
+          if (code && BENIGN_ERROR_CODES.has(code)) {
+            return;
+          }
+
+          // Fallback de idioma: si el motor no soporta es-VE, reintentamos con es-ES.
+          if (code === 'language-not-supported' && !hasRetriedLangRef.current) {
+            hasRetriedLangRef.current = true;
+            const retryModule = loadSpeechPackage()?.ExpoSpeechRecognitionModule;
+            try {
+              retryModule?.start(buildStartOptions('es-ES'));
+              return;
+            } catch {
+              // Si el reintento tambien falla, cae al manejo de error normal.
+            }
+          }
+
+          console.warn(
+            '[useSpeechToText] Error de reconocimiento:',
+            code,
+            event?.code,
+            event?.message
+          );
+          onErrorRef.current?.(describeError(code, event?.code));
         })
       );
     } catch (error) {
@@ -198,19 +266,15 @@ export function useSpeechToText(
         return;
       }
 
-      module.start({
-        lang,
-        interimResults: true,
-        continuous: false,
-        maxAlternatives: 1,
-        addsPunctuation: true,
-      });
+      // Reiniciamos la bandera de fallback de idioma en cada arranque.
+      hasRetriedLangRef.current = false;
+      module.start(buildStartOptions(langRef.current));
       setIsListening(true);
     } catch {
       setIsListening(false);
       onErrorRef.current?.('No se pudo iniciar el reconocimiento de voz.');
     }
-  }, [lang]);
+  }, []);
 
   const stop = useCallback(async () => {
     const module = loadSpeechPackage()?.ExpoSpeechRecognitionModule;

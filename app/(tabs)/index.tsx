@@ -305,10 +305,10 @@ export default function DashboardScreen() {
 
         {/* ===== EXCHANGE RATES & ALERTS ROW ===== */}
         <View style={{ paddingHorizontal: CARD_HORIZONTAL_MARGIN, marginBottom: 20 }}>
-          <View style={{ flexDirection: 'row', gap: 16 }}>
+          <View style={{ gap: 12 }}>
             {/* Exchange Rate Card */}
             <View style={{
-              flex: 1,
+              width: '100%',
               backgroundColor: themeColors.surfaceContainer,
               borderRadius: 12,
               padding: 16,
@@ -329,7 +329,7 @@ export default function DashboardScreen() {
               <ThemedText type="h3" themeColor="text" style={{ fontSize: 18, marginBottom: 8 }}>
                 1 USD = {formatBS(activeRate ?? 0).replace('Bs.', '').trim()} BS
               </ThemedText>
-              <View style={{ flexDirection: 'row', gap: 6 }}>
+              <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
                 <View style={{ backgroundColor: themeColors.surfaceVariant, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
                   <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ fontSize: 11 }}>
                     BCV: {bcvRate?.rateUSDToBS?.toFixed(2) ?? '---'}
@@ -346,7 +346,7 @@ export default function DashboardScreen() {
             {/* Alert Card */}
             {dueSubscriptions.length > 0 && (
               <View style={{
-                flex: 1,
+                width: '100%',
                 backgroundColor: themeColors.surfaceContainer,
                 borderRadius: 12,
                 padding: 16,
@@ -756,7 +756,7 @@ export default function DashboardScreen() {
                     activeOpacity={0.7}
                   >
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
                         <View style={{
                           width: 32,
                           height: 32,
@@ -764,14 +764,21 @@ export default function DashboardScreen() {
                           backgroundColor: themeColors.surfaceVariant,
                           justifyContent: 'center',
                           alignItems: 'center',
+                          flexShrink: 0,
                         }}>
                           <Ionicons name="flag-outline" size={16} color={themeColors.onSurfaceVariant} />
                         </View>
-                        <ThemedText type="body" themeColor="text" style={{ fontSize: 15 }}>
+                        <ThemedText
+                          type="body"
+                          themeColor="text"
+                          style={{ fontSize: 15, flexShrink: 1 }}
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
+                        >
                           {goal.name}
                         </ThemedText>
                       </View>
-                      <ThemedText type="body" themeColor="secondary" style={{ fontSize: 15, fontWeight: '600' }}>
+                      <ThemedText type="body" themeColor="secondary" style={{ fontSize: 15, fontWeight: '600', flexShrink: 0, marginLeft: 8 }}>
                         {pct}%
                       </ThemedText>
                     </View>

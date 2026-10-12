@@ -523,15 +523,15 @@ export default function SubscriptionsScreen() {
                 borderColor: themeColors.outlineVariant + '30',
               }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
                     <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ textTransform: 'uppercase', letterSpacing: 0.5, fontSize: 11 }}>
                       Gasto Mensual Estimado
                     </ThemedText>
-                    <ThemedText type="h2" themeColor="secondary" style={{ fontWeight: '700', letterSpacing: -0.5, marginTop: 8 }}>
+                    <ThemedText type="h2" themeColor="secondary" style={{ fontWeight: '700', letterSpacing: -0.5, marginTop: 8 }} numberOfLines={1} ellipsizeMode="tail">
                       {formatUSD(monthlyEstimate)}
                     </ThemedText>
                   </View>
-                  <View style={{ flexDirection: 'row', gap: 12 }}>
+                  <View style={{ flexDirection: 'row', gap: 12, flexShrink: 0, marginLeft: 12 }}>
                     <View style={{
                       backgroundColor: themeColors.surfaceContainerHigh,
                       borderRadius: 8,
@@ -590,7 +590,7 @@ export default function SubscriptionsScreen() {
                     }}
                   >
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, flex: 1, minWidth: 0 }}>
                         <View style={{
                           width: 48,
                           height: 48,
@@ -598,6 +598,7 @@ export default function SubscriptionsScreen() {
                           backgroundColor: themeColors.surfaceVariant,
                           justifyContent: 'center',
                           alignItems: 'center',
+                          flexShrink: 0,
                         }}>
                           <Ionicons
                             name={sub.name.toLowerCase().includes('netflix') ? 'film' :
@@ -613,12 +614,12 @@ export default function SubscriptionsScreen() {
                             color={themeColors.text}
                           />
                         </View>
-                        <View>
-                          <ThemedText type="body" themeColor="text" style={{ fontWeight: '600' }}>
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <ThemedText type="body" themeColor="text" style={{ fontWeight: '600' }} numberOfLines={1} ellipsizeMode="tail">
                             {sub.name}
                           </ThemedText>
                           {sub.description && (
-                            <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ marginTop: 2 }}>
+                            <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ marginTop: 2 }} numberOfLines={1} ellipsizeMode="tail">
                               {sub.description}
                             </ThemedText>
                           )}
@@ -629,6 +630,9 @@ export default function SubscriptionsScreen() {
                         paddingVertical: 4,
                         borderRadius: 999,
                         backgroundColor: status.badgeBg,
+                        marginLeft: 8,
+                        flexShrink: 0,
+                        alignSelf: 'flex-start',
                       }}>
                         <ThemedText type="caption" color={status.badgeColor} style={{ fontWeight: '600', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>
                           {status.badgeLabel}
@@ -637,8 +641,8 @@ export default function SubscriptionsScreen() {
                     </View>
 
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                      <View>
-                        <ThemedText type="h3" themeColor="text" style={{ fontWeight: '700' }}>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <ThemedText type="h3" themeColor="text" style={{ fontWeight: '700' }} numberOfLines={1} ellipsizeMode="tail">
                           {sub.amountUSD ? formatUSD(sub.amountUSD) : ''}
                           {sub.amountUSD && sub.amountBS ? ' / ' : ''}
                           {sub.amountBS ? formatBS(sub.amountBS) : ''}
@@ -653,7 +657,7 @@ export default function SubscriptionsScreen() {
                           </ThemedText>
                         </View>
                       </View>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0, marginLeft: 8 }}>
                         {/* Toggle Switch */}
                         <TouchableOpacity
                           onPress={() => handleToggleActive(sub)}

@@ -550,7 +550,9 @@ export default function GoalsScreen() {
                             <ThemedText
                               type="body"
                               themeColor="text"
-                              style={{ textDecorationLine: item.isCompleted === 1 ? 'line-through' : 'none', fontSize: 14 }}
+                              style={{ textDecorationLine: item.isCompleted === 1 ? 'line-through' : 'none', fontSize: 14, flexShrink: 1 }}
+                              numberOfLines={1}
+                              ellipsizeMode="tail"
                             >
                               {item.name}
                             </ThemedText>
@@ -643,7 +645,13 @@ export default function GoalsScreen() {
             <ThemedText type="h2" themeColor="text" style={{ marginBottom: 8 }}>
               ¡Meta Completada!
             </ThemedText>
-            <ThemedText type="h3" themeColor="secondary" style={{ marginBottom: 12 }}>
+            <ThemedText
+              type="h3"
+              themeColor="secondary"
+              style={{ marginBottom: 12, textAlign: 'center' }}
+              numberOfLines={2}
+              ellipsizeMode="tail"
+            >
               "{celebrationGoal?.name}"
             </ThemedText>
             <ThemedText type="body" themeColor="onSurfaceVariant" style={{ textAlign: 'center', marginBottom: 24 }}>

@@ -1,5 +1,23 @@
 # Changelog
 
+## v2.6.2 (2026-10-12)
+
+### 🧩 Correcciones de layout en Metas, Tasas, Alerta y Suscripciones
+- **Archivos:** [`app/(tabs)/index.tsx`](app/(tabs)/index.tsx), [`app/(tabs)/goals.tsx`](app/(tabs)/goals.tsx), [`app/(tabs)/subscriptions.tsx`](app/(tabs)/subscriptions.tsx)
+- **Patrón común:** un contenedor `flexDirection: 'row'` sin `flex: 1` / `minWidth: 0` en el bloque de texto y sin `numberOfLines` en el `Text` provocaba que los nombres largos empujaran sus hermanos fuera de la tarjeta. La corrección aplica `flex: 1, minWidth: 0` al contenedor de texto, `numberOfLines` + `ellipsizeMode="tail"` al texto y `flexShrink: 0` a los elementos que deben conservar su tamaño.
+- **Metas (vista previa del Resumen):** el nombre de la meta ahora se trunca con puntos suspensivos y el porcentaje conserva su ancho.
+- **Metas (pantalla completa):** los nombres de los items expandidos y el nombre en el modal de celebración también se truncan.
+- **Tasas de cambio y Alerta de Suscripción:** las dos tarjetas dejaron de compartir la fila (que las comprimía y hacía ver "TASA DE CAMBIO" cortada) y ahora se apilan a ancho completo (*grid 1*). La fila de chips BCV/Paralelo se protegió con `flexWrap` para no desbordar.
+- **Suscripciones:** el encabezado de cada tarjeta (icono + nombre + descripción + badge) y la fila de monto/toggle ya no se salen; nombre y descripción se truncan y el badge y los controles mantienen su tamaño. En el resumen superior, las cajas de **Activas** y **Pausadas** quedan dentro de la tarjeta gracias a `flex: 1, minWidth: 0` en el bloque izquierdo y `flexShrink: 0` en la fila de cajas.
+
+### 🎤 Diagnóstico y robustez del dictado por voz
+- **Archivo:** [`src/hooks/useSpeechToText.ts`](src/hooks/useSpeechToText.ts)
+- **Causa:** el mensaje genérico "No se pudo reconocer tu voz. Intenta de nuevo." era el caso por defecto de `describeError`, que no contemplaba varios códigos del motor (`interrupted`, `bad-grammar`, `language-not-supported`, `busy`, `client`, `speech-timeout`, `unknown`).
+- **Arreglo 1 (mensajes):** `describeError` ahora mapea **todos** los códigos documentados a un mensaje claro en español y **anexa el código crudo** (y el `code` nativo si existe) para poder diagnosticar en el dispositivo.
+- **Arreglo 2 (errores benignos):** los códigos `no-speech`, `speech-timeout` y `aborted` (silencio o corte) se manejan en silencio: se detiene el dictado y **no** se muestra el Alert modal.
+- **Arreglo 3 (idioma):** si el motor responde `language-not-supported` para `es-VE`, se reintenta una vez con `es-ES` antes de informar el error.
+- Se registra un `console.warn` con el código y el mensaje nativo para depurar con el dispositivo conectado.
+
 ## v2.6.1 (2026-10-03)
 
 ### 🐛 Corrección crítica: el asistente de IA cerraba la app al abrirlo
