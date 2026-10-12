@@ -3,7 +3,7 @@
     "name": "Mis Finanzas",
     "newArchEnabled": true,
     "slug": "finanzas-app",
-    "version": "2.6.0",
+    "version": "2.6.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -11,7 +11,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.tufinanzas.app",
-      "buildNumber": "2",
+      "buildNumber": "3",
       "infoPlist": {
         "UIStatusBarHidden": false,
         "ITSAppUsesNonExemptEncryption": false,

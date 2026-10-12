@@ -1,8 +1,39 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  ExpoSpeechRecognitionModule,
-  useSpeechRecognitionEvent,
-} from 'expo-speech-recognition';
+
+/**
+ * Carga diferida de expo-speech-recognition.
+ *
+ * El paquete ejecuta `requireNativeModule("ExpoSpeechRecognition")` en tiempo
+ * de evaluacion del modulo. Si el modulo nativo no esta registrado en el build
+ * (por ejemplo, por un desajuste de version con SDK 54), esa llamada lanza una
+ * excepcion que tumba la pantalla que importe el paquete. Por eso lo cargamos
+ * con `require` dentro de try/catch, igual que en useSettings.ts.
+ *
+ * `typeof import(...)` es solo un tipo: no genera codigo en runtime.
+ */
+type SpeechRecognitionPackage = typeof import('expo-speech-recognition');
+
+let speechPackageLoaded = false;
+let speechPackage: SpeechRecognitionPackage | null = null;
+
+function loadSpeechPackage(): SpeechRecognitionPackage | null {
+  if (speechPackageLoaded) {
+    return speechPackage;
+  }
+  speechPackageLoaded = true;
+  try {
+    speechPackage = require('expo-speech-recognition') as SpeechRecognitionPackage;
+  } catch (error) {
+    console.warn(
+      '[useSpeechToText] El modulo nativo de reconocimiento de voz no esta disponible en este build.',
+      error
+    );
+    speechPackage = null;
+  }
+  return speechPackage;
+}
+
+type SpeechSubscription = { remove: () => void };
 
 /**
  * Opciones del hook de dictado.
@@ -54,6 +85,10 @@ function describeError(errorCode: string | undefined): string {
  * Encapsula expo-speech-recognition: permisos, arranque, parada y
  * los eventos de resultado/error/fin. Mantiene el estado `isListening`
  * sincronizado para poder pintar el boton de microfono.
+ *
+ * Es tolerante a fallos: si el modulo nativo no esta disponible, el hook
+ * sigue funcionando en modo degradado (`isAvailable === false`) y nunca
+ * lanza una excepcion durante el render.
  */
 export function useSpeechToText(
   options: UseSpeechToTextOptions = {}
@@ -61,7 +96,7 @@ export function useSpeechToText(
   const { lang = 'es-VE' } = options;
 
   const [isListening, setIsListening] = useState(false);
-  const [isAvailable, setIsAvailable] = useState(true);
+  const [isAvailable, setIsAvailable] = useState(false);
 
   // Refs para evitar closures obsoletos en los eventos.
   const onTranscriptRef = useRef(options.onTranscript);
@@ -76,39 +111,85 @@ export function useSpeechToText(
   }, [options.onError]);
 
   useEffect(() => {
+    const pkg = loadSpeechPackage();
+    if (!pkg) {
+      setIsAvailable(false);
+      return;
+    }
+
+    const module = pkg.ExpoSpeechRecognitionModule;
+    if (!module) {
+      setIsAvailable(false);
+      return;
+    }
+
     try {
-      setIsAvailable(
-        ExpoSpeechRecognitionModule.isRecognitionAvailable() ?? true
-      );
+      setIsAvailable(module.isRecognitionAvailable() ?? true);
     } catch {
+      // Algunos motores lanzan si se consulta antes de inicializar;
+      // preferimos intentar el dictado antes que deshabilitarlo.
       setIsAvailable(true);
     }
+
+    const subscriptions: SpeechSubscription[] = [];
+
+    try {
+      subscriptions.push(
+        module.addListener('start', () => {
+          setIsListening(true);
+        })
+      );
+
+      subscriptions.push(
+        module.addListener('end', () => {
+          setIsListening(false);
+        })
+      );
+
+      subscriptions.push(
+        module.addListener('result', (event) => {
+          const transcript: string = event?.results?.[0]?.transcript ?? '';
+          if (transcript) {
+            onTranscriptRef.current?.(transcript, Boolean(event?.isFinal));
+          }
+        })
+      );
+
+      subscriptions.push(
+        module.addListener('error', (event) => {
+          setIsListening(false);
+          onErrorRef.current?.(describeError(event?.error));
+        })
+      );
+    } catch (error) {
+      console.warn(
+        '[useSpeechToText] No se pudieron registrar los eventos de voz.',
+        error
+      );
+    }
+
+    return () => {
+      subscriptions.forEach((subscription) => {
+        try {
+          subscription.remove();
+        } catch {
+          // Ignoramos errores al desuscribirnos durante el desmontaje.
+        }
+      });
+    };
   }, []);
 
-  useSpeechRecognitionEvent('start', () => {
-    setIsListening(true);
-  });
-
-  useSpeechRecognitionEvent('end', () => {
-    setIsListening(false);
-  });
-
-  useSpeechRecognitionEvent('result', (event: any) => {
-    const transcript: string = event?.results?.[0]?.transcript ?? '';
-    if (transcript) {
-      onTranscriptRef.current?.(transcript, Boolean(event?.isFinal));
-    }
-  });
-
-  useSpeechRecognitionEvent('error', (event: any) => {
-    setIsListening(false);
-    onErrorRef.current?.(describeError(event?.error));
-  });
-
   const start = useCallback(async () => {
+    const module = loadSpeechPackage()?.ExpoSpeechRecognitionModule;
+    if (!module) {
+      onErrorRef.current?.(
+        'El dictado por voz no esta disponible en esta version de la app.'
+      );
+      return;
+    }
+
     try {
-      const permission =
-        await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+      const permission = await module.requestPermissionsAsync();
 
       if (!permission?.granted) {
         onErrorRef.current?.(
@@ -117,7 +198,7 @@ export function useSpeechToText(
         return;
       }
 
-      await ExpoSpeechRecognitionModule.start({
+      module.start({
         lang,
         interimResults: true,
         continuous: false,
@@ -132,8 +213,9 @@ export function useSpeechToText(
   }, [lang]);
 
   const stop = useCallback(async () => {
+    const module = loadSpeechPackage()?.ExpoSpeechRecognitionModule;
     try {
-      await ExpoSpeechRecognitionModule.stop();
+      module?.stop();
     } catch {
       // Ignoramos errores al detener: el evento `end` limpia el estado.
     }

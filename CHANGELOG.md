@@ -1,5 +1,13 @@
 # Changelog
 
+## v2.6.1 (2026-10-03)
+
+### 🐛 Corrección crítica: el asistente de IA cerraba la app al abrirlo
+- **Archivos:** [`package.json`](package.json), [`package-lock.json`](package-lock.json), [`src/hooks/useSpeechToText.ts`](src/hooks/useSpeechToText.ts)
+- **Causa raíz:** la app es **Expo SDK 54**, pero se había instalado `expo-speech-recognition@57.1.0`, cuya versión mayor corresponde a **Expo SDK 56/57** y cuyo `podspec` exige **iOS 16.4**. Con ese desajuste, el módulo nativo `ExpoSpeechRecognition` no queda registrado en el binario, y el paquete ejecuta `requireNativeModule("ExpoSpeechRecognition")` en tiempo de evaluación. Al importar la ruta del chat, esa llamada lanzaba y, en un build Release, terminaba el proceso: tocar el asistente cerraba la app.
+- **Arreglo 1 (dependencia):** se fijó `expo-speech-recognition@3.1.3`, que es la versión alineada con **SDK 54** (dist-tag `sdk-54`) y cuyo `podspec` exige solo **iOS 13.4**. Su API pública (`ExpoSpeechRecognitionModule`, `useSpeechRecognitionEvent`) y las opciones de su plugin son idénticas, por lo que `app.json` no requirió cambios.
+- **Arreglo 2 (defensa en profundidad):** `useSpeechToText` ya no importa el paquete de forma estática. Ahora lo carga con `require` dentro de `try/catch` (mismo patrón que `useSettings.ts` con `expo-secure-store`) y registra los eventos `start`/`end`/`result`/`error` mediante `addListener` con limpieza explícita. Si el módulo nativo faltara o fallara, el hook degrada a `isAvailable === false`, muestra un mensaje claro al pulsar el micrófono y **nunca** lanza durante el render.
+
 ## v2.6.0 (2026-10-01)
 
 ### 🎤 Micrófono y dictado en iOS
