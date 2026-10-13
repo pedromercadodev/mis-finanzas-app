@@ -65,8 +65,21 @@ function getIcon(icon: string | null | undefined): keyof typeof Ionicons.glyphMa
 import { useFocusEffect } from 'expo-router';
 import { useThemeColors } from '../../src/hooks/useThemeColors';
 import ThemedText from '../../src/components/ThemedText';
+import SegmentedControl from '../../src/components/SegmentedControl';
 import { getGroupSummaries, setAllocation } from '../../src/services/budgetAllocations';
+import {
+  getWeeklySummary,
+  setWeeklyAvailable as saveWeeklyAvailable,
+  setWeeklyAllocation,
+} from '../../src/services/weeklyBudgets';
 import { formatUSD, getCurrentMonthRange } from '../../src/utils/format';
+import {
+  getWeekRange,
+  shiftWeekRange,
+  formatWeekLabel,
+  isCurrentWeek,
+  type WeekRange,
+} from '../../src/utils/date';
 import type { GroupWithCategories } from '../../src/utils/types';
 
 const MONTH_NAMES = [
@@ -74,13 +87,21 @@ const MONTH_NAMES = [
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
 ];
 
+type BudgetMode = 'weekly' | 'monthly';
+
 export default function BudgetsScreen() {
   const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();
+  const [mode, setMode] = useState<BudgetMode>('weekly');
   const [groups, setGroups] = useState<GroupWithCategories[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Set<number>>(new Set());
   const [currentMonth, setCurrentMonth] = useState('');
+  const [weekRange, setWeekRange] = useState<WeekRange>(() => getWeekRange());
+  const [weeklyAvailable, setWeeklyAvailable] = useState(0);
+  const [availableInput, setAvailableInput] = useState('');
+  const [editingAvailable, setEditingAvailable] = useState(false);
+  const [savingAvailable, setSavingAvailable] = useState(false);
   const [showAllocationModal, setShowAllocationModal] = useState(false);
   const [allocCategoryId, setAllocCategoryId] = useState<number | null>(null);
   const [allocCategoryName, setAllocCategoryName] = useState('');
@@ -90,13 +111,23 @@ export default function BudgetsScreen() {
   const [saving, setSaving] = useState(false);
 
   const loadData = useCallback(async () => {
-    const month = getCurrentMonthRange().start.substring(0, 7);
-    setCurrentMonth(month);
-    const data = await getGroupSummaries(month);
-    setGroups(data);
-  }, []);
+    if (mode === 'weekly') {
+      const summary = await getWeeklySummary(
+        weekRange.weekKey,
+        weekRange.startDate,
+        weekRange.endDate
+      );
+      setWeeklyAvailable(summary.availableUSD);
+      setGroups(summary.groups);
+    } else {
+      const month = getCurrentMonthRange().start.substring(0, 7);
+      setCurrentMonth(month);
+      const data = await getGroupSummaries(month);
+      setGroups(data);
+    }
+  }, [mode, weekRange.weekKey, weekRange.startDate, weekRange.endDate]);
 
-  // Recargar datos cada vez que la pantalla obtiene foco
+  // Recargar datos cada vez que la pantalla obtiene foco o cambia el modo/semana
   useFocusEffect(
     useCallback(() => {
       loadData();
@@ -107,6 +138,11 @@ export default function BudgetsScreen() {
     setRefreshing(true);
     await loadData();
     setRefreshing(false);
+  };
+
+  const changeWeek = (delta: number) => {
+    setWeekRange((prev) => shiftWeekRange(prev, delta));
+    setEditingAvailable(false);
   };
 
   const toggleGroup = (groupId: number) => {
@@ -121,10 +157,34 @@ export default function BudgetsScreen() {
     });
   };
 
+  const startEditingAvailable = () => {
+    setAvailableInput(weeklyAvailable > 0 ? String(weeklyAvailable) : '');
+    setEditingAvailable(true);
+  };
+
+  const handleSaveAvailable = async () => {
+    const amount = parseFloat(availableInput.replace(',', '.'));
+    if (isNaN(amount) || amount < 0) {
+      Alert.alert('Error', 'Ingresa un monto válido');
+      return;
+    }
+
+    setSavingAvailable(true);
+    try {
+      await saveWeeklyAvailable(weekRange.weekKey, weekRange.startDate, weekRange.endDate, amount);
+      setEditingAvailable(false);
+      await loadData();
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo guardar el disponible');
+    } finally {
+      setSavingAvailable(false);
+    }
+  };
+
   const openAllocationModal = (cat: any) => {
     setAllocCategoryId(cat.id);
     setAllocCategoryName(cat.name);
-    setAllocAmount(String(cat.allocation?.amountUSD || ''));
+    setAllocAmount(cat.allocation?.amountUSD ? String(cat.allocation.amountUSD) : '');
     setAllocCurrentSpent(cat.spending?.spentUSD || 0);
     setAllocCurrentBudget(cat.allocation?.amountUSD || 0);
     setShowAllocationModal(true);
@@ -133,7 +193,7 @@ export default function BudgetsScreen() {
   const handleSaveAllocation = async () => {
     if (allocCategoryId === null) return;
 
-    const amount = parseFloat(allocAmount);
+    const amount = parseFloat(allocAmount.replace(',', '.'));
     if (isNaN(amount) || amount < 0) {
       Alert.alert('Error', 'Ingresa un monto válido');
       return;
@@ -141,7 +201,11 @@ export default function BudgetsScreen() {
 
     setSaving(true);
     try {
-      await setAllocation(allocCategoryId, currentMonth, amount);
+      if (mode === 'weekly') {
+        await setWeeklyAllocation(weekRange.weekKey, allocCategoryId, amount);
+      } else {
+        await setAllocation(allocCategoryId, currentMonth, amount);
+      }
       setShowAllocationModal(false);
       await loadData();
     } catch (error) {
@@ -163,7 +227,7 @@ export default function BudgetsScreen() {
     return themeColors.secondary || '#10B981';
   };
 
-  // Calcular totales
+  // Totales (aplican a ambos modos)
   const totalBudget = groups.reduce((sum, g) => sum + g.totalBudgetUSD, 0);
   const totalSpent = groups.reduce((sum, g) => sum + g.totalSpentUSD, 0);
   const totalPercentage = totalBudget > 0 ? Math.min((totalSpent / totalBudget) * 100, 100) : 0;
@@ -174,6 +238,14 @@ export default function BudgetsScreen() {
       return budget > 0 && spent >= budget;
     }).length;
   }, 0);
+
+  // Específicos del modo semanal
+  const remainingToAssign = weeklyAvailable - totalBudget;
+  const allocatedPercentage = weeklyAvailable > 0
+    ? Math.min((totalBudget / weeklyAvailable) * 100, 100)
+    : 0;
+  const allocatedBarColor = getBarColor(allocatedPercentage);
+  const dangerColor = themeColors.danger || '#EF4444';
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
@@ -197,14 +269,195 @@ export default function BudgetsScreen() {
               </ThemedText>
             </View>
           </View>
-          <ThemedText type="body" themeColor="onSurfaceVariant" style={{ marginTop: 4, fontSize: 14 }}>
-            {getMonthLabel(currentMonth)}
-          </ThemedText>
+
+          {/* Selector de modo */}
+          <View style={{ marginTop: 12 }}>
+            <SegmentedControl<BudgetMode>
+              options={[
+                { key: 'weekly', label: 'Semanal' },
+                { key: 'monthly', label: 'Mensual' },
+              ]}
+              selected={mode}
+              onSelect={setMode}
+            />
+          </View>
         </View>
 
-        {/* Budget Summary Bento */}
-        {groups.length > 0 && (
+        {/* Navegación de semana (solo modo semanal) */}
+        {mode === 'weekly' && (
+          <View style={{ paddingHorizontal: 24, marginBottom: 16 }}>
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              backgroundColor: themeColors.surfaceContainer + '99',
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: themeColors.outlineVariant + '30',
+              paddingVertical: 6,
+              paddingHorizontal: 6,
+            }}>
+              <TouchableOpacity
+                onPress={() => changeWeek(-1)}
+                accessibilityLabel="Semana anterior"
+                style={{ padding: 8 }}
+              >
+                <Ionicons name="chevron-back" size={22} color={themeColors.onSurfaceVariant} />
+              </TouchableOpacity>
+              <View style={{ alignItems: 'center', flex: 1, minWidth: 0 }}>
+                <ThemedText
+                  type="body"
+                  themeColor="text"
+                  style={{ fontWeight: '700' }}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {formatWeekLabel(weekRange.startDate, weekRange.endDate)}
+                </ThemedText>
+                <ThemedText type="caption" color={themeColors.secondary} style={{ fontSize: 11, fontWeight: '600' }}>
+                  {isCurrentWeek(weekRange) ? 'Semana actual' : 'Semana'}
+                </ThemedText>
+              </View>
+              <TouchableOpacity
+                onPress={() => changeWeek(1)}
+                accessibilityLabel="Semana siguiente"
+                style={{ padding: 8 }}
+              >
+                <Ionicons name="chevron-forward" size={22} color={themeColors.onSurfaceVariant} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Tarjeta de Disponible (solo modo semanal) */}
+        {mode === 'weekly' && (
           <View style={{ paddingHorizontal: 24, marginBottom: 24 }}>
+            <View style={{
+              backgroundColor: themeColors.surfaceContainer + '99',
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: themeColors.outlineVariant + '30',
+              padding: 20,
+              overflow: 'hidden',
+            }}>
+              <View style={{
+                position: 'absolute', right: -40, top: -40,
+                width: 192, height: 192,
+                backgroundColor: themeColors.secondary + '10',
+                borderRadius: 96,
+              }} />
+
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  Disponible de la semana
+                </ThemedText>
+                {!editingAvailable && (
+                  <TouchableOpacity
+                    onPress={startEditingAvailable}
+                    accessibilityLabel="Editar disponible"
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                  >
+                    <Ionicons name="pencil" size={14} color={themeColors.secondary} />
+                    <ThemedText type="caption" color={themeColors.secondary} style={{ fontSize: 12, fontWeight: '600' }}>
+                      Editar
+                    </ThemedText>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {editingAvailable ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <TextInput
+                    value={availableInput}
+                    onChangeText={setAvailableInput}
+                    placeholder="Ej: 235"
+                    placeholderTextColor={themeColors.onSurfaceVariant}
+                    keyboardType="decimal-pad"
+                    autoFocus
+                    style={{
+                      flex: 1,
+                      backgroundColor: themeColors.surfaceContainer,
+                      borderRadius: 12,
+                      padding: 14,
+                      fontSize: 20,
+                      fontWeight: '700',
+                      color: themeColors.text,
+                      borderWidth: 1,
+                      borderColor: themeColors.secondary + '60',
+                    }}
+                  />
+                  <TouchableOpacity
+                    onPress={handleSaveAvailable}
+                    disabled={savingAvailable}
+                    accessibilityLabel="Guardar disponible"
+                    style={{
+                      backgroundColor: savingAvailable ? themeColors.onSurfaceVariant : themeColors.secondary,
+                      borderRadius: 12,
+                      paddingVertical: 14,
+                      paddingHorizontal: 18,
+                      opacity: savingAvailable ? 0.6 : 1,
+                    }}
+                  >
+                    <Ionicons name="checkmark" size={20} color={themeColors.background} />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <ThemedText type="h1" themeColor="text" style={{ fontSize: 30, fontWeight: '700' }}>
+                  {formatUSD(weeklyAvailable)}
+                </ThemedText>
+              )}
+
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 }}>
+                <View>
+                  <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ fontSize: 11 }}>
+                    Asignado
+                  </ThemedText>
+                  <ThemedText type="body" themeColor="text" style={{ fontWeight: '700', fontSize: 15 }}>
+                    {formatUSD(totalBudget)}
+                  </ThemedText>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ fontSize: 11 }}>
+                    Por asignar
+                  </ThemedText>
+                  <ThemedText
+                    type="body"
+                    color={remainingToAssign >= 0 ? themeColors.secondary : dangerColor}
+                    style={{ fontWeight: '700', fontSize: 15 }}
+                  >
+                    {formatUSD(remainingToAssign)}
+                  </ThemedText>
+                </View>
+              </View>
+
+              <View style={{ marginTop: 12 }}>
+                <View style={{
+                  height: 8,
+                  backgroundColor: themeColors.surfaceContainerHigh,
+                  borderRadius: 4,
+                  overflow: 'hidden',
+                }}>
+                  <View style={{
+                    width: `${weeklyAvailable > 0 ? Math.max(allocatedPercentage, 2) : 0}%` as any,
+                    height: '100%',
+                    backgroundColor: allocatedBarColor,
+                    borderRadius: 4,
+                  }} />
+                </View>
+                <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ marginTop: 6, fontSize: 11 }}>
+                  Gastado real de la semana: {formatUSD(totalSpent)}
+                </ThemedText>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* Budget Summary Bento (solo modo mensual) */}
+        {mode === 'monthly' && groups.length > 0 && (
+          <View style={{ paddingHorizontal: 24, marginBottom: 24 }}>
+            <ThemedText type="body" themeColor="onSurfaceVariant" style={{ marginBottom: 12, fontSize: 14 }}>
+              {getMonthLabel(currentMonth)}
+            </ThemedText>
             <View style={{ flexDirection: 'row', gap: 12 }}>
               {/* Total Budget Card */}
               <View style={{
@@ -492,7 +745,7 @@ export default function BudgetsScreen() {
         </View>
       </ScrollView>
 
-      {/* Modal de Asignación Mensual */}
+      {/* Modal de Asignación (semanal o mensual) */}
       <Modal
         visible={showAllocationModal}
         animationType="slide"
@@ -543,9 +796,9 @@ export default function BudgetsScreen() {
                 </ThemedText>
               </View>
 
-              {/* Mes */}
+              {/* Semana / Mes */}
               <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ marginBottom: 6 }}>
-                Mes
+                {mode === 'weekly' ? 'Semana' : 'Mes'}
               </ThemedText>
               <View style={{
                 backgroundColor: themeColors.surfaceContainer,
@@ -556,18 +809,20 @@ export default function BudgetsScreen() {
                 marginBottom: 20,
               }}>
                 <ThemedText type="body" themeColor="text">
-                  {getMonthLabel(currentMonth)}
+                  {mode === 'weekly'
+                    ? formatWeekLabel(weekRange.startDate, weekRange.endDate)
+                    : getMonthLabel(currentMonth)}
                 </ThemedText>
               </View>
 
-              {/* Presupuesto USD */}
+              {/* Monto asignado */}
               <ThemedText type="caption" themeColor="onSurfaceVariant" style={{ marginBottom: 6 }}>
-                Presupuesto en USD
+                {mode === 'weekly' ? 'Asignado en USD' : 'Presupuesto en USD'}
               </ThemedText>
               <TextInput
                 value={allocAmount}
                 onChangeText={setAllocAmount}
-                placeholder="Ej: 500.00"
+                placeholder={mode === 'weekly' ? 'Ej: 20.00' : 'Ej: 500.00'}
                 placeholderTextColor={themeColors.onSurfaceVariant}
                 keyboardType="decimal-pad"
                 style={{
@@ -593,13 +848,17 @@ export default function BudgetsScreen() {
                 marginBottom: 32,
               }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <ThemedText type="body" themeColor="onSurfaceVariant">Gasto actual:</ThemedText>
+                  <ThemedText type="body" themeColor="onSurfaceVariant">
+                    {mode === 'weekly' ? 'Gastado esta semana:' : 'Gasto actual:'}
+                  </ThemedText>
                   <ThemedText type="body" themeColor="text" style={{ fontWeight: '600' }}>
                     {formatUSD(allocCurrentSpent)}
                   </ThemedText>
                 </View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <ThemedText type="body" themeColor="onSurfaceVariant">Presupuesto anterior:</ThemedText>
+                  <ThemedText type="body" themeColor="onSurfaceVariant">
+                    Asignado actual:
+                  </ThemedText>
                   <ThemedText type="body" themeColor="text" style={{ fontWeight: '600' }}>
                     {formatUSD(allocCurrentBudget)}
                   </ThemedText>

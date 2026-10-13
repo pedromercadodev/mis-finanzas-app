@@ -162,6 +162,28 @@ export async function initializeDatabase(db: SQLiteDatabase) {
       FOREIGN KEY (categoryId) REFERENCES categories(id) ON DELETE CASCADE,
       UNIQUE(categoryId, month)
     );
+
+    CREATE TABLE IF NOT EXISTS weekly_budgets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      weekKey TEXT NOT NULL UNIQUE,
+      startDate TEXT NOT NULL,
+      endDate TEXT NOT NULL,
+      availableUSD REAL NOT NULL DEFAULT 0,
+      createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+      updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS weekly_allocations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      weekKey TEXT NOT NULL,
+      categoryId INTEGER NOT NULL,
+      amountUSD REAL NOT NULL DEFAULT 0,
+      amountBS REAL NOT NULL DEFAULT 0,
+      createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+      updatedAt TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (categoryId) REFERENCES categories(id) ON DELETE CASCADE,
+      UNIQUE(weekKey, categoryId)
+    );
   `);
 
   // --- Migración: Agregar columnas faltantes (para BD creadas antes de esta actualización) ---

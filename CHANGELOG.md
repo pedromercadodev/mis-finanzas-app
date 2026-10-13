@@ -1,5 +1,17 @@
 # Changelog
 
+## v2.7.0 (2026-10-12)
+
+### 🗓️ Presupuesto semanal por categoría
+- **Archivos:** [`app/(tabs)/budgets.tsx`](app/(tabs)/budgets.tsx), [`src/services/weeklyBudgets.ts`](src/services/weeklyBudgets.ts), [`src/services/budgetAllocations.ts`](src/services/budgetAllocations.ts), [`src/utils/date.ts`](src/utils/date.ts), [`src/utils/types.ts`](src/utils/types.ts), [`src/db/schema.ts`](src/db/schema.ts)
+- **Qué hace:** la pantalla de Presupuestos ahora tiene un selector **Semanal | Mensual** (Semanal por defecto). En modo semanal escribes a mano el **disponible de la semana** y repartes ese monto por categorías; la app suma lo asignado, calcula **por asignar** (`disponible − asignado`) y compara cada categoría contra el **gasto real de esa semana**.
+- **Semana viernes → jueves:** la semana activa es la del **próximo viernes** (el primer viernes mayor o igual a hoy). Si ya pasó el viernes, la app salta automáticamente a la semana siguiente; así el lunes se planifica la semana del viernes. El encabezado permite navegar a semanas anteriores/siguientes con los botones ‹ › y marca "Semana actual" cuando corresponde.
+- **Plan por semana, no plantilla:** cada semana guarda su propio disponible y su propio reparto (`weekKey` = fecha del viernes de inicio), de modo que las semanas son independientes entre sí.
+- **Base de datos:** se añadieron las tablas `weekly_budgets` (disponible por semana, `UNIQUE(weekKey)`) y `weekly_allocations` (monto por categoría y semana, `UNIQUE(weekKey, categoryId)`). Se crean de forma idempotente en `initializeDatabase` y no tocan el presupuesto mensual existente (`budget_allocations`).
+- **Utilidades de fecha:** `getWeekRange`, `shiftWeekRange`, `formatWeekLabel` e `isCurrentWeek` en [`src/utils/date.ts`](src/utils/date.ts), todas con el desplazamiento UTC-4 ya usado por la app.
+- **Refactor:** se extrajo `buildGroupSummaries(...)` en [`src/services/budgetAllocations.ts`](src/services/budgetAllocations.ts) como función pura compartida por el resumen mensual y el semanal.
+- **Modal de asignación:** las etiquetas se adaptan al modo (`Semana`/`Mes`, `Asignado en USD`/`Presupuesto en USD`, "Gastado esta semana"/"Gasto actual").
+
 ## v2.6.2 (2026-10-12)
 
 ### 🧩 Correcciones de layout en Metas, Tasas, Alerta y Suscripciones

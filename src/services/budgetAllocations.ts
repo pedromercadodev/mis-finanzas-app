@@ -1,5 +1,12 @@
 import { getDatabase } from './database';
-import type { BudgetAllocation, CategorySpending, GroupWithCategories, CategoryWithGroup } from '../utils/types';
+import type {
+  BudgetAllocation,
+  CategorySpending,
+  GroupWithCategories,
+  CategoryWithGroup,
+  CategoryGroup,
+  AllocationAmount,
+} from '../utils/types';
 import { getCategoriesWithGroups } from './categories';
 import { getGroups } from './categoryGroups';
 
@@ -52,15 +59,21 @@ export async function getSpendingByCategory(month: string): Promise<CategorySpen
   );
 }
 
-export async function getGroupSummaries(month: string): Promise<GroupWithCategories[]> {
-  const groups = await getGroups('expense');
-  const categories = await getCategoriesWithGroups('expense');
-  const allocations = await getMonthAllocations(month);
-  const spending = await getSpendingByCategory(month);
-
-  const allocMap = new Map(allocations.map((a) => [a.categoryId, a]));
-  const spendMap = new Map(spending.map((s) => [s.categoryId, s]));
-
+/**
+ * Construye la lista de grupos con sus categorías, la asignación y el gasto.
+ * Es puro y reutilizable: lo comparten el presupuesto mensual y el semanal.
+ *
+ * @param groups    Grupos de gasto (getGroups('expense')).
+ * @param categories Categorías de gasto con su grupo (getCategoriesWithGroups('expense')).
+ * @param allocMap   Mapa categoryId → asignación (mensual o semanal).
+ * @param spendMap   Mapa categoryId → gasto (del período correspondiente).
+ */
+export function buildGroupSummaries(
+  groups: CategoryGroup[],
+  categories: CategoryWithGroup[],
+  allocMap: Map<number, AllocationAmount>,
+  spendMap: Map<number, CategorySpending>
+): GroupWithCategories[] {
   // Categorías sin grupo
   const ungroupedCats = categories
     .filter((c) => c.groupId === null)
@@ -115,4 +128,16 @@ export async function getGroupSummaries(month: string): Promise<GroupWithCategor
   }
 
   return result;
+}
+
+export async function getGroupSummaries(month: string): Promise<GroupWithCategories[]> {
+  const groups = await getGroups('expense');
+  const categories = await getCategoriesWithGroups('expense');
+  const allocations = await getMonthAllocations(month);
+  const spending = await getSpendingByCategory(month);
+
+  const allocMap = new Map<number, AllocationAmount>(allocations.map((a) => [a.categoryId, a]));
+  const spendMap = new Map<number, CategorySpending>(spending.map((s) => [s.categoryId, s]));
+
+  return buildGroupSummaries(groups, categories, allocMap, spendMap);
 }

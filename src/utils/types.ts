@@ -69,6 +69,15 @@ export interface BudgetAllocation {
   updatedAt: string;
 }
 
+/**
+ * Forma mínima de una asignación de presupuesto (mensual o semanal).
+ * Tanto `BudgetAllocation` como `WeeklyAllocation` la satisfacen.
+ */
+export interface AllocationAmount {
+  amountUSD: number;
+  amountBS?: number;
+}
+
 export interface CategorySpending {
   categoryId: number;
   spentUSD: number;
@@ -77,9 +86,44 @@ export interface CategorySpending {
 
 export interface GroupWithCategories {
   group: CategoryGroup;
-  categories: (CategoryWithGroup & { allocation?: BudgetAllocation; spending?: CategorySpending })[];
+  categories: (CategoryWithGroup & { allocation?: AllocationAmount; spending?: CategorySpending })[];
   totalBudgetUSD: number;
   totalSpentUSD: number;
+}
+
+export interface WeeklyBudget {
+  id: number;
+  weekKey: string;
+  startDate: string;
+  endDate: string;
+  availableUSD: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WeeklyAllocation {
+  id: number;
+  weekKey: string;
+  categoryId: number;
+  amountUSD: number;
+  amountBS: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WeeklySummary {
+  weekKey: string;
+  startDate: string;
+  endDate: string;
+  /** Disponible escrito a mano por el usuario para esa semana. */
+  availableUSD: number;
+  /** Suma de lo repartido por categorías. */
+  totalAllocatedUSD: number;
+  /** Gasto real registrado dentro del rango de la semana. */
+  totalSpentUSD: number;
+  /** availableUSD - totalAllocatedUSD. */
+  remainingUSD: number;
+  groups: GroupWithCategories[];
 }
 
 export interface Goal {
